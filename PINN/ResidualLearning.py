@@ -9,6 +9,12 @@ from NeuralNetwork import FFN
 
 
 class ResidualLearner(object):
+    """Train and assess the post-training Hybrid-PINN correction.
+
+    Besides fitting ``C_FVM-C_PINN``, the class evaluates bounds, exact hard
+    constraints, mass balance, surface flux, PDE consistency, and regularity.
+    """
+
     def __init__(self):
         pass
 
@@ -21,6 +27,11 @@ class ResidualLearner(object):
             early_stopping_patience,
             device
             ):
+        """Fit the residual FFN with an MSE and concentration-bounds penalty.
+
+        Inputs are training settings and residual loaders. Returns the best
+        validation model selected by early stopping.
+        """
 
         print("Training Residual Learner...")
 
@@ -112,6 +123,7 @@ class ResidualLearner(object):
             out_folder="./Results/Models",
             filename="residual_model.pth"
             ):
+        """Save residual-model weights and validation metadata; return the path."""
 
         output_folder = Path(out_folder)
         output_folder.mkdir(
@@ -158,6 +170,7 @@ class ResidualLearner(object):
             high_b=1.0,
             verbose=True
             ):
+        """Return a squared soft penalty for concentrations outside ``[low_b, high_b]``."""
 
         if verbose:
             max_C = concentrations.max().item()
@@ -229,6 +242,11 @@ class ResidualLearner(object):
             ramp_time=300.0,
             ramp_down_start=3600.0
             ):
+        """Compare one predicted field with FVM globally and by operating phase.
+
+        Parameters are the corrected dataset and prediction column. Returns
+        field, boundary, average, and phase-wise error dictionaries.
+        """
         radius = np.sort(dataset["rho"].unique())
         tau = np.sort(dataset["tau"].unique())
         time = (
@@ -298,6 +316,10 @@ class ResidualLearner(object):
             initial_concentration,
             mass_balance_tolerance=1e-4
             ):
+        """Evaluate mass balance and concentration bounds for all three fields.
+
+        Returns diagnostics for the FVM reference, PINN, and Hybrid-PINN.
+        """
         radius = np.sort(dataset["rho"].unique())
         tau = np.sort(dataset["tau"].unique())
         flux_profile = (
@@ -382,6 +404,7 @@ class ResidualLearner(object):
             initial_concentration,
             device
             ):
+        """Return initial-condition and centre-symmetry errors of the hybrid model."""
         initial_mask = np.isclose(
             dataset["tau"].to_numpy(),
             0.0
@@ -449,6 +472,11 @@ class ResidualLearner(object):
             ramp_time=300.0,
             ramp_down_start=3600.0
             ):
+        """Evaluate the full-physics surface-flux residual.
+
+        Inputs include the corrected dataset and diffusivity parameters.
+        Returns global and phase-wise surface residual metrics.
+        """
         surface_data = (
             dataset.loc[
                 np.isclose(dataset["rho"], 1.0),
@@ -582,6 +610,11 @@ class ResidualLearner(object):
             ramp_down_start=3600.0,
             batch_size=2048
             ):
+        """Evaluate full and simplified PDE residuals on interior samples.
+
+        Returns global/phase metrics, residual arrays, and numerical-regularity
+        statistics for the corrected concentration field.
+        """
         evaluation_data = (
             dataset.loc[
                 (dataset["rho"] > 0.0)

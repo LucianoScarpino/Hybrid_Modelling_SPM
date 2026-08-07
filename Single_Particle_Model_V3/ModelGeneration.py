@@ -1,12 +1,10 @@
 import numpy as np
 
 class ModelGeometry(object):
-    """
-    Reference physics-based model of lithium diffusion inside a single spherical
-    active-material particle of the positive electrode. The model solves the
-    dimensionless diffusion equation using a conservative finite-volume
-    discretization and numerical time integration to generate synthetic data.
+    """Define the geometry and transport/thermal laws of the reference SPM.
 
+    The class builds dimensionless grids and evaluates state-dependent solid
+    diffusion and the lumped thermal balance used by the finite-volume solver.
     """
     def __init__(self,
                 Rp,
@@ -46,6 +44,7 @@ class ModelGeometry(object):
         self.Rg = Rg                                                        #thermal
 
     def diffusion_coefficient(self,concentration,C0,T,alpha=1.0):
+        """Return nodal diffusivity for the current concentration and temperature."""
         if self.diffusion_type == 'adaptive':
             self.adaptive_diff_coeff = self.diff_coeff * np.exp(alpha * (concentration - C0)) * np.exp(-(self.activation_energy/self.Rg)*(1/T - 1/self.T_ref))
             return self.adaptive_diff_coeff
@@ -132,6 +131,7 @@ class ModelGeometry(object):
         return self.convection_coeff * self.heat_area/(self.mass * self.heat_cap)
 
     def compute_temperature_derivatives(self,current,temperature):
+        """Return the dimensionless lumped-temperature derivative."""
         diffusion_time = self.radius**2 / self.diff_coeff
         betaQ = self.get_beta_q()
         betaH = self.get_beta_h()
@@ -139,9 +139,10 @@ class ModelGeometry(object):
         return diffusion_time * ((betaQ * current**2) - betaH * (temperature - self.T_amb)) 
 
 class SurfaceFlux(object):
-    """
-    Itercalation Flux modelling through applied current.
-    
+    """Map an applied-current profile to dimensional and normalized fluxes.
+
+    It supports constant or ramp--hold--ramp operating profiles and supplies
+    the surface boundary input used by the particle model.
     """
     def __init__(self,I1C,F,Sp,Rp,Ds,Cmax):
         self.nominal_current = I1C
@@ -152,6 +153,7 @@ class SurfaceFlux(object):
         self.max_concentration = Cmax
 
     def define_applied_current(self,t,tr,tload,profile='operating'):
+        """Evaluate the selected current profile at physical time ``t``."""
         if profile == 'constant':
             curr = self.nominal_current
             
@@ -171,6 +173,7 @@ class SurfaceFlux(object):
         return - curr/(self.F * self.active_surf)   # --> j(t(tau))
 
     def get_dimentionless_intercalation_flux(self,j):
+        """Convert dimensional flux to its normalized value and nominal scale."""
         delta = (self.radius * j)/(self.diff_coeff * self.max_concentration)
         delta1C = self.nominal_current * self.radius/(
             self.diff_coeff * self.F * self.active_surf * self.max_concentration)           #nominal  dimentionless intercalation flux

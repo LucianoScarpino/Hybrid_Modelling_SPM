@@ -2,6 +2,12 @@ import torch
 from torch import nn
 
 class MLP(nn.Module):
+    """Predict concentration while enforcing the initial and centre conditions.
+
+    Squared radius guarantees centre symmetry and the output transformation
+    ``C0 + tau * N`` exactly recovers the initial concentration.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -21,6 +27,7 @@ class MLP(nn.Module):
                 nn.init.zeros_(module.bias)
 
     def forward(self,x:torch.tensor,init_concentration):
+        """Map ``(rho, tau)`` coordinates to normalized concentration."""
         rho = x[:,:1]
         tau = x[:,1:2]
 
@@ -40,6 +47,12 @@ class MLP(nn.Module):
         return  concentration
 
 class FFN(nn.Module):
+    """Learn the post-training correction to a frozen PINN field.
+
+    The network uses ``rho``, ``tau``, and ``C_PINN`` and multiplies its output
+    by time so that the learned correction vanishes initially.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -52,6 +65,7 @@ class FFN(nn.Module):
         self.activation = nn.Tanh()
 
     def forward(self,X):
+        """Return the concentration correction for residual-model inputs."""
         rho = X[:, 0:1]
         tau = X[:, 1:2]
         concentration_pinn = X[:, 2:3]
@@ -72,7 +86,11 @@ class FFN(nn.Module):
 
 
 class HybridModel(nn.Module):
-    """Frozen PINN baseline corrected by the learned residual model."""
+    """Combine a frozen PINN baseline with a learned residual correction.
+
+    The wrapper exposes both components for diagnostics and their sum as the
+    final Hybrid-PINN concentration prediction.
+    """
 
     def __init__(self, pinn_model, residual_model):
         super().__init__()
@@ -80,6 +98,7 @@ class HybridModel(nn.Module):
         self.residual_model = residual_model
 
     def forward_components(self, coordinates, initial_concentration):
+        """Return baseline, residual correction, and corrected concentration."""
         concentration_pinn = self.pinn_model(
             coordinates,
             initial_concentration

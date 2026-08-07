@@ -7,6 +7,12 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 class Loader(object):
+    """Load, align, and split datasets for concentration residual learning.
+
+    Each time sample is represented by simplified integral/boundary states,
+    while the target is the complete radial FVM--simplified discrepancy.
+    """
+
     def __init__(self, random_state=26):
         self.random_state = random_state
 
@@ -54,6 +60,11 @@ class Loader(object):
         )
 
     def split_dataset(self, reference_dataset,simplified_dataset):
+        """Align reference and simplified grids and create residual splits.
+
+        Returns train, validation, and test tensor pairs ``(features, profile)``.
+        Split indices and aligned profiles are retained for later evaluation.
+        """
 
         simplified = self._concentration_profiles(simplified_dataset)
         reference = self._concentration_profiles(reference_dataset)
@@ -137,6 +148,7 @@ class Loader(object):
         )
 
     def loader(self, X, y, batch_size=32, shuffle=False):
+        """Wrap feature and target tensors in a configured ``DataLoader``."""
         dataset = TensorDataset(X, y)
 
         return DataLoader(
@@ -146,6 +158,7 @@ class Loader(object):
         )
 
     def get_simplified_profiles(self, split):
+        """Return simplified profiles associated with a previously built split."""
         if self.split_indices is None:
             raise RuntimeError("split_dataset must be called first.")
 

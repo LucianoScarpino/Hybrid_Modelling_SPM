@@ -5,10 +5,17 @@ from Assembler import FiniteVolumeSolver
 
 
 class Simulate(object):
+    """Orchestrate one coupled finite-volume particle simulation.
+
+    Parsed settings are converted into geometry, current, diffusion, and
+    thermal components; ``run`` returns the complete space--time solution.
+    """
+
     def __init__(self,args):
         self.args = args
     
     def get_parameters(self):
+        """Return parsed command-line settings as a simulation dictionary."""
         # Physical settings
         #Rp = 8.5 * 1e-6                 #particle radius                    [m]
         #Sp = 1.167                      #particle surface area              [m^2]
@@ -80,6 +87,13 @@ class Simulate(object):
             }
     
     def run(self):
+        """Run the coupled concentration--temperature model.
+
+        Returns
+        -------
+        dict
+            Grids, fields, flux histories, temperatures, and initial data.
+        """
         params = self.get_parameters()
 
         geometry = ModelGeometry(

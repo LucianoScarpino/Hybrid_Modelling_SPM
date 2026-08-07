@@ -2,19 +2,10 @@ import torch
 import torch.nn as nn
 
 class FNN(nn.Module):
-    """Predict the radial concentration-discrepancy profile.
+    """Predict a complete radial concentration-discrepancy profile.
 
-    The default input order is::
-
-        [C_average, C_surface, current]
-
-    Each output column corresponds to one radial node::
-
-        delta_C[:, i] = C_reference[:, i] - C_simplified[:, i]
-
-    The radial coordinates are metadata used to order the output columns; they
-    are not network inputs. The corrected profile must be assembled outside the
-    network as ``C_hybrid = C_simplified + delta_C``.
+    Average concentration, surface concentration, and current define the input;
+    each output is the FVM--simplified correction at one radial node.
     """
 
     feature_names = (
@@ -68,6 +59,12 @@ class FNN(nn.Module):
 
 
 class ThermalFFN(nn.Module):
+    """Approximate the lumped thermal derivative from state and current.
+
+    The two inputs are normalized ``theta`` and current; the scalar output is
+    normalized ``dtheta/dt`` and is integrated externally during rollout.
+    """
+
     def __init__(
             self,
             device,
@@ -86,6 +83,7 @@ class ThermalFFN(nn.Module):
         self.activation = nn.Tanh()
 
     def forward(self,X):
+        """Return the normalized temperature derivative for each input state."""
         x = self.activation(self.input(X))
         h1 = self.activation(self.hidden1(x))
         out = self.output(h1)

@@ -8,6 +8,12 @@ from pathlib import Path
 from NeuralNetwork import MLP,FFN
 
 class Processing(object):
+    """Train and diagnose the simplified-physics PINN.
+
+    It combines data, PDE, and surface-boundary losses during Adam training,
+    optionally refines with L-BFGS, and stores the selected checkpoint.
+    """
+
     def __init__(
             self,
             d_loader_train,
@@ -44,6 +50,11 @@ class Processing(object):
         sheduler_patience=200,
         lbfgs_max_iter=500
         ):
+        """Fit the PINN with weighted data, PDE, and boundary losses.
+
+        Inputs specify optimization settings and physical constants. Returns
+        the best trained concentration model.
+        """
 
         model = MLP().to(self.device)
         opt1 = torch.optim.Adam(params=model.parameters(),lr=lr)
@@ -274,6 +285,7 @@ class Processing(object):
             lambda_f,
             lambda_b
             ):
+        """Evaluate data, PDE, boundary, and weighted total validation losses."""
 
         model.eval()
 
@@ -363,6 +375,7 @@ class Processing(object):
             lambda_b,
             max_iter=500
             ):
+        """Refine a trained PINN on full batches with L-BFGS and return it."""
 
         x_data, y_data = self.d_loader.dataset.tensors
         (x_collocation_base,) = self.f_loader.dataset.tensors
@@ -537,6 +550,7 @@ class Processing(object):
         return checkpoint_path
 
     def check_output_scale(self,concentrations: torch.Tensor) -> dict[str, float]:
+        """Validate finite concentration outputs and return scale statistics."""
         values = concentrations.detach()
 
         if not torch.isfinite(values).all():
@@ -569,6 +583,7 @@ class Processing(object):
         return statistics
 
     def check_pde_residual(self,residual: torch.Tensor,baseline_rms: float | None = None) -> dict[str, float]:
+        """Validate a PDE residual tensor and return magnitude statistics."""
         values = residual.detach()
 
         if not torch.isfinite(values).all():
@@ -606,6 +621,7 @@ class Processing(object):
         return statistics
 
     def check_gradients(self,model: torch.nn.Module,loss_value: float) -> dict[str, object]:
+        """Detect invalid, vanishing, or exploding gradients and summarize them."""
         squared_total_norm = 0.0
         maximum_absolute_gradient = 0.0
         layer_norms = {}

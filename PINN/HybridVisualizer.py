@@ -10,7 +10,11 @@ from Visualizer import PINNVisualizer
 
 
 class HybridPINNVisualizer(PINNVisualizer):
-    """Visualize Hybrid-PINN predictions and compare them with PINN/FVM."""
+    """Visualize Hybrid-PINN predictions against the PINN and FVM reference.
+
+    The subclass retains the baseline, correction, and reconstructed field so
+    their errors and physical diagnostics can be plotted independently.
+    """
 
     def __init__(
             self,
@@ -38,6 +42,10 @@ class HybridPINNVisualizer(PINNVisualizer):
             flux,
             tau_final
             ):
+        """Evaluate all hybrid components on a structured space--time grid.
+
+        Returns grids followed by PINN, correction, and Hybrid-PINN fields.
+        """
         device = next(hybrid_model.parameters()).device
 
         self.model = hybrid_model
@@ -113,6 +121,7 @@ class HybridPINNVisualizer(PINNVisualizer):
         )
 
     def generate_all_plots(self, n_profiles=5, show=False):
+        """Generate and return all standalone-hybrid and comparison figures."""
         self._require_hybrid_data()
         self._require_reference_data()
 
@@ -636,6 +645,7 @@ class HybridPINNVisualizer(PINNVisualizer):
             corrected_dataset_path,
             show=False
             ):
+        """Plot the stored full-physics PDE residual from a corrected dataset."""
         dataset = pd.read_csv(corrected_dataset_path)
         residual_column = "full_physics_pde_residual"
 

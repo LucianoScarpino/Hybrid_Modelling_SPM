@@ -9,8 +9,10 @@ from scipy.special import erfc
 
 
 class SimulationVisualizer(object):
-    """
-    Visualize the Single Particle Model simulation results.
+    """Visualize and validate finite-volume particle simulations.
+
+    It generates field, profile, boundary, mass, and temperature figures and
+    can compare the surface solution with the Guo--White approximation.
     """
 
     def __init__(

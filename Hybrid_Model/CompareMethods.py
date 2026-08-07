@@ -32,6 +32,7 @@ SHOW_IMAGES = True
 
 
 def load_concentration_field(dataset_path):
+    """Load a CSV and return its structured concentration field and states."""
     dataset = pd.read_csv(dataset_path)
 
     concentration_field = (
@@ -60,6 +61,7 @@ def load_concentration_field(dataset_path):
 
 
 def check_common_grid(reference,*models):
+    """Raise when any model does not share the reference space-time grid."""
     for model in models:
         if not np.allclose(reference["radius"],model["radius"]):
             raise ValueError("The radial grids do not match.")
@@ -69,6 +71,7 @@ def check_common_grid(reference,*models):
 
 
 def load_pinn_model():
+    """Load the frozen PINN and return model, checkpoint metadata, and device."""
     network_spec = spec_from_file_location(
         "pinn_neural_network",
         PINN_NETWORK
@@ -95,6 +98,7 @@ def load_pinn_model():
 
 
 def compute_pinn_field(radius,tau):
+    """Evaluate the frozen PINN on ``radius`` x ``tau`` and return field/flux."""
     model,checkpoint,device = load_pinn_model()
 
     rho_grid,tau_grid = np.meshgrid(
@@ -138,6 +142,7 @@ def compute_average(concentration,radius):
 
 
 def compute_error_metrics(reference,prediction):
+    """Return relative L2, RMSE, MAE, and maximum error for two arrays."""
     error = prediction - reference
     reference_norm = np.linalg.norm(reference.ravel())
 
@@ -157,6 +162,7 @@ def compute_mass_balance_residual(
         tau,
         flux_profile
         ):
+    """Return the global mass-balance residual over the supplied time grid."""
 
     average_concentration = compute_average(concentration,radius)
     expected_average = (
@@ -417,6 +423,7 @@ def plot_error_metrics(metrics):
 
 
 def save_metrics(metrics,residuals):
+    """Serialize cross-model error and mass-balance summaries to CSV."""
     rows = []
 
     for method,method_metrics in metrics.items():

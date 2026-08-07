@@ -2,6 +2,12 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 class FiniteVolumeSolver(object):
+    """Assemble the spherical finite-volume equations and integrate them.
+
+    The solver combines concentration and lumped-temperature derivatives into
+    the coupled state advanced by SciPy's implicit BDF integrator.
+    """
+
     def __init__(self):
         pass
 
@@ -14,6 +20,12 @@ class FiniteVolumeSolver(object):
                             surface_volume,
                             diffusion_coeff
                             ):
+        """Evaluate the conservative radial diffusion operator.
+
+        Parameters are the nodal state, control-volume geometry, imposed
+        surface flux, and nodal diffusivity. Returns ``dC/dtau`` at all nodes.
+        """
+
         drho = 1/N
         D_interface = 0.5 * (diffusion_coeff[:-1] + diffusion_coeff[1:])
         
@@ -36,6 +48,7 @@ class FiniteVolumeSolver(object):
             concentration_deivatives,
             temperature_derivatives
             ):
+        """Join concentration and temperature derivatives into one state."""
 
         return np.concatenate((concentration_deivatives,[temperature_derivatives]))
 
@@ -46,6 +59,11 @@ class FiniteVolumeSolver(object):
                         sampling_grid,
                         atol,
                         rtol):
+        """Integrate the coupled initial-value problem.
+
+        Parameters are the right-hand side, initial state, time interval,
+        output grid, and solver tolerances. Returns sampled times and states.
+        """
 
         solution = solve_ivp(
             fun=right_hand,

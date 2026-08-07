@@ -7,7 +7,11 @@ from scipy.integrate import cumulative_trapezoid
 
 
 class HybridSimulationVisualizer(object):
-    """Visualize the corrected concentration field."""
+    """Visualize a corrected concentration field and its mass consistency.
+
+    Corrected and reference datasets are aligned once, then reused to generate
+    radial, boundary, average, field, and mass-balance figures.
+    """
 
     def __init__(
             self,

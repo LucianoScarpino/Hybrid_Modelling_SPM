@@ -8,6 +8,12 @@ from datetime import datetime
 from time import perf_counter
 
 class Processing(object):
+    """Train the concentration-profile correction network.
+
+    The processor minimizes radial residual MSE, selects the best validation
+    state through early stopping, records timing, and saves a checkpoint.
+    """
+
     def __init__(self,train_loader,val_loader):
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -28,6 +34,7 @@ class Processing(object):
             out_dim,
             device
             ):
+        """Fit and return the best validation residual-profile network."""
 
         print("Training...")
         model = FNN(input_dim=input_dim,hidden_dim=hidden_dim,output_dim=out_dim)
@@ -106,6 +113,7 @@ class Processing(object):
 
 
     def validate(self,model,device):
+        """Return sample-weighted validation MSE for ``model``."""
         model.eval()
         val_loss = 0.0
         num_points = 0
@@ -131,6 +139,7 @@ class Processing(object):
             output_name="checkpoint.pth",
             output_folder="./Results/Models"
             ):
+        """Save model weights and training metadata; return the checkpoint path."""
 
         output_folder = Path(output_folder)
         output_folder.mkdir(parents=True,exist_ok=True)

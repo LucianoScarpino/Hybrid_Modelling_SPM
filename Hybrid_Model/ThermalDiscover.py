@@ -21,6 +21,12 @@ def compute_thermal_metrics(
         time,
         T_amb=298.15
         ):
+    """Compute trajectory, peak, phase, and final-temperature errors.
+
+    Inputs are aligned reference/predicted temperatures, current, and time.
+    Returns a dictionary of physical-temperature metrics.
+    """
+
     reference_temperature = np.asarray(reference_temperature, dtype=float)
     predicted_temperature = np.asarray(predicted_temperature, dtype=float)
     current = np.asarray(current, dtype=float)
@@ -76,6 +82,12 @@ def compute_thermal_metrics(
     }
 
 class SINDyc(object):
+    """Identify and evaluate a sparse controlled thermal ODE.
+
+    Multiple training trajectories may be supplied; threshold selection trades
+    rollout accuracy against equation complexity on a validation trajectory.
+    """
+
     def __init__(self,reference_dataset):
         self.reference_dataset = reference_dataset
 
@@ -102,6 +114,10 @@ class SINDyc(object):
             validation_dataset=None,
             T_amb=298.15
             ):
+        """Fit candidate SINDYc equations and select a parsimonious model.
+
+        Returns the selected model, validation rollout, and sparsity threshold.
+        """
         training_datasets = (
             list(self.reference_dataset)
             if isinstance(self.reference_dataset, (list, tuple))
@@ -254,6 +270,7 @@ class SINDyc(object):
         )
 
     def evaluate_dataset(self,model,dataset,T_amb=298.15):
+        """Roll out ``model`` on one trajectory and return fields plus metrics."""
         (
             _,time,temperature,current,temperature_state,control_input
         ) = self._signals(dataset, T_amb)
@@ -326,6 +343,7 @@ class SINDyc(object):
             time,
             current
             ):
+        """Integrate the identified controlled ODE and return temperature in K."""
         
         def current_function(current_time):
             interpolated_current = np.interp(
@@ -374,6 +392,12 @@ class SINDyc(object):
         )
 
 class FFNDiscovering(object):
+    """Learn and roll out a neural approximation of the thermal ODE.
+
+    Scalers are fitted only on training trajectories; independent validation,
+    interpolation, and extrapolation trajectories assess generalization.
+    """
+
     def __init__(self,source_path,datasets_names,T_amb=298.15):
         self.source_path = source_path
         self.datasets_names = datasets_names
@@ -383,6 +407,7 @@ class FFNDiscovering(object):
         self.target_scaler = None
 
     def align_dataset(self,dataset):
+        """Extract one thermal trajectory and estimate ``dtheta/dt``."""
         thermal_data = (
             dataset[["time","current","temperature"]]
             .drop_duplicates("time")
@@ -406,6 +431,11 @@ class FFNDiscovering(object):
         )
 
     def generate_thermal_loaders(self):
+        """Build normalized train/validation/interpolation/extrapolation loaders.
+
+        Returns four loaders while retaining input and target scalers for
+        inverse transformation and closed-loop rollout.
+        """
         data_path = Path(self.source_path)
 
         datasets = []                               #8 datasets, 0-4 for training, 5 for validation, 6-7 for test
@@ -491,6 +521,7 @@ class FFNDiscovering(object):
             train_loader,
             val_loader
             ):
+        """Train the thermal FFN with validation early stopping and return it."""
 
         model = ThermalFFN(device).to(device)
         optimizer = torch.optim.Adam(params=model.parameters(),lr=lr)
@@ -577,6 +608,11 @@ class FFNDiscovering(object):
             test_type,
             T_amb=298.15,
             ):
+        """Test derivative prediction and temperature rollout on one trajectory.
+
+        ``test_type`` selects interpolation or extrapolation. Returns aligned
+        histories, temperature maps, derivatives, and metrics.
+        """
 
         if test_type not in {"interpolation", "extrapolation"}:
             raise ValueError(
@@ -707,6 +743,10 @@ class FFNDiscovering(object):
             device,
             T_amb
             ):
+        """Integrate the learned derivative over a prescribed current history.
+
+        Returns the predicted physical-temperature trajectory in kelvin.
+        """
 
         predicted_theta = np.zeros_like(time, dtype=float)
         predicted_theta[0] = init_temperature - T_amb

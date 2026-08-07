@@ -8,6 +8,12 @@ from scipy.stats import qmc
 from sklearn.model_selection import train_test_split
 
 class DatasetGenerator(object):
+    """Prepare supervised, collocation, boundary, and residual-learning data.
+
+    The class reads reference simulations, applies reproducible splits, and
+    returns PyTorch loaders for the standalone and post-training PINN stages.
+    """
+
     def __init__(self,data_location,length=20301):
         self.data = pd.read_csv(data_location)
         self.N = length
@@ -15,6 +21,7 @@ class DatasetGenerator(object):
         os.makedirs("Data",exist_ok=True)
 
     def get_reference_dataset(self,reference_data_folder="./Data/full_simulation_dataset.csv"):
+        """Load ``rho``, ``tau``, and concentration from the FVM dataset."""
         reference_data = pd.read_csv(reference_data_folder)
 
         reference_dataset = reference_data[["rho","tau","concentration"]].copy()
@@ -22,6 +29,7 @@ class DatasetGenerator(object):
         return reference_dataset
 
     def generate_collocation_points(self):
+        """Extract interior space--time coordinates and save them as CSV."""
         new_frame = self.data.loc[
             (self.data["rho"] > 0.0)
             & (self.data["rho"] < 1.0)
@@ -33,6 +41,7 @@ class DatasetGenerator(object):
         new_frame.to_csv("./Data/collocation_dataset.csv",index=False)
 
     def generate_boundary_points(self,tauf=1.007):
+        """Generate Sobol time samples on the particle surface."""
         sobol = qmc.Sobol(d=1)
         rho = np.ones((self.N,1))
         taut = tauf * sobol.random(self.N)
@@ -47,6 +56,11 @@ class DatasetGenerator(object):
         reference_loader,
         initial_concentration
         ):
+        """Build inputs and targets for residual learning.
+
+        Inputs are reference batches and a frozen PINN; the returned
+        ``TensorDataset`` contains ``(rho, tau, C_PINN)`` and ``C_FVM-C_PINN``.
+        """
 
         pinn_model.eval()
         model_device = next(pinn_model.parameters()).device
@@ -79,6 +93,7 @@ class DatasetGenerator(object):
         test_dataset,
         batch_size=512
         ):
+        """Wrap pre-split residual datasets in train, validation, and test loaders."""
 
         train_loader = DataLoader(
             train_dataset,
@@ -101,6 +116,7 @@ class DatasetGenerator(object):
         return train_loader, val_loader, test_loader
 
     def split_dataset(self,dataset):
+        """Return a reproducible 70/15/15 random split of ``dataset``."""
         train,temporary = train_test_split(dataset,
                                            test_size=0.30,
                                            random_state=26,
@@ -114,6 +130,11 @@ class DatasetGenerator(object):
         return train,validation,test
 
     def generate_dataloaders(self,dataset,labels=True,batch_size=512):
+        """Convert a split numeric dataset into PyTorch loaders.
+
+        ``labels`` selects supervised ``(X, y)`` or coordinate-only batches.
+        Returns train, validation, and test loaders.
+        """
         X_train, X_val, X_test = self.split_dataset(dataset)
 
         if labels:

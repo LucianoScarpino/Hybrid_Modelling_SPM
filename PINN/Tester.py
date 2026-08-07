@@ -7,6 +7,12 @@ from pathlib import Path
 from time import perf_counter
 
 class Testing(object):
+    """Evaluate standalone PINN and residual-correction models.
+
+    The tester reports held-out concentration and physics errors, records
+    inference timing, and appends reproducible CSV histories.
+    """
+
     def __init__(
             self,
             d_test_loader=None, 
@@ -31,6 +37,10 @@ class Testing(object):
             init_concentration,
             flux
             ):
+        """Test PINN accuracy plus PDE and boundary consistency.
+
+        Returns relative field/surface errors, physics RMSE values, and timing.
+        """
         model.eval()
         model_device = next(model.parameters()).device
 
@@ -220,6 +230,7 @@ class Testing(object):
             output_folder="./Results",
             filename="test_history.csv"
             ):
+        """Append one standalone-PINN test record and return its CSV path."""
         
         output_folder = Path(output_folder)
         output_folder.mkdir(
@@ -253,6 +264,11 @@ class Testing(object):
             residual_model,
             residual_loader
             ): 
+        """Test residual prediction and reconstructed Hybrid-PINN accuracy.
+
+        Returns the metric dictionary together with predicted and target
+        correction tensors.
+        """
         
         print("Testing Residual Learner...")
 
@@ -344,6 +360,7 @@ class Testing(object):
             output_folder="./Results",
             filename="residual_test_history.csv"
             ):
+        """Append one residual-model test record and return its CSV path."""
 
         output_folder = Path(output_folder)
         output_folder.mkdir(

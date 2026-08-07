@@ -4,6 +4,12 @@ import os
 from scipy.integrate import cumulative_trapezoid
 
 class PostProcessing(object):
+    """Validate and serialize the outputs of a particle simulation.
+
+    It derives integral quantities, physical checks, and flattened datasets
+    used by the FVM, PINN, and hybrid workflows.
+    """
+
     def __init__(
         self,
         tau,
@@ -30,6 +36,7 @@ class PostProcessing(object):
         self.temperatures = temperatures
 
     def compute_expected_mass_balance(self):
+        """Return the average concentration implied by the applied flux."""
 
         integral_flux = cumulative_trapezoid(
             self.dimensionless_flux,
@@ -44,6 +51,7 @@ class PostProcessing(object):
         return expected_average_concentration
 
     def compute_average_concentration(self):
+        """Return the spherical volume average at every stored time."""
         numerator = np.trapezoid(
             self.concentration * self.radius[:, None] ** 2,
             self.radius,
@@ -168,6 +176,14 @@ class PostProcessing(object):
         return dataset, global_outputs
 
     def get_pinn_training_arrays(self):
+        """Build PINN coordinates and concentration targets.
+
+        Returns
+        -------
+        tuple
+            Input coordinates, concentration labels, and global histories.
+        """
+
         dataset, global_outputs = self.generate_dataset()
 
         X = np.column_stack((   dataset["rho"],
@@ -186,6 +202,11 @@ class PostProcessing(object):
                     full_dataset_filename="full_simulation_dataset.csv",
                     pinn_dataset_filename="pinn_training_dataset.csv",
                     ):
+        """Save the full FVM and reduced PINN datasets.
+
+        Parameters are the destination, flattened simulation data, and PINN
+        arrays. Returns the two generated CSV paths.
+        """
 
         os.makedirs(folder_path,exist_ok=True)
 
@@ -237,6 +258,11 @@ class PostProcessing(object):
         folder_path="./SPMDataset",
         simplified_dataset_name="simplified_simulation_dataset.csv"
         ):
+        """Save a complete simplified-model concentration grid.
+
+        Inputs contain the grid, concentration field, derived histories, and
+        destination. Returns the generated CSV path.
+        """
 
         tau = np.asarray(tau)
         time = np.asarray(time)

@@ -47,6 +47,7 @@ def select_device():
 
 
 def load_pinn_model(checkpoint_path, device):
+    """Load a trained PINN checkpoint and return model plus metadata."""
     checkpoint = torch.load(
         checkpoint_path,
         map_location=device,
@@ -60,6 +61,7 @@ def load_pinn_model(checkpoint_path, device):
 
 
 def find_latest_residual_checkpoint(models_folder):
+    """Return the newest timestamped residual-model checkpoint."""
     candidates = list(
         models_folder.glob("residual_model_*.pth")
     )
@@ -77,6 +79,7 @@ def find_latest_residual_checkpoint(models_folder):
 
 
 def load_residual_model(checkpoint_path, device):
+    """Load and freeze a residual FFN from ``checkpoint_path``."""
     checkpoint = torch.load(
         checkpoint_path,
         map_location=device,
@@ -99,6 +102,7 @@ def generate_pinn_plots(
         num_tau_points,
         show
         ):
+    """Generate standalone PINN plots and FVM comparison diagnostics."""
     visualizer = PINNVisualizer(
         num_rho_points,
         num_tau_points,
@@ -133,6 +137,7 @@ def generate_hybrid_plots(
         device,
         show
         ):
+    """Generate Hybrid-PINN plots without retraining either component."""
     hybrid_model = HybridModel(
         pinn_model,
         residual_model

@@ -13,6 +13,12 @@ from scipy.special import erfc
 
 
 class PINNVisualizer(object):
+    """Generate standalone PINN plots and FVM comparison diagnostics.
+
+    The class evaluates a trained model on a structured grid, aligns reference
+    data, computes physical/error summaries, and saves publication-ready plots.
+    """
+
     def __init__(
             self,
             num_rho_points=101,
@@ -68,6 +74,10 @@ class PINNVisualizer(object):
             flux,
             tau_final
             ):
+        """Evaluate ``model`` on the requested structured ``(rho, tau)`` grid.
+
+        Returns radius, dimensionless time, physical time, and concentration.
+        """
         device = next(model.parameters()).device
 
         self.model = model
@@ -289,6 +299,7 @@ class PINNVisualizer(object):
             )
 
     def check_hard_constraints(self):
+        """Return maximum initial-condition and centre-symmetry errors."""
         self._require_plot_data()
 
         initial_condition_max_error = float(
@@ -367,6 +378,10 @@ class PINNVisualizer(object):
             number_eigenfunctions=5,
             show=True
             ):
+        """Compare the PINN surface history with the Guo--White approximation.
+
+        Returns the figure, axis, and surface-concentration RMSE.
+        """
         self._require_plot_data()
 
         surface_concentration = self.concentration[-1, :]
@@ -493,6 +508,7 @@ class PINNVisualizer(object):
         return animation
 
     def show_all(self, animate=True, show=True):
+        """Generate all standalone PINN figures and optionally animate them."""
         self._require_plot_data()
 
         self.plot_radial_profiles(show=show)
@@ -508,6 +524,10 @@ class PINNVisualizer(object):
         return None
 
     def load_reference_data(self, reference_dataset_path):
+        """Load and align an FVM concentration field with the plotting grid.
+
+        Returns aligned radius, dimensionless time, physical time, and field.
+        """
         self._require_plot_data()
 
         reference_frame = pd.read_csv(reference_dataset_path)
@@ -690,6 +710,7 @@ class PINNVisualizer(object):
             )
 
     def compute_comparison_metrics(self):
+        """Return global, boundary, average, and phase-wise PINN errors."""
         self._require_reference_data()
 
         pinn_average = self.compute_average_concentration()
@@ -749,6 +770,7 @@ class PINNVisualizer(object):
         return metrics
 
     def run_comparative_checks(self, mass_balance_tolerance=1e-4):
+        """Return mass, bounds, and hard-constraint checks for PINN and FVM."""
         self._require_reference_data()
 
         pinn_mass_passed, pinn_mass_residual = (
@@ -1165,6 +1187,7 @@ class PINNVisualizer(object):
         return fig, axes
 
     def show_comparison(self, show=True):
+        """Generate the complete set of FVM--PINN comparison figures."""
         self._require_reference_data()
 
         self.plot_comparison_radial_profiles(show=show)

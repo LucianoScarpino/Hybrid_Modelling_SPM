@@ -7,6 +7,12 @@ from datetime import datetime
 from time import perf_counter
 
 class Testing(object):
+    """Evaluate and reconstruct the FVM--FFN hybrid concentration model.
+
+    It enforces a zero-volume-average correction, compares baseline and hybrid
+    profiles, records timing/physics metrics, and exports corrected datasets.
+    """
+
     def __init__(self,test_loader,radius,simplified_profiles):
         self.test_loader = test_loader
         self.radius = np.asarray(radius,dtype=float)
@@ -45,6 +51,11 @@ class Testing(object):
             filename="test_history.csv",
             variant_number=None
             ):
+        """Evaluate held-out profile corrections and save aggregate metrics.
+
+        Inputs include model, execution metadata, and output settings. Returns
+        the corrected-field mean-squared error.
+        """
         
         test_loss = 0.0
         num_points = 0
@@ -131,6 +142,7 @@ class Testing(object):
 
     @staticmethod
     def compute_average_weights(radius):
+        """Return normalized trapezoidal weights for a spherical volume average."""
         radius = np.asarray(radius,dtype=float)
 
         if radius.ndim != 1 or len(radius) < 2:
@@ -155,6 +167,7 @@ class Testing(object):
         return spherical_weights / np.sum(spherical_weights)
 
     def enforce_zero_average_correction(self,corrections):
+        """Project each radial correction onto the zero-volume-average subspace."""
         weights = torch.as_tensor(
             self.average_weights,
             dtype=corrections.dtype,
@@ -187,6 +200,7 @@ class Testing(object):
         )
 
     def compute_concentration_metrics(self,targets,predictions):
+        """Return baseline/hybrid field, surface, average, and bounds metrics."""
         targets = np.asarray(targets,dtype=float)
         predictions = np.asarray(predictions,dtype=float)
 
@@ -262,6 +276,10 @@ class Testing(object):
             device,
             simplified_dataset
             ):
+        """Predict mass-neutral corrections for a full simplified dataset.
+
+        Returns tensors containing simplified concentrations and corrections.
+        """
 
         profiles = (
             simplified_dataset
@@ -320,6 +338,7 @@ class Testing(object):
             filename="test_history.csv",
             variant_number=None
             ):
+        """Append one hybrid test record and return the results CSV path."""
         
         output_folder = Path(output_folder)
         output_folder.mkdir(
@@ -365,6 +384,11 @@ class Testing(object):
             output_path,
             filename="corrected_dataset.csv",
             ):
+        """Replace concentration-derived columns and save a corrected grid.
+
+        Inputs are a complete simplified dataset and corrected concentration
+        matrix. Returns the generated CSV path.
+        """
 
         output_path = Path(output_path)
         output_path.mkdir(exist_ok=True,parents=True)
