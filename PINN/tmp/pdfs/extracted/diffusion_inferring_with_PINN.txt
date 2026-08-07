@@ -1,0 +1,933 @@
+===== PAGE 1 =====
+Inferring solid-state diffusivity in lithium-ion battery active materials: improving
+upon the classical GITT method
+A. Emir G¨ umr¨ uk¸ c¨ uo˘ glu,1 James Burridge, 1 Kieran O’Regan, 2 and Jamie M. Foster 1, 3
+1School of Mathematics and Physics, University of Portsmouth, Lion Terrace, Portsmouth PO1 3HF, UK
+2About:Energy, Labs Camden - Atrium The Stables Market, Chalk Farm Road, London, England, NW1 8A
+3The Faraday Institution, Quad One, Becquerel Avenue, Harwell Campus, Didcot, OX11 0RA, UK
+(Dated: April 26, 2024)
+The Galvanostatic Intermittent Titration Technique (GITT) is a ubiquitous method for deter-
+mining the solid-state diffusivity in lithium-ion battery materials. However, it is notoriously time-
+consuming and relies upon assumptions whose applicability is questionable. We propose a novel
+methodology that allows inference of the diffusivity for a more general class of data that is simpler
+and faster to harvest. We infer the diffusivity (as a function of stoichiometry) by minimising the
+residual sum of squares between data and solutions to a spherically-symmetric diffusion model in
+a single representative active material particle. Using data harvested from the NMC cathode of a
+commercial LG M50 cell we first demonstrate that our method is able to reproduce the diffusivities
+inferred by the GITT, which requires ten days of galvanostatic intermittent titration data. We then
+demonstrate that our method reliably reconstructs diffusivity using significantly less data. Despite
+arising from quick-to-measure data, our method more accurately infers diffusivities. This work is
+a contribution towards developing faster and more reliable techniques in parameter inference for
+lithium-ion batteries.
+I. INTRODUCTION
+The Doyle-Fuller-Newman (DFN) model [1–4] is widely acknowledged as the gold standard in physics-based mod-
+elling for lithium-ion batteries and offers a framework for understanding and predicting device behaviour at the level
+of individual and electrode pairs. Provided that the parameterisation has been performed accurately, the DFN model
+has been shown to reliably predict the electrochemical response of real batteries in realistic operating conditions; with
+observed and predicted voltages often matching to within a single percentage [5–8]. So ubiquitous is the DFN model
+that a wealth of literature exists on various model simplifications and extensions, many of which are discussed in a
+recent review by Brosa Planella et. al [9]. One prevalent class of simplified DFN models are the so-called single particle
+models (SPM) [10–13]. These are generally accurate for low and moderate C-rate operating ( <1C, or thereabouts), in
+which all the particles in each electrode behave similarly and so the model can be reduced to that of lithium transport
+within one “representative” particle in each electrode. The distribution of lithium ions within these representative
+particles are assumed to obey a spherically-symmetric diffusion process.
+As alluded to above, the predictive power of the DFN, and related physics-based models, is predicated upon
+knowledge of parameters that cannot be directly measured but must instead be inferred through physical principles
+and indirect experimental observations. Therefore, the process of parameterisation – the accurate inference of these
+parameters – is crucial for developing effective battery models, which in turn are key to advancing device improvement
+and control [14].
+One of the most influential parameters in physics-based models (especially SPMs) is the solid state diffusivity of
+lithium-ions within the active materials, D(c), which varies (often rather strongly) with concentration c, and must
+be inferred. The most widespread inference approach is to collect data with the Galvanostatic Intermittent Titration
+Technique (GITT), where the electrode is forced with a small constant current for a short time, then allowed to relax
+until the lithium ions are fully diffused, with the forcing–relaxation cycle repeated until the state-of-charge range of
+interest is covered. This technique allows each forcing-relaxation cycle to be analysed separately as an independent
+diffusion problem with constant diffusivity and homogeneous initial concentration. Using the analytic solution of a
+semi-infinite slab (or, the Sand equation [15]), one can determine a diffusion constant corresponding to the small range
+of concentrations in the cycle [16].
+Despite its widespread application, the GITT approach presents several limitations, with one of the most prominent
+being the practical challenge of data collection. For typical particle sizes R ∼ O (1)µm and diffusion constants
+D ∼ O (10−15)m2/s, the constant current should be applied for O(10) seconds to accurately determine D(c). As a
+consequence, in order to adequately reconstruct D(c) across the relevant range of concentrations, it is necessary to
+apply low currents several hundred times. Each pulse is followed by a relaxation period, typically lasting around an
+hour, to restore uniform concentration, a prerequisite for applying the Sand equation to the next pulse. Thus the
+total data collection time can span weeks. A second type of issue is that of the questionable embedded assumptions.
+The GITT inference is carried out using a solution that pertains for semi-infinite slabs, yet the models in which the
+arXiv:2404.16658v1  [physics.app-ph]  25 Apr 2024
+
+===== PAGE 2 =====
+2
+parameters will be used contain diffusion equations in a sphere. Thus there is inconsistency in between inference
+and prediction. The semi-infinite slab approximation is appropriate for pulse durations tpulse much shorter than the
+diffusion time scale td = R2/D. The accuracy decreases as the ratio tpulse/td increases, with a 5% deviation from
+the spherical solution at tpulse/td ≈ 3 × 10−2 [17]. For tpulse > 0.04 td, the Sand equation becomes inadequate for
+determining D(c) (a detailed discussion is presented in Appendix A).
+In addition to the GITT, other techniques to determine the diffusivity exist. Cyclic voltammetry allows estimation of
+the average (constant) diffusivity [18, 19]; electrochemical impedance spectroscopy [20]; the potentiostatic intermittent
+titration technique [21]; the intermittent current interruption technique [22].
+In this paper, we propose determining the diffusivity by inference from spherical diffusion model (ISDM). In the
+spirit of SPMs, we solve the fully nonlinear spherical diffusion model in a single representative particle for a known
+surface lithium flux (directly proportional to the known current applied to/drawn from the cell) and determine the
+concentration at the particle surface. Via the equilibrium overpotential, Ueq(c), we calculate the cell voltage, V (t),
+and by comparing this quantity to the observed cell voltage, we infer D(c). In contrast with the GITT, our approach
+offers the following benefits: (i) it can be applied to data with any current profile as long as the concentration spans
+the range of state of charge of interest, thereby allowing for very significantly reduced data collection times; (ii) the
+model being used for inference is compatible with those in which the parameters will subsequently be used to make
+predictions, thus there are no embedded assumptions and it is therefore valid for all diffusion timescales; (iii) as we
+will show the parameters inferred by ISDM may offer improved predictive capability for many use cases of interest.
+To validate our approach, we use half-cell data harvested from a commercial LG M50 NMC811 cathode from Ref.[23]
+and show that by using data covering a significantly shorter time, we are able to match, and arguably improve upon,
+the parameter inference produced by the GITT. The remainder of this paper is organised as follows. In Section II,
+we outline the mathematical method underlying ISDM. We validate our approach in Section III using both synthetic
+and experimental data for GITT current profiles. In Section IV we demonstrate the generality of our approach by
+inferring diffusivity from experimental data generated by applying a constant current. We then compare ISDM to
+the GITT in recovering a known diffusivity in a full DFN model simulation data in Section V. We conclude with
+Section VI where we summarise and discuss our results.
+II. THE ISDM APPROACH
+In this section we present the system of equations (reminiscent of a SPM) that lie at the heart of the ISDM. We
+then discuss the details of the inference approach before moving onto validation in Section III.
+For the present study, our aim is to write down the simplest physics-based model that contains only the parameters
+that one infers with the GITT, thereby ensuring an even playing field in terms of what we are expecting to learn from
+ISDM vs. GITT. If confronted with data where the influence of other parameters are nonnegligible, then our ISDM
+methodology remains robust once one the inference model is extended to include those parameters concurrently with
+diffusivity.
+A. A single particle model
+We consider a representative particle with radius R, where the molar Li ion concentration c(t, r) on the sphere
+follows the radially symmetric diffusion equation
+∂c
+∂t = 1
+r2
+∂
+∂r
+
+r2 D(c) ∂c
+∂r
+
+, (1)
+subject to the initial condition
+c(0, r) = c0 , (2)
+and boundary conditions
+∂c
+∂r
+
+r=0
+= 0 , −D(c) ∂c
+∂r
+
+r=R
+= j , (3)
+where j(t) is the molar surface flux, describing the rate of Li ions transferred across the particle’s surface. Under
+the usual SPM assumption that the dynamics of each particle are very similar, we can (to a good approximation)
+
+===== PAGE 3 =====
+3
+apportion the current applied to/drawn from the cell, I(t), equally between particles, such that
+j = ± I
+F n 4 π R2 , (4)
+where n is the number of active particles in the electrode, and F = e NA = 9.6485 × 104C/mol is Faraday’s constant.
+The sign above is negative for the cathode and positive for the anode, so that positive values of I(t) correspond to a
+lithiating cathode (and delithiating anode) and hence battery discharging.
+In most experiments, one applies I(t) and measures the voltage V (t). Neglecting the reaction overpotential and
+internal resistance, the dominant contribution to the voltage comes from the equilibrium potential, that is,
+V = Ueq(csurf) , (5)
+where csurf(t) = c(t, R) is the surface concentration of Li ions.
+B. Inference of diffusivity and the parameterisation scheme
+Let D = {ti, Ii, Vi}N
+i=1 be an experimental data and let us assume that the particle number n, radius R and Ueq(c)
+are known from independent measurements. In order to infer concentration-dependent diffusivity, we parameterise it
+as D(c; θ), where θ is the parameter vector.
+The spatial derivatives in Eq. (1) are treated using the conservative control-volume method [24] thereby reducing
+the PDE to a system of coupled ODEs for the concentrations at given collocation points, ri, as functions of time only.
+We proceed to numerically solve the ODE system for given parameters θ. Using the solution on the particle surface
+c(t, R; θ), we define the loss function as the mean of the residual sum of squares:
+L(θ) = 1
+N
+NX
+i=1
+(Vi − Ueq(c(ti, R; θ)))2 . (6)
+The parameters θ can be estimated by minimising the loss:
+ˆθ = argmin
+θ
+L(θ) , (7)
+which is equivalent to a maximum likelihood estimate under the assumption of Gaussian errors.
+The main challenge in this approach is the parameterisation of D(c). To model diffusivity, there exists an infinite
+number of choices of functional forms. Parameterisations with few number of parameters generally do not reflect
+the complexity of the GITT estimation. On the other hand, increasing the number of parameters leads to a high
+dimensional parameter space which makes it impractical to scan for a global minimum of the loss function.
+In this proof-of-principle study, we model D(c) as a piecewise linear function, where the N dimensional parameter
+vector θ is defined as the array of diffusivity values at predetermined knots. To estimate these parameters, we first
+bin the time series data into N partitions. Each partition α has the corresponding data:
+Dα = {tαi, Iαi, Vαi}Nα
+i=1 , (8)
+where Nα is the number of data points in partition α ∈ {1, . . . ,N }. We evolve the diffusion equation for each partition
+sequentially, assuming a series of Fickian diffusion processes with constant diffusivity θα in each segment, and solve
+the corresponding optimisation problem. Defining the local loss in partition α as
+Lα(θα) = 1
+Nα
+NαX
+i=1
+[Vαi − Ueq(c(tαi, R; θα))]2 , (9)
+we estimate the constant diffusivity θα as
+ˆθα = argmin
+θα
+Lα(θα) . (10)
+The value of the corresponding knot ˆ cα is defined by evolving the diffusion equation for the partition using the
+estimated diffusivity ˆθα and averaging it over time and volume:
+ˆcα = 3
+Tα R3
+Z R
+0
+Z tα1+Tα
+tα1
+r2c(t, r; ˆθα) dt dr , (11)
+
+===== PAGE 4 =====
+4
+where Tα is the duration of the evolution that falls into partition α. At the end of this procedure, we obtain N pairs
+of (ˆcα, ˆθα) values which can be seen as sample points from the full diffusivity function D(c) that is most likely to
+produce the experimental data in each partition.
+It should be noted that this approach is not a comprehensive optimisation strategy in the global sense. For scenarios
+in which the concentration gradients within the particle are minimal, e.g. a galvanostatic intermittent titration (GIT)
+experiment with slow constant charge input and frequent relaxation periods, the local optimisation procedure yields
+highly precise outcomes. On the other hand, for cases with high overlap in c values across partitions, it is necessary
+to transition to a more global optimisation scheme. In this study, this transition is accomplished by our second
+optimisation phase, where D(c; θ) is initialised as a piecewise linear function with knots (ˆcα, ˆθα) obtained in the first
+phase; the values of ˆθα are then improved towards the minimum of the global (or quasi-global) loss function using a
+numerical gradient algorithm. The updated parameter values are then used to construct the final inferred function
+ˆD(c) = D(c; ˆθ). The pseudocode for our two-stage optimisation approach is presented in Appendix B.
+For the success of the first (local) optimisation stage, the selection of the number and locations of the partitions
+is a crucial step. The optimum choice heavily relies on the form of input current and the density of data, such that
+each partition contains sufficient information about the diffusion of Li ions. For instance, a typical GIT experiment
+consists mostly of stabilisation data, where the potential does not noticeably change; these data points contain minimal
+information once the relaxation is well under way. For the specific example of GIT data, a natural choice is to select
+the partitions such that they each coincide with at least one pulse and relaxation period to democratically distribute
+the diffusion information across the partitions. On the other hand, for an experiment where there is no obvious choice
+for partitioning, e.g. a battery sourced by a continuous constant current (see Section IV), one option is to bin the
+data such that each partition contains an equal amount of useful data points, which we define as points where the
+change in voltage ∆ V is above a certain pre-set threshold value ∆ Vmin. 1
+The parameterisation and optimisation schemes adopted in this study are only a subset of possible approaches for
+ISDM. For materials with well-characterised diffusion properties, adopting a physics-informed parameterisation will
+closely align the model with the underlying physical principles, while reducing the number of inferred parameters
+θ significantly. Additionally, the adjoint sensitivity method, which facilitates an effective use of gradient descent
+variants, can be adopted as an alternative optimisation strategy. For the present study, where a major focus is a
+GIT experiment with very large number of data points, a global parameterisation with adjoint methods proves to
+be computationally expensive and can become unstable due to the complexity of the diffusion equation. Instead,
+the two-stage approach adopted here allows us to analyse individual segments of data separately with parameters
+localised in each segment, providing a more practical application of ISDM in this initial study.
+III. VALIDATION
+In this Section, we show that ISDM produces a diffusivity that is consistent with the one obtained with the
+GITT. For the purposes of demonstration we will use a commercially relevant cathode comprised of NMC811. The
+measurements have already been reported in Ref. [23]. In the interests of brevity we refer the interested reader to [23]
+with a brief summary of the data collection method given below.
+The data contains four cycles: the first one (cycle 0) is a charging cycle with constant current for about 10 hours,
+followed by (cycle 1) a discharge cycle of the same duration, but opposite current. Then there is a GIT charge cycle
+(cycle 2) consisting of 249 periods of constant pulse (150 seconds) and relaxation (1 hour). The last part of the
+data is a GIT discharge cycle (cycle 3) with the same parameters for 250 periods, with an opposite-sign current. For
+this experiment, a 15 mm diameter and 75 .6 µm thickness coin cell is used, and the constant current for all cycles is
+I = 0.78 mA (or C/10). The average particle radius is R = 5.22 µm. The delithiation starts at minimum state of
+charge with fully diffused concentrationc = 0.9084 cmax. Maximum concentration is reported as cmax = 51765 mol/m3
+[23].
+In this section, we establish the diffusivity derived from the conventional GITT procedure, denoted as DGITT, as
+the baseline diffusivity for comparison with the ISDM results. We calculate DGITT by applying the Sand equation to
+each forcing-relaxation period within the GIT charging data.
+1 If the current direction remains the same throughout the experiment, an alternative would be to define the partitions such that the
+transferred electric charge is uniformly distributed across the partitions.
+
+===== PAGE 5 =====
+5
+A. Self-Validation
+We start by demonstrating the efficacy of the ISDM method in accurately reproducing diffusivity. We generate
+synthetic data by solving the spherical diffusion equation for a particle using DGITT(c) and Ueq(c), both obtained
+from the conventional GITT approach. The diffusion equation is forced by the same current time series in the GIT
+charging data, with 249 periods of pulse and relaxation.
+We note that this self-validation step focusses solely on the performance of the ISDM method and is not influenced
+by the validity of the semi-infinite slab approximation or the suitability of the spherical diffusion model for this
+context; within the scope of this synthetic data analysis, the DGITT(c) function is treated as the “true” diffusivity.
+We divide the synthetic data into N = 50 partitions, such that each partition contains 5 whole GIT periods,
+with the last one covering 4. For the first stage of the optimisation, we create a uniform grid with 10 points for
+log10
+
+1015
+m2/s D
+
+within the range [ −2, 2]. We evaluate the loss at these points to identify the minimum. If a minimum
+is located, the range encompassed by the grid point and its two adjacent points is subdivided into 10 finer points,
+and this process is repeated until desired accuracy is reached. If no minimum is found within this range, the number
+of grid points is expanded by a factor of 10, and the range is extended by 1 unit on both sides. As a result we obtain
+50 pairs of (ˆcα, ˆθα).
+The second stage of the optimisation scheme is intended to change the inferred diffusivity towards the minimum of
+the global loss. To this goal, we adopt a variant of cyclic coordinate descent algorithm. We construct the stepwise
+linear D(c; θ) function with parameters θ initialised at the estimates ˆθ from the previous step. For the GIT data,
+there is minimal overlap in concentration across the partitions; the slow forcing and relaxation periods prevent the
+growth of c gradients. We therefore employ a quasi-global loss function for each partition, defined as:
+L(β)
+α (θα) = 1
+Pα+β
+i=α−β Ni
+α+βX
+i=α−β
+NiX
+j=1
+[Vi,j − Ueq (c(ti,j, R; θα))]2 , (12)
+where β is the number of neighbours (left and right) for each partition α. For inference from synthetic data we use
+β = 2, that is, for each θα parameter, we include 5 partitions to calculate the quasi-global loss (12). We then estimate
+the gradient of L(β)
+α (θα) with respect to θα numerically and update the values of ˆθα, sequentially going over each
+partition. We repeat this procedure until the global loss L(θ) converges and we obtain our final ˆD(c) = D(c; ˆθ) from
+ISDM.
+The results of ISDM procedure is shown in Fig.1 for N = 50 partitions, along with the “true” value DGITT(c)
+which was used to generate the synthetic data. In the plot, we also show ˜DGITT(c) which is obtained by applying
+the traditional GITT to this synthetic data for comparison. For the synthetic data, the ISDM result ˆD(c) is in good
+agreement with the original DGITT(c) used to generate the data.
+To quantify the accuracy of the predictions from our model, we first note that an overwhelming portion of the data
+is determined by the correct choice of the equilibrium potential Ueq(c). Therefore we expect the predictions to be very
+close to the data. Instead of directly quantifying how much of the data is explained, we instead quantify how much of
+the data in excess of a null model can be predicted by the model. To this end, we choose a null model corresponding
+to D(c) → ∞, which predicts instantaneous diffusion, i.e.
+V null(t) = Ueq(cav(t)) , (13)
+where cav(t) is the average concentration across the particle at time t, and Ueq is determined from the relaxation
+values in the GITT forcing-relaxation data. Defining the voltage data in excess of the null model as
+∆Vi = Vi − V null(ti) , (14)
+the predicted voltage deviation from the null model for a given D(c) is
+∆V pred
+i (D) = Ueq(cpred(ti, R; D)) − V null(ti) , (15)
+where cpred(t, R; D) is the concentration predicted by the specific D(c) model used.
+We define the coefficient of determination R2 as the proportion of variability in the dataset beyond that explained
+by the null model, accounted for by a spherical diffusion model with diffusivity D(c). Specifically,
+R2(D) = 1 −
+PN
+i=1
+
+∆Vi − ∆V pred
+i (D)
+2
+PN
+i=1
+
+∆Vi − 1
+N
+PN
+j=1 ∆Vj
+2 . (16)
+
+===== PAGE 6 =====
+6
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+10 18
+10 17
+10 16
+10 15
+10 14
+D(c) [m2/s]
+DGITT ("True" value)
+D(c) (ISDM with = 50)
+DGITT (Traditional GITT on synthetic data)
+FIG. 1. The diffusivity inferred from a synthetic data using ISDM on 50 partitions. The current is chosen to coincide with the
+GIT charge cycle in [23]. The solid black line shows the true value of D(c) used to generate the synthetic data, while the solid
+blue line is the result of applying the traditional GITT on the synthetic data.
+Note that R2 ∈ (−∞, 1], where 1 indicates a perfect fit, values close to 0 suggest that the model does not improve
+upon the null model, and negative values reveal that the model adds more variability than the null model. The
+coefficient of determination for the ISDM estimate ˆD(c) is calculated as follows:
+R2( ˆD) = 0.997 , (17)
+that is, ISDM yields a model that can account for almost all the variability in the data. For comparison we apply
+the traditional GITT, using the Sand equation on the synthetic data to infer the diffusivity ˜DGITT(c). This model
+produces less accurate predictions compared to ISDM, with R2( ˜DGITT) = 0.800.
+Since the true diffusivity is known for the synthetic data, we can also define a measure of accuracy for D(c) itself:
+R2
+D(D) = 1 −
+D
+(D(c) − Dtrue)2
+E
+cD
+(Dtrue(c) − ⟨Dtrue(c)⟩c)2
+E
+c
+, (18)
+where ⟨f(c)⟩c denotes the mean of a function f(c) over the range of c. 2 The metric R2
+D quantifies the proximity of
+the estimated diffusivity to its true value. For the ISDM estimate, we calculate
+R2
+D( ˆD) = 0.991 , (19)
+while using the diffusivity obtained by applying the traditional GITT to the synthetic data, we getR2( ˜DGITT) = 0.882.
+This demonstrates the self-consistency of our approach. Since the synthetic data was generated from a single particle
+spherical diffusion model, it is no surprise that the spherical-diffusion-based ISDM performs better than GITT, which
+is based on semi-infinite slab approximation.
+2 It is important to note that this measure loses significance if Dtrue is flat, i.e. does not exhibit variations. Nevertheless, for the cases
+examined in this paper, the diffusivities typically have strong dependence on concentration and R2
+D proves to be a reliable metric for
+assessing the differences of the inferred diffusivities from the true one.
+
+===== PAGE 7 =====
+7
+B. Validation with real data
+After confirming that the ISDM approach can reproduce the trueD(c) from synthetic data, we move on to analysing
+the real data from Ref.[23]. Specifically, we consider the GIT charging cycle from which we inferred DGITT(c) in the
+previous sub-section using the conventional GITT. We note that theUeq(c) function used in this section is also inferred
+from the GIT data.
+After applying the partitioning and optimisation scheme outlined in section III A, we obtain the ISDM result for
+diffusivity. In Fig.2, we show the inferred ˆD(c) for 50 partitions.
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+10 18
+10 17
+10 16
+10 15
+10 14
+D(c) [m2/s]
+D (ISDM with = 50)
+DGITT (Traditional GITT)
+FIG. 2. The diffusivity inferred from real GIT charging data using ISDM on 50 partitions. We also show DGITT(c) obtained
+with the conventional GITT, i.e. by applying the Sand equation to each GIT period in the data.
+The coefficient of determination, as defined in Eq.(16), for the ISDM result is computed as
+R2( ˆD) = 0.501 , (20)
+that is, the predictive model accounts for half of the deviations in the data from the null model. On the other
+hand, using DGITT, i.e. the diffusivity obtained by applying the Sand equation, this quantity is slightly lower, with
+R2(DGITT) = 0.470.
+Interestingly, ISDM estimates a diffusivity ˆD(c) that is generally lower than the conventional GITT result DGITT.
+The mean relative deviation is 48%. We show the plot for the percentage relative deviations for all available c values
+in Figure.3 We see that the typical relative deviation is of order O(10)%. The largest contribution arises from the
+marginal values of concentration. Constraining the comparison to c ∈ [0.3, 0.9], the mean relative percentage deviation
+drops down to 34%. In Appendix A, we showed how the GITT result suffers from errors due to approximating the
+spherical particle with a semi-infinite slab, which would render the ISDM result more accurate. On the other hand,
+the GITT is insensitive to constant contributions to the output voltage during the pulse regime, such as internal
+resistance effects.
+IV. INFERENCE WITH CONSTANT CURRENT PROFILE
+So far, our application of ISDM has been limited to GIT data, serving mainly for comparison with the traditional
+GITT-based methods. On the other hand, the true strength of ISDM lies in its versatility to infer diffusivity across
+the range of concentration spanned by any current profile.
+
+===== PAGE 8 =====
+8
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+100
+101
+102
+103
+Relative percentage deviation:  100 × |1 D(c)
+DGITT(c) |
+FIG. 3. The relative percentage deviation of the ISDM result ˆD(c) with respect to DGITT(c), both estimates inferred from the
+same GIT charge data.
+In this section, we consider the constant current measurements of Chen et al [23] and use ISDM to estimate D(c).
+The data contains a 10-hour measurement where the electrode is charged with a constant C/10 current.
+A vital component of our inference methodology is the equilibrium potential Ueq(c), which, until now, has been
+derived from GIT data. For ISDM to be used as a swift alternative to the GITT, it becomes essential to determine
+Ueq(c) without resorting to the extensive, weeks-long measurements traditionally required. In this section, we perform
+ISDM using two different equilibrium potentials: U (GITT)
+eq (c) obtained from GIT data and U (pOCV)
+eq (c) obtained from
+C/20 charge/discharge data. The latter data set [25] was acquired from a half cell cathode and consists of alternating
+charge and discharge cycles, repeated 10 times. We estimate U (pOCV)
+eq (c) as outlined in Appendix C, averaging over
+the 10 charge/discharge cycles.
+For partitioning, we distribute the useful data evenly into 50 partitions. We define a useful data where the change
+in output voltage between two consecutive points exceeds 2 × 10−4V.
+The first stage of optimisation is performed as prescribed in Sec.III A, allowing us to obtain constant diffusion
+values ˆθα for each partition, corresponding to the average concentrations ˆ cα. For the second stage, the quasi-global
+loss definition is no longer useful, since the constant current introduces nonnegligible gradients across the particles and
+the parameters ˆθα are no longer localised to their corresponding partitions. We therefore use a traditional gradient
+descent algorithm where we use the global loss function (6) and numerically estimate the gradients with respect
+to every parameter ˆθα, then update all parameters simultaneously towards the minimum of the global loss until
+convergence.
+We show the results in Figure.4 for inference from C/10 charging data, compared with the corresponding GITT
+result, using both choices of the equilibrium potential. The coefficients of determination for the two case are calculated
+as:
+R2( ˆD) = 0.863 ,
+
+using U (GITT)
+eq
+
+,
+R2( ˆD) = 0.860 ,
+
+using U (pOCV)
+eq
+
+. (21)
+where for the computation of model predictions, we use the corresponding Ueq(c) that was used when inferring each
+ˆD(c). For comparison, the traditional GITT result gives R2(DGITT) = 0.0017 (using U (GITT)
+eq ).
+The poor performance of DGITT in explaining the constant charge data underlines the inconsistency between the
+predictive model (single particle spherical diffusion) and the inference model (single particle slab diffusion), which
+
+===== PAGE 9 =====
+9
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+10 18
+10 17
+10 16
+10 15
+10 14
+D(c) [m2/s]
+D (ISDM with = 50 and U(GITT)
+eq )
+D (ISDM with = 50 and U(pOCV)
+eq )
+DGITT (Traditional GITT)
+FIG. 4. The diffusivity D(c) inferred from ISDM on real C/10 charging data of Ref.[23], using 50 partitions. The blue and
+red plots lines correspond to ˆD(c) inferred using Ueq(c) from GITT and pOCV, respectively. The orange line represents the
+diffusivity obtained with the conventional GITT.
+becomes particularly apparent when the system is subjected to a more generalised forcing beyond the periodic pulse-
+relaxation signal.
+V. ACCURACY COMPARISON: ISDM VS GITT
+In Sections III B and IV, we have demonstrated that ISDM outperforms the traditional GITT in explaining the
+data. However, these assessments are primarily consistency tests that hinge on the validity of the single-particle
+approximation. Moreover, we have neglected any contribution from e.g. overpotentials, electrolyte. Given these
+constraints, the superior data fitting of ISDM compared to the GITT is expected, as ISDM is specifically designed to
+minimise deviations from observed data it is inferred from. Nonetheless, neither analysis provides insight into which
+of the inferred diffusivities is more correct. Even in Section III A, where the true diffusivity was known, the synthetic
+data originated from a single-particle model, limiting the analysis therein to only a self-consistency test.
+To fairly compare the results of ISDM and the GITT, we require an unbiased data with a known diffusivity. To
+this end, we used Dandeliion [26] for DFN model simulations of a LG M50 NMC811 cathode half-cell with various
+current profiles, using the parameters from Ref.[23]. In these runs, we use a realistic diffusion function formulated as
+the exponential of a high-order polynomial, whose full form can be retrieved from the links provided in footnotes 3–5.
+The equilibrium potential was fixed to be the fitted function presented in Ref.[23].
+We first generate a dataset for a cathode half-cell charging with a GIT forcing-relaxation current 3 (covering 9.5
+days of data). We then apply the traditional GITT with Sand equation to determine diffusivity DGITT(c).
+We then move on to applying ISDM to the simulated half-cell, which consists of two stages. In the first stage we
+apply charge then discharge the half-cell with a constant C/20 current 4 (covering 40 hours of data), which allows
+us to determine U (pOCV)
+eq as described in Appendix C. In the second stage, we generate charging data with C/10
+3 The Dandeliion run for GIT pulse-relaxation current can be accessed at:
+https://simulation.dandeliion.com/legacy/simulation/?id=40751b48-307b-46fb-bcb9-5b3ab79b3b5c
+4 The Dandeliion run for charge and discharge with constant C/20 current can be accessed at:
+https://simulation.dandeliion.com/legacy/simulation/?id=d91db0e5-e0bb-4391-936c-50c69f267c24
+
+===== PAGE 10 =====
+10
+constant current 5 (covering 10 hours) and apply ISDM (with N = 50 partitions) to infer diffusivity ˆD(c), using the
+equilibrium potential U (pOCV)
+eq .
+The comparison of the inferred diffusivities along with the true one is shown in Fig.5. Coefficient of determination
+0.4 0.5 0.6 0.7 0.8 0.9
+x
+10 16
+10 15
+Diffusivity [m2/s]
+Dtrue
+D (ISDM with = 50)
+DGITT
+FIG. 5. Comparison of diffusivities inferred using ISDM ( ˆD) with 50 partitions and the traditional GITT ( DGITT), along with
+the true value used to generate the DFN data.
+for diffusivity R2
+D, defined in Eq.(18), which quantifies how close the inferred functions are to the true diffusivity is
+calculated for each case as:
+R2
+D( ˆD) = 0.883 , R 2
+D(DGITT) = 0.777 . (22)
+ISDM not only achieves a more accurate approximation of the true diffusivity compared to GITT, but it also requires
+only 50 hours of data collection, in contrast to the 9.5 days necessary for GITT. This represents a 78% reduction in
+data collection time.
+VI. CONCLUSIONS
+We have introduced a novel methodology for inferring the concentration-dependent solid-state diffusivity using
+experimentally measured voltage data. We refer to our method as “inference from spherical diffusion model” (ISDM).
+The ISDM approach offers advantages over the GITT, namely: (i) it does not depend upon the questionable semi-
+infinite slab assumption inherent in the Sand equation, (ii) it does not require a carefully controlled pulsed current
+input and lengthy relaxation intervals. The proposed approach is highly versatile, and can infer diffusivity from any
+current excitation which causes the concentration to pass through the desired range of values, and which is consistent
+with the assumptions of the SPM. This allows significant savings in experimental time.
+We first showed that ISDM is capable of recovering the correct diffusivity from synthetic data (generated by solving
+the model equations forward with a known diffusivity). This demonstrates that ISDM is consistent, in contrast to
+the GITT. Second, we applied the approach to real galvanostatic intermittent titration (GIT) data from an LG M50
+NMC811 cathode [23]. The diffusivity inferred by our method is in good agreement with the results of the GITT.
+5 The Dandeliion run for charging with constant C/10 current can be accessed at:
+https://simulation.dandeliion.com/legacy/simulation/?id=3865ded1-60e1-439b-82b3-65a0ec8c5b0c
+
+===== PAGE 11 =====
+11
+Third, we applied ISDM to C/10 galvanostatic charging data, which is much faster and easier to harvest than GIT
+data. Once again, we were able to obtain results broadly consistent with the diffusivity inferred from the previous
+tests. Finally, we directly compared the performance of ISDM and the GITT at inferring diffusivity. We used the DFN
+model to generate synthetic GIT charge, C/20 charge-discharge and C/10 charge data using a realistic pre-specified
+diffusivity. Diffusivities were then predicted from this data using both the GITT and ISDM, with the latter method
+producing substantially more accurate results.
+The most obvious application for our method is in inferring the diffusivity of an electrode at the beginning of life
+in order to make predictions of the device behaviour in the future. However, owing to the speed and agility of the
+technique it may prove useful in other ways. It is well-known that degradation, for example in the form of microscale
+intra-particle cracks, causes the effective diffusivity of the insertion material to reduce with cycle number. Since the
+ISDM is agnostic to data-type, it could be used in the field to update the model parameters from incoming data as
+the devices ages, maintaining the predictive capability of the model. These parameter changes might also be used
+as an advanced indicator of approaching device failure or nonlinear ageing. Finally, we emphasise that although we
+have chosen to focus on solid-state diffusivity there are no conceptual hurdles to applying the technique elsewhere.
+In Li-ion batteries it could be used to infer electrolytic conductivity, transference number, or activation energies for
+the Arrhenius temperature dependence of the diffusivity. It may also prove useful in a variety of other energy capture
+and storage devices.
+ACKNOWLEDGMENTS
+We are grateful to Edmund Dickinson for their invaluable comments and suggestions on an earlier version of
+the draft. JF was supported by the Faraday Institution Multi-Scale Modelling (MSM) project Grant number
+EP/S003053/1.
+Appendix A: Validity of Slab approximation on a sphere
+In this appendix, we discuss the validity of the slab approximation implicit in Sand equation to describe a spherical
+diffusion process. Similar analyses was presented in Ref.[17] and in the Supplementary Information of Ref.[22]. In
+particular, we quantify the validity of D(c) obtained using the Sand equation on an actual galvanostatic intermittent
+titration (GIT) experiment.
+We consider the spherical diffusion equation (1) for constant diffusivity D, forced with a constant surface flux j0,
+and starting with an initial homegenous concentration c0. We rescale concentration c, distance r and time t with
+initial concentration c0, particle radius R and diffusion timescale td, respectively. That is,
+˜c(t, r) = c(t, r)
+c0
+, x = r
+R , τ = t
+td
+= D t
+R2 . (A1)
+With these redefinitions, Eq.(1) becomes
+∂˜c(τ, x)
+∂τ = ∂2˜c(τ, x)
+∂x2 + 2
+x
+∂˜c(τ, x)
+∂x , (A2)
+subject to:
+˜c(0, x) = 1 , ∂˜c(τ, x)
+∂x
+
+x=0
+= 0 , ∂˜c(τ, x)
+∂x
+
+x=1
+= −δ , (A3)
+where we defined
+δ = j0 R
+c0D . (A4)
+The solution to Eq.(A2) is known analytically [27, 28],
+˜c(τ, x) = 1 − δ
+"
+3 τ + 5 x2 − 3
+10 − 2
+x
+∞X
+n=1
+sin(αn x)
+α2n sin(αn) e−α2
+nτ
+#
+, (A5)
+where αn is the n–th positive root of the transcendental equation α = tan α.
+
+===== PAGE 12 =====
+12
+On the surface ( x = 1), this solution reduces to:
+˜c(τ, 1) = 1 − δ
+"
+3 τ + 1
+5 − 2
+∞X
+n=1
+e−α2
+nτ
+α2n
+#
+. (A6)
+At τ = 0, the sum evaluates to P∞
+n=1 α−2
+n = 1/10 [29], which verifies the initial condition ˜c(0, 1) = 1.
+One way to determine the behaviour of the finite sum is to approximate it into an integral. We observing that for
+large n, the recursion approximates to αn+1 ≈ αn + π. Extending this relation, we have
+αn ≈ α1 + (n − 1)π , (A7)
+which is accurate at 1% level for low n, but becomes more precise for larger values. This allows the approximation
+S =
+∞X
+n=1
+e−α2
+nτ
+α2n
+≈
+∞X
+n=1
+s(n) , (A8)
+where we defined
+s(n) = e−[α1+(n−1)π]2τ
+[α1 + (n − 1)π]2 . (A9)
+Next, we approximate the infinite sum (A8) with the Euler-Maclaurin formula:
+S =
+∞X
+n=1
+s(n) ≈
+Z ∞
+1
+s(x)dx + s(∞) + s(1)
+2 +
+∞X
+k=1
+B2k
+(2k)!
+
+s(2k−1)(∞) − s(2k−1)(1)
+
+, (A10)
+where B2k are the even Bernoulli numbers. Since we are only interested in small τ approximation, we only keep terms
+up to linear order in τ. The integral is straightforward to evaluate and we find:
+Z ∞
+1
+s(x)dx = e−α2
+1τ
+α1π −
+r τ
+π erfc
+ 
+α1
+√τ
+
+= 1
+α1π −
+r τ
+π + O(τ) (A11)
+As for the correction terms, s(n) and its odd derivatives evaluated at infinity all vanish. The only remaining con-
+tributions come from the function and its derivatives at n = 1. The infinite sum of odd derivatives at n = 1 are
+problematic. Around k = 12th term, the sum starts to grow rapidly. On the other hand, these terms only give
+contributions at order τ 0, τ 2 and higher. Since we are only interested in the behaviour of the τ 1/2 term, we will
+assume that these terms can be resummed. Considering the finite limit for τ → 0, we conjecture that
+S ≈ 1
+10 −
+r τ
+π + O(τ) . (A12)
+That is, for small τ, the solution to the spherical diffusion equation is approximated as
+˜c(τ, 1) − 1
+δ = −2
+r τ
+π + O(τ) . (A13)
+Written in dimensionful quantities, the surface concentration is:
+csurf = c0 − 2 j0
+r
+t
+D π + O
+ D t
+R2
+
+. (A14)
+Thus, for t ≪ R2/D, the spherical diffusion equation has the same surface solution as the diffusion equation for a
+semi-infinite slab [16] which forms the basis of the Sand equation. Although Eq.(A14) suggests that the GITT would
+be applicable for short pulses, we need to determine how small D t/R2 should be to determine the diffusivity reliably
+using the GITT.
+Moreover, at relatively large τ, the infinite sum decays exponentially, and we are left with
+˜c(τ, 1) − 1
+δ = −1
+5 − 3 τ , (A15)
+
+===== PAGE 13 =====
+13
+or
+csurf = c0 − j0R
+D
+1
+5 + 3 t D
+R2
+
+, (t ∼ R2/D) . (A16)
+This expression is particularly interesting since the surface concentration depends linearly on t and the slope is
+independent of D. Therefore if one employs the GITT in this regime, the inferred diffusion constants will be arbitrary.
+Again, we need to use numerical methods to determine precisely the time τ = t D/R2 where this behaviour becomes
+relevant.
+In Figure 6, we show a comparison of the full solution and demonstrate the validity of (A13) and (A15) in the
+corresponding regimes.
+10 4
+ 10 3
+ 10 2
+ 10 1
+0.8
+0.7
+0.6
+0.5
+0.4
+0.3
+0.2
+0.1
+0.0
+(c 1) /
+Full Solution
+Early ( ) approximation
+Late ( ) approximation
+FIG. 6. Comparison of the full solution (solid black), the early √τ approximation (red dashed) and the late linear behaviour
+(green dashed).
+To quantify the accuracy of the approximations, we calculate the relative error by
+Error[%] = 100 × ˜c − ˜capprox
+˜c − 1 , (A17)
+where ˜c is the exact solution while ˜ capprox is the approximation. The time dependence of the relative errors are
+presented in Figure 7. We see that the square-root solution (A13) is valid within 5% for τ < 0.0032, 7.5% for
+τ < 0.0073 and 10% for τ < 0.0132.
+On the other hand, we see the relative error in the late solution (A15) catches up with the early approximation
+(A13) at τeq = 0.0402, with both errors at 17 .25%. For τ > τ eq, the linear approximation rapidly improves and the
+Sand equation is no longer applicable. 6
+In Figure 8 we demonstrate the effect of approximating the sphere as a semi-infinite slab using the GIT data for
+cathode delithiation from Ref.[23]. Here τ = t D/R2 is compute for each GITT pulse of duration t, with D inferred
+from the Sand equation. For this data, the value of τ is consistently above the 5% cutoff, occasionally going above
+the 7.5% line. The sand equation is valid within 10% accuracy in general. Even though GITT might not be accurate,
+it is still valid since τ stays below the critical τeq line, where Sand equation breaks down for spherical diffusion.
+6 A typical value for the 5% accuracy of the linear solution is τ > 1.27 [17, 22]. This actually corresponds to the accuracy associated with
+approximating (˜c − 1)/δ ≈ −3 τ. Instead, including the intercept (˜c − 1)/δ ≈ −1/5 − 3 τ, the linear behaviour becomes valid at a much
+earlier time, reaching 5% accuracy at τ > 0.0783.
+
+===== PAGE 14 =====
+14
+10 4
+ 10 3
+ 10 2
+ 10 1
+100
+101
+102
+103
+Relative error [%]
+Early ( ) approximation
+Late ( ) approximation
+FIG. 7. Comparison of the full solution (solid black), the early √τ approximation (red dashed) and the late linear behaviour
+(green dashed).
+On the other hand, given a relative error ∆c/c in concentration, Eq.(A14) implies that the relative error in diffusivity
+is
+∆D
+D = −2 ∆c
+c . (A18)
+Since the early solution (A14) consistently underestimates the drop in concentration, this leads to an overestimation
+of diffusivity larger by a factor of 2. For instance, a 5% error in ˜ c would translate into a 10% error in D.
+Appendix B: Optimisation scheme
+In this appendix, we present the pseudocode for the optimisation algorithm.
+procedure InferD(Data, N , N iter, β)
+Divide Data into N partitions, (time: tα, voltage Vα)
+for each partition α from 1 to N do
+Calculate ˆcα as the average c in partition α
+Define local loss Lα using tα, Vα, as a function of Dα
+Perform grid search to find Dα that minimises Lα
+Store pair (ˆcα, ˆDα)
+end for
+Construct ˆD(c) as a piecewise linear function with knots at (ˆcα, ˆDα)
+if overlaps are manageable (e.g. GITT) then
+for iteration from 1 to N iter do
+for each partition α do
+Estimate gradient of the quasi-global loss including 2 β with respect to ˆD(ˆcα) numerically
+Update ˆD(ˆcα)
+end for
+end for
+else (e.g. constant C/10)
+for iteration from 1 to N iter do
+
+===== PAGE 15 =====
+15
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+10 4
+10 3
+10 2
+10 1
+ tpulse / td
+ from GITT result
+5% error
+7.5% error
+10% error
+eq
+FIG. 8. Plot of the τ parameter for Chen et al [23] cathode delithiation data. The dashed orange, green and magenta lines
+denote the 5%, 7.5% and 10% accuracy lines, respectively. The solid red line corresponds to the critical τeq value above which,
+one cannot infer diffusivity from the Sand equation.
+Estimate gradients of global loss w.r.t each ˆD(ˆcα) numerically
+Update all ˆD(ˆcα) simultaneously
+end for
+end if
+end procedure
+Appendix C: Determination of equilibrium potential using pOCV
+The efficacy of ISDM, as with any inference technique, hinges on the accurate determination of the equilibrium
+potential Ueq(c). In particular, if the output voltage differs from the correct Ueq once the system relaxed, the inference
+process becomes futile, yielding arbitrary outcomes.
+When we are presented with a GIT data, it is straightforward to reconstruct the Ueq(c) function from the voltages
+at the relaxation points. However, in order to make use of the flexibility of ISDM, it is crucial to find alternative
+approaches to determining Ueq(c) without resorting to lengthy experimental techniques.
+In this appendix, we outline the determination of the U (pOCV )
+eq (c) function used in Sections IV and V. In order to
+construct the Ueq, we first note that
+Vmeasured = Ueq(csurf) ± |η| , (C1)
+where η is the reaction overpotential. The sign is positive (negative) during charging (discharging). Assuming a
+small enough current such that the charge is quickly dissipated across the particle, we can estimate the equilibrium
+potential as:
+Ueq ≈ 1
+2 (Vcharge + Vdischarge) , (C2)
+such that the effect of the overpotential is cancelled. For the data set used in Sec.IV, which contains 10 charge and
+discharge cycles, we average over all 10 cycles, and show the estimated U (pOCV )
+eq in Fig.9, along with the U (GITT)
+eq
+
+===== PAGE 16 =====
+16
+0.3 0.4 0.5 0.6 0.7 0.8 0.9
+c / cmax
+3.4
+3.5
+3.6
+3.7
+3.8
+3.9
+4.0
+4.1
+4.2
+Ueq(c) [V]
+from pOCV
+from GITT
+FIG. 9. The equilibrium potential estimated from pOCV data with constant C/20, compared to the one obtained directly from
+GIT data.
+obtained from a full GIT charging cycle. The mean squared error between the two functions is 7 × 10−6 within the
+overlapping stoichiometry range.
+[1] M. Doyle, T. F. Fuller, and J. Newman, Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion
+cell, Journal of the Electrochemical Society 140, 1526 (1993).
+[2] T. F. Fuller, M. Doyle, and J. Newman, Simulation and optimization of the dual lithium ion insertion cell, Journal of the
+Electrochemical Society 141, 1 (1994).
+[3] T. F. Fuller, M. Doyle, and J. Newman, Relaxation phenomena in lithium-ion-insertion cells, Journal of the Electrochemical
+Society 141, 982 (1994).
+[4] T. F. Fuller, M. Doyle, and J. Newman, Simulation and optimization of the dual lithium ion insertion cell, J. Electrochem.
+Soc. 141, 1 (1994).
+[5] A. Z¨ ulke, I. Korotkin, J. M. Foster, M. Nagarathinam, H. Hoster, and G. Richardson, Parametrisation and use of a
+predictive dfn model for a high-energy nca/gr-siox battery, Journal of The Electrochemical Society 168, 120522 (2021).
+[6] C. Schmitt, M. Gerle, D. Kopljar, and K. A. Friedrich, Full parameterization study of a high-energy and high-power li-ion
+cell for physicochemical models, Journal of The Electrochemical Society 170, 070509 (2023).
+[7] M. Ecker, T. K. D. Tran, P. Dechent, S. K¨ abitz, A. Warnecke, and D. U. Sauer, Parameterization of a physico-chemical
+model of a lithium-ion battery: I. determination of parameters, Journal of The Electrochemical Society 162, A1836 (2015).
+[8] M. Ecker, S. K¨ abitz, I. Laresgoiti, and D. U. Sauer, Parameterization of a physico-chemical model of a lithium-ion battery:
+Ii. model validation, Journal of The Electrochemical Society 162, A1849 (2015).
+[9] F. B. Planella, W. Ai, A. M. Boyce, A. Ghosh, I. Korotkin, S. Sahu, V. Sulzer, R. Timms, T. G. Tranter, M. Zyskin, S. J.
+Cooper, J. S. Edge, J. M. Foster, M. Marinescu, B. Wu, and G. Richardson, A continuum of physics-based lithium-ion
+battery models reviewed, Progress in Energy 4, 042003 (2022).
+[10] S. J. Moura, F. B. Argomedo, R. Klein, A. Mirtabatabaei, and M. Krstic, Battery state estimation for a single particle
+model with electrolyte dynamics, IEEE Transactions on Control Systems Technology 25, 453 (2016).
+[11] M. Guo, G. Sikha, and R. E. White, Single-particle model for a lithium-ion cell: Thermal behavior, Journal of The
+Electrochemical Society 158, A122 (2010).
+[12] S. G. Marquis, V. Sulzer, R. Timms, C. P. Please, and S. J. Chapman, An asymptotic derivation of a single particle model
+with electrolyte, Journal of The Electrochemical Society 166, A3693 (2019).
+[13] G. Richardson, I. Korotkin, R. Ranom, M. Castle, and J. Foster, Generalised single particle models for high-rate operation
+of graded lithium-ion electrodes: Systematic derivation and validation, Electrochimica Acta 339, 135862 (2020).
+
+===== PAGE 17 =====
+17
+[14] A. A. Wang, S. E. J. O’Kane, F. B. Planella, J. L. Houx, K. O’Regan, M. Zyskin, J. Edge, C. W. Monroe, S. J. Cooper,
+D. A. Howey, E. Kendrick, and J. M. Foster, Review of parameterisation and a novel database (liiondb) for continuum
+li-ion battery models, Progress in Energy 4, 032004 (2022).
+[15] H. J. Sand, Iii. on the concentration at the electrodes in a solution, with special reference to the liberation of hydrogen
+by electrolysis of a mixture of copper sulphate and sulphuric acid, The London, Edinburgh, and Dublin Philosophical
+Magazine and Journal of Science 1, 45 (1901).
+[16] W. Weppner and R. A. Huggins, Determination of the kinetic parameters of mixed-conducting electrodes and application
+to the system li 36sb, J. Electrochem. Soc 124, 43 (1977).
+[17] A. Nickol, T. Schied, C. Heubner, M. Schneider, A. Michaelis, M. Bobeth, and G. Cuniberti, Gitt analysis of lithium
+insertion cathodes for determining the lithium diffusion coefficient at low temperature: Challenges and pitfalls, Journal of
+The Electrochemical Society 167, 090546 (2020).
+[18] T. Kim, W. Choi, H.-C. Shin, J.-Y. Choi, J. M. Kim, M.-S. Park, and W.-S. Yoon, Applications of voltammetry in lithium
+ion battery research, Journal of Electrochemical Science and Technology 11, 14 (2020).
+[19] G. Leftheriotis, S. Papaefthimiou, and P. Yianoulis, Dependence of the estimated diffusion coefficient of lixwo3 films on
+the scan rate of cyclic voltammetry experiments, Solid State Ionics 178, 259 (2007).
+[20] C. Ho, I. D. Raistrick, and R. A. Huggins, Application of a-c techniques to the study of lithium diffusion in tungsten
+trioxide thin films, Journal of The Electrochemical Society 127, 343 (1980).
+[21] C. J. Wen, B. A. Boukamp, R. A. Huggins, and W. Weppner, Thermodynamic and mass transport properties of “LiAl”,
+Journal of The Electrochemical Society 126, 2258 (1979).
+[22] Y.-C. Chien, H. Liu, A. S. Menon, W. R. Brant, D. Brandell, and M. J. Lacey, Rapid determination of solid-state diffusion
+coefficients in li-based batteries via intermittent current interruption method, Nature communications 14, 2289 (2023).
+[23] C.-H. Chen, F. B. Planella, K. O’Regan, D. Gastol, W. D. Widanage, and E. Kendrick, Development of experimental
+techniques for parameterization of multi-scale lithium-ion battery models, Journal of The Electrochemical Society 167,
+080534 (2020).
+[24] Y. Zeng, P. Albertus, R. Klein, N. Chaturvedi, A. Kojic, M. Z. Bazant, and J. Christensen, Efficient conservative numerical
+schemes for 1d nonlinear spherical diffusion equations with applications in battery modeling, Journal of The Electrochemical
+Society 160, A1565 (2013).
+[25] The E. Kendrick group, Birmingham University, unpublished data.
+[26] I. Korotkin, S. Sahu, S. E. J. O’Kane, G. Richardson, and J. M. Foster, DandeLiion v1: An extremely fast solver for the
+newman model of lithium-ion battery (dis)charge, Journal of The Electrochemical Society 168, 060544 (2021).
+[27] H. S. Carslaw and J. C. Jaeger, Conduction of heat in solids, 2nd ed. (Oxford University Press, London, England, 1959).
+[28] V. R. Subramanian and R. E. White, New separation of variables method for composite electrodes with galvanostatic
+boundary conditions, Journal of Power Sources 96, 385 (2001).
+[29] N. Liron, Some infinite sums, SIAM Journal on Mathematical Analysis 2, 105 (1971), https://doi.org/10.1137/0502010.

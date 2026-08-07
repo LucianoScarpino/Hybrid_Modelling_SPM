@@ -1,0 +1,3181 @@
+===== PAGE 1 =====
+1 of 31Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026; 16:e70108
+https://doi.org/10.1002/widm.70108
+Wiley Interdisciplinary Reviews: Data Mining and 
+Knowledge Discovery
+ADVANCED REVIEW
+A Systematic Review and Numerical Evaluation on 
+Physics- Informed Neural Network for Blood Flow Dynamics
+Niraimathi K. R. 1 |  Amutha S 2  |  Dhanush R 3  |  Surendiran B 4
+1School of Advanced Sciences, Vellore Institute of Technology Chennai, Chennai, India | 2School of Computer Science and Engineering, Vellore Institute of 
+Technology Chennai, Chennai, India | 3School of Electronics Engineering, Vellore Institute of Technology Chennai, Chennai, India | 4Computer Science 
+and Engineering, National Institute of Technology Puducherry, Karaikal, India
+Correspondence:  Amutha S (amuthabenziker@gmail.com )
+Received:  16 December 2025 | Revised:  19 March 2026 | Accepted:  8 June 2026
+Chief Editor:  Witold Pedrycz 
+Keywords: blood flow modeling | complex vascular systems | computational fluid dynamics | hemodynamics | physics-  informed neural networks | 
+turbulence
+ABSTRACT
+Physics- Informed Neural Networks (PINNs) are deep neural networks that incorporate partial differential equations in their loss 
+function to understand the physics of the system. Thereby enhancing the learning process of the model to achieve better predic -
+tive results than the existing models. PINNs embed governing physical principles directly into their loss functions, enabling them 
+to solve complex problems even with limited or noisy data. This distinctive capability allows PINNs to effectively handle com -
+plex computational and engineering problems. Such problems include fluid flow prediction, heat transfer simulation, and wave 
+propagation analysis. Hence, a comprehensive analysis of PINNs and their variations for fluid dynamics in the human biological 
+system will be presented in this work. The findings of this numerical evaluation indicate that PINN-  based models are always in 
+agreement with reference and in vivo data, which proves to be more accurate in predicting the major hemodynamic parameters, 
+including velocity, pressure, and wall shear stress (WSS). However, challenges including high computational cost, convergence 
+instability, and limitations in multi-  scale generalization remain significant. Further, the review addresses the foundational ar -
+chitecture of PINNs, improvements introduced through various extensions, and their relative advantages in different biofluid ap-
+plications. Special emphasis will be placed on their applications in hemodynamics modeling blood flow dynamics and vascular 
+biomechanics using PINNs. This study also discusses the major challenges of PINNs, such as high computational cost, conver -
+gence issues, multi- scale modeling, and limited generalization. It also reviews proposed solutions and suggests future directions, 
+including integration with other machine learning models for improved scalability and broader interdisciplinary applications.
+1   |   Introduction
+The problem of biofluid dynamics, and in particular cardiovas -
+cular hemodynamics, was difficult to solve because of the com -
+plexity of the interactions between fluid mechanics and vessel 
+wall biomechanics, as well as patient-  specific anatomical vari -
+ability (Berger and Malpas 1998; Bessonov et al.  2016; Tawhai and 
+Burrowes  2008). The traditional methods such as computational 
+fluid dynamics (CFD) and fluid–structure interaction (FSI) have 
+been regularly used in the simulation of blood flow and vascular 
+mechanics (Apraiz et al.  2024; Hu et al.  2021; Jiang et al.  2022; 
+Q. Li et al.  2025; Y. Ling et al.  2022; Nakajima et al.  2022; Ning 
+et al.  2023). Nevertheless, classical approaches demanded large 
+mesh construction and a lot of computing forces, which were 
+prohibitive in large-  scale or time-  dependent tasks of complex 
+vascular geometries (Bateman et al.  2025; Candreva et al.  2022; 
+Y. Ling et al.  2022). Moreover, their sensitivity to boundary and 
+initial conditions often limited the applicability of the models 
+© 2026 Wiley Periodicals LLC.
+
+
+===== PAGE 2 =====
+2 of 31 Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+especially when clinical data were smaller and noisy (Kim and 
+Koo  2025; Y. Ling et al.  2022; Zhao et al.  2021). These limitations 
+made the calculations more complicated and required material 
+property data that were hard to get in  vivo and of high fidel -
+ity (Alzhanov et al.  2024; L. Chen et al.  2023; Cilla et al.  2020; 
+Misaki et al.  2021).
+Reduced Order Models became available to provide simplicity in 
+computations but a one- dimensional (1D) blood flow model ap -
+plied reduced spatial resolution and spatial detail in flow and hy-
+draulic representations of blood flow (Farias et al.  2023; Kissas 
+et al.  2020). Equally, three- dimensional (3D) CFD resolved high- 
+resolution flow configurations at a high computational rate in a 
+way that usually made the idea of an inverse problem like param-
+eter estimation or flow reconstruction using clinical measure -
+ments practical (Oliveira et al.  2021; Yevtushenko et al.  2022). 
+Traditional methods often encountered difficulties in modeling 
+complex turbulence and were sensitive toward the boundary 
+conditions with turbulent or transitional flows that were often 
+present in pathological conditions such as stenosis or aneurysm 
+(L. Chen et al.  2023; Mason et al.  2019; Misaki et al.  2021; Qiao 
+et al.  2016; Steinman et al.  2002; Zhao et al.  2021). The short -
+comings of these systems supported the urgency of developing 
+a new architecture with a combination of basic principles of 
+physics and clinical information that was not hindered compu -
+tational performance.
+Physics- informed neural networks (PINNs) have recently be -
+come the new paradigm of computational modeling, explic -
+itly using governing partial differential equations (PDEs) in 
+the training of the neural network (Farea et  al.  2024; Sikora 
+et al.  2024). Physics informed neural networks were neural net -
+works that encode the physical laws typically partial differential 
+equations, directly into their training process by including PDE 
+residuals, boundary conditions, and initial conditions in the 
+loss function by automatic differentiation (Bai et al.  2020; Singh 
+et  al.  2024). This framework had seen a rapid evolution that 
+made it applicable to many applications in computational phys -
+ics, fluid dynamics and engineering systems. Recent articles 
+have provided universal discussions of PINN algorithms, uses, 
+research gaps, and the corresponding challenges. Particularly, 
+a critical assessment of the fundamental methodological prin -
+ciples of PINNs with the focus on the learning of physical laws 
+in neural-  network training using physics-  based loss functions 
+and using automatic differentiation to analyze the governing 
+equation error. Contrary to purely data-  driven models, PINNs 
+incorporated the residues of the PDEs, boundary conditions, 
+and initial conditions in a composite loss minimization for -
+mulation, hence imparting the network to seek physically 
+consistent solutions even in case of sparse and noisy data (Liu 
+et  al.  2025). This would use meshless methodologies that had 
+not require discretisation and mesh generation and therefore 
+allowed the accommodation of complex geometries and bound -
+ary conditions with greater flexibility (Donnelly et al.  2024; Hu 
+et al.  2021; Jo et al.  2024; Orera et al.  2025; Xu et al.  2023). The 
+key mathematical idea behind the PINN was the automatic dif -
+ferentiation of spatial and time derivatives, used to estimate the 
+residues of the partial differential equations, which were then 
+regarded as part of the loss function (Yuan et  al.  2022). The 
+physics- informed regulariser confined the space of possible 
+solutions to physically-  consistent states but further improved 
+the generalization provided by solutions outside of the training 
+data (Sarma et al.  2024).
+The most recent methodological developments included the 
+learning of boundary complexity progressively whereby the 
+boundary conditions were progressively embedded slowly to 
+stabilize the learning of complex vascular geometries (Wong 
+et al.  2025). Also, hybrid methods based on surrogate modeling 
+of boundary conditions, or parameter estimation, on PINNs de -
+creased the cost of computing by using the strengths associated 
+with each method (Alzhanov et al.  2024; Bateman et al.  2025; L. 
+Chen et al.  2023) of these developments made PINNs a potent 
+and excellent example of biofluid dynamics modeling. PINNs 
+have been shown to be highly successful in the reconstruction 
+of velocity and pressure fields at sparse clinical data including 
+four- dimensional imaging (4D flow MRI) and Transcranial 
+Doppler ultrasound (TCD) in the hemodynamics and vascu -
+lar biomechanical context (Kissas et al.  2020). To use physics- 
+informed archetypal neural networks (PINNs), as an example, 
+they were shown to predict the wall shear stress (WSS) and pres-
+sure gradients in patient-  specific types of arteries, with relative 
+errors less when compared to a standard and CFD simulation (Y. 
+Ling et al.  2022).
+Physics- guided Neural Networks were the new trend in cardio -
+vascular modeling that manages the shortcomings of traditional 
+solutions by providing a powerful mathematical model, a high- 
+quality optimisation, and novel methods of computational solu -
+tions (Donnelly et al.  2024; Sarma et al.  2024; Sikora et al.  2024). 
+The mathematical accuracy of successful PINN implementation 
+involved the basic governing equations, complex constraint 
+models, complicated optimisation algorithms, and multi-  scale 
+integration measures. Such frameworks gave the basis to the ap-
+plication of clinical translation and personalized medicine that 
+likely to transform the cardiovascular diagnostics, treatment 
+planning, and patient care application.
+The objective of this systematic review was to present the founda-
+tional architectures of PINNs and their methodological innova -
+tions tailored to biofluid dynamics in human biological systems, 
+with an emphasis on hemodynamics and vascular biomechan -
+ics. This paper consists of nine sections with introduction as the 
+first section. Section  2 discussed the methodological procedures. 
+Section  3 described the taxonomy of various PINN architectures. 
+Section  4 discussed the application of PINN in hemodynamics. 
+The pros and cons of various PINN frameworks and their exper-
+imental setup are emphasized in Sections  5 and 6 respectively. 
+Section  7 illustrates the results followed by the research chal -
+lenges and future research directions in Sections  8 and 9.
+2   |   Methodology
+The research area of the literature survey based on the applica -
+tions of Physics informed neural network in the field of hemody-
+namics. Several key search terms were determined based on the 
+research area, such as PINNs, hemodynamics, FSI, biomedical 
+fluid flow, brain disease, and blood. Web of Science and PubMed 
+databases were searched for research articles, which was shown 
+in Table  1. The available research articles from the search results 
+were taken into account. The articles published till the present 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 3 =====
+3 of 31Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+day were taken into consideration. Search queries (SQs) were 
+created using the identified search terms or keywords to look 
+for research articles from the databases. The SQ syntax varied 
+according to the databases. In a research publication, they were 
+typically linked with a search tag that indicated a particular 
+search term and a linking operator (AND).
+SQ1: ALL = (Physics- informed neural network) AND ALL = 
+(Hemodynamics).
+SQ2: ALL = (Physics- informed neural network) AND ALL = 
+(Brain disease).
+SQ3: ALL = (Physics- informed neural network) AND 
+ALL = (MRI).
+SQ4: ALL = (Physics- informed neural network) AND ALL = 
+(Blood).
+SQ5: ALL = (Physics- informed neural network) AND (ALL = 
+(Fluid dynamics) AND ALL = (Blood)).
+SQ6: ALL = (Physics- informed neural network) AND ALL = 
+(Fluid structure interaction).
+SQ7: ALL = (Physics- informed neural network) AND ALL = 
+(Biomedical fluid flow).
+2.1   |   Selection Criteria
+The articles underwent additional examination based on the in -
+clusion and exclusion criteria. Risk of bias assessment was con -
+ducted as shown in the Table  2. The research articles were only 
+included if they met the subsequent criteria:
+1. Only articles related to PINN in hemodynamics were taken 
+into account.
+2. Original research articles with experimental data were 
+considered.
+The research articles were excluded if they were article types 
+such as reviews, meta- analysis, conference abstracts, and books 
+as shown in Figure  1.
+2.2   |   Exclusion Criteria
+Several exclusion criteria were applied to ensure the relevance, 
+quality, and reliability of the selected literatures ( n = 134). 
+Duplicate records taken from multiple databases were identi -
+fied and the original version kept for the review ( n = 40). Non- 
+peer reviewed sources such as book chapters ( n = 1), webpages 
+(n = 10), conference papers ( n = 8), and review papers ( n = 5) 
+were excluded. Additionally, abstract analysis was conducted 
+and the papers ( n = 7) that were not aligned with the research 
+objectives or lacked relevance to the topic were removed 
+(n = 20). Moreover, text analysis was done to exclude the papers 
+which were not related to the hemodynamics ( n = 4). Finally, 
+39 articles were selected for the review after applying exclusion 
+criteria.
+3   |   Taxonomy of PINN
+The conventional PINN framework faced significant practical 
+limitations when used to the complicated multiscale, multi- 
+physics cardiovascular hemodynamics. These inherent limita -
+tions have led to the development of a taxonomy of specialized 
+PINN architectures designed to address specific theoretical and 
+practical challenges while maintaining the benefits of physics- 
+informed learning. In this section, a critical review of the cur -
+rent advanced PINN variants to hemodynamic modeling will be 
+done using a systematic evaluation of their technical advances, 
+theoretical foundations, implementation challenges, and their 
+clinical translation opportunities were assessed. The taxonomy 
+of the variants of PINN models were shown in Figure  2.
+3.1   |   Roe PINN
+Roe PINN integrated the advanced CFD solvers into the PINN 
+architectures. This CFD utilized a numerical technique, the 
+finite volume method, to solve hyperbolic partial differential 
+equations for blood flow. Finite volume method was based on 
+the Roe approximate Reimann solver (Roe FV) and involved 
+calculating the Roe matrix to linearize the Riemann problem 
+at cell interfaces, allowing efficient and accurate flux computa -
+tions. Roe PINNs replaced conventional automated differentia -
+tion (AD) for PDE residual evaluation, its architecture shown in 
+Figure  3. Instead of forming the residual using AD derivatives, 
+Roe PINN formed the residual loss by finite volume discretiza -
+tion. Uniquely, Roe- PINN incorporated slope limiters, adaptive 
+mesh refinement, direct conservative variable prediction, and 
+custom activation functions tailored to flow physics.
+The core innovation of Roe- PINN laid in the integration of flux- 
+difference splitting within the neural network architecture, 
+which enabled accurate representation of flow discontinuities 
+and shock phenomena that conventional PINNs could not han -
+dle effectively. Traditional PINNs approximated the solution 
+fields using the Navier–Stokes equations in their differential 
+form, which could lead to numerical instabilities and inaccurate 
+predictions when dealing with discontinuities. Roe- PINN ad -
+dressed this limitation by incorporating flux-  difference splitting 
+techniques that enabled the stable and accurate solution of prob-
+lems with discontinuities through characteristic decomposition 
+TABLE 1     |    The number of articles taken from different databases.
+Search queries Web of sciences PubMed
+SQ 1 22 9
+SQ 2 6 4
+SQ 3 12 11
+SQ 4 8 5
+SQ 5 7 16
+SQ 6 10 4
+SQ 7 17 3
+Total n = 134
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 4 =====
+4 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+TABLE 2     |    Risk of bias assessment for included studies.
+References
+Data source 
+and geometry
+Physics 
+formulation
+Validation 
+strategy
+Reporting and 
+reproducibility
+Overall risk 
+of bias
+Du Toit and Laubscher  2023 Moderate Low Moderate Unclear Moderate
+Isaev et al.  2024 Low Low Low Low Low
+Aghaee and Khan  2024 Low Low Low Low Low
+Sarabian et al.  2022 Low Low Low Unclear Low
+Q. Li et al.  2025 Low Low Low Unclear Low
+Jagtap et al.  2020 Low Low Low Low Low
+Sun et al.  2020 Moderate Low Low Low Low
+Aghaee and Khan  2025 Low Low Low Low Low
+Wong et al.  2025 Low Low Low Low Low
+Sainz- DeMena et al.  2024 Moderate Low Low Unclear Low
+Rehman et al.  2025 High Moderate Moderate Low High
+Orera et al.  2025 High Low Low Low Moderate
+Kissas et al.  2020 Low Low Moderate Low Moderate
+Yevtushenko et al.  2022 Moderate High Moderate Low High
+Sen et al.  2024 Low Low Low Low Low
+Yuan et al.  2022 High Low Low Low Moderate
+Liu et al.  2024 High Low Low Low Moderate
+Liu et al.  2025 Moderate Low Moderate Low Moderate
+Arzani et al.  2021 High Low High Low High
+Alzhanov et al.  2024 Low Low Low Low Low
+Wong et al.  2025 Low Low Low Low Low
+Huang et al.  2025 Low Low Low Moderate Low
+Daneker et al.  2024 Low Low Low Low Low
+Sel et al.  2023 Low Low Low Moderate Low
+Aygun et al.  2023 Moderate Low Low Moderate Low
+R. Z. Zhang et al.  2025 Moderate Low Low Moderate Moderate
+J.- X. Wang et al.  2017 Low Low Low Moderate Low
+Maidu et al.  2025 Low Low Low Moderate Low
+Shukla et al.  2025 Low Low Low Low Low
+Dobroserdova et al.  2024 Low Moderate Low Low Moderate
+Voorter et al.  2023 Moderate Low Low Low Moderate
+Alzhanov et al.  2024 Low Low Low Moderate Moderate
+L. Chen et al.  2023 Moderate Low Low Moderate Moderate
+Kim and Koo  2025 Low Low High Moderate High
+Auddy et al.  2024 Low Low Low Low Low
+X. Zhang et al.  2023 Moderate Low Low Moderate Moderate
+Du Toit and Laubscher  2023 Low Moderate Low Low Moderate
+(Continues)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 5 =====
+5 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+of the governing equations. The Roe flux formula Fu
+ⅈ+1∕2 used in 
+finite volume method was given in Equation ( 1).
+where Fu
+ⅈ+1∕2 was the flux at the interface between grid points i 
+and i + 1. F/parenleft.s1un
+L
+/parenright.s1, F/parenleft.s1un
+R
+/parenright.s1
+ were the fluxes evaluated at the left and 
+right states predicted by the neural network at each interface, /u1D706k 
+were the eigenvalues of the Jacobian matrix A = /u1D715F
+/u1D715u, represent-
+ing characteristic wave speeds, /u1D6FCk were wave strengths calcu -
+lated as projection coefficients, rk were right eigenvectors of the 
+Roe matrix.
+Slope limiters were mathematical functions that played a cru -
+cial role in accurately capturing the sharp gradients such as 
+shocks or discontinuities. These slope limiters were used to 
+adaptively adjust the local polynomial reconstruction so that the 
+solution remains non- oscillatory near discontinuities and high- 
+resolution in smooth regions.
+In Roe- PINN, the process of applying slope limiters started with 
+the neural network producing solution (u) estimates at differ -
+ent points across the domain. To capture the local behavior of 
+the solution, gradients /u1D6E5u were calculated by comparing values 
+between neighboring points in both directions represented by 
+Equation ( 2).
+By taking the ratio /u1D703 in Equation  ( 3) of these gradients, the 
+method assessed whether an area was smooth or contains a 
+sharp transition, like a discontinuity.
+A slope limiter function, the van-  Albada formula /u1D6E5ulimited given 
+in Equation ( 4) was then used to refine this ratio /u1D719(/u1D703) given in 
+E quation (5), effectively tuning the impact of the computed slope.
+This approach allowed the algorithm to maintain precision in 
+smooth regions while actively working to eliminate oscillations 
+near discontinuities. The resulting limited slope (Equation  5) 
+was then used in calculating the Roe flux at each interface, 
+which helped ensure the neural network produced solutions 
+that were both physically realistic and numerically stable.
+Roe PINN had two hyperparameters compared to the traditional 
+PINN. First, the time min time-  stability condition parameter: 
+time- stability condition parameters are parameters associated 
+with the Courant–Friedrichs–Lewy parameter (CFL), and by 
+means of these parameters, the largest admissible time step size 
+can be determined in relation to the spatial discretization, so 
+that the time solvers of partial differential equations could be 
+numerically stable. Second, there was a local support distance 
+parameter 𝛥𝑥, which determined the neighborhood around each 
+collocation point of which Roe- PINN computations or approxi -
+mations were being done.
+Roe PINNs for forward Problems focused on the discretization 
+of the governing equation's residual loss as in the vanilla PINN. 
+But included RoeFV- based PDE residual loss enabling extremely 
+accurate physical modeling without the need for an additional 
+data loss factor. Roe PINN did not try to fix or match any extra 
+data points since the objective was to predict the solutions by 
+strictly following the governing physical laws and the boundary 
+conditions. For the inverse problem, Roe PINN added an addi -
+tional domain data fitting term given in Equations ( 6) and ( 7) 
+respectively.
+where o was initial condition loss and bc was boundary condi-
+tion loss, each constructed as in the vanilla PINN. The data loss 
+was defined in Equation (8),
+3.2   |   Area Specific PINN(AS- PINN)
+The concept of Area- Specific PINN is an important architectural 
+development that overcomes the main difficulty of dealing with 
+complex vascular geometries that cardiovascular systems are 
+based on. The model is based on the one- dimensional blood- flow 
+models that were widely developed in the cardiovascular biome-
+chanics. Cross- sectional averaging of the full three-  dimensional 
+equations of Navier–Stokes can be used to systematically reduce 
+the equations to one dimensional equations, and provide area- 
+averaged equations of conservation, which explicitly included 
+the geometric parameter of area A(x, t). The one-  dimensional 
+equation of mass-  conservation of the vessels connected with 
+the variable area has the following form presented in the 
+(1)Fu
+ⅈ+1∕2 = 1
+2
+/bracketleft.s1F/parenleft.s1un
+L
+/parenright.s1+ F/parenleft.s1un
+R
+/parenright.s1/bracketright.s1−Σ /uni007C.x/uni007C.x/u1D706k /uni007C.x/uni007C.x/u1D6FCk rk
+(2)
+/u1D6E5uupstream = ucurrent − uprevious and /u1D6E5udownstream = ucurrent − uprevious
+(3)/u1D703= /u1D6E5udownstream
+/u1D6E5uupstream
+(4)/u1D719(/u1D703)= /u1D703(1 + /u1D703)
+1 + /u1D7032
+(5)/u1D6E5ulimited = /u1D719(/u1D703). /u1D6E5uupstream
+(6)LROe,F
+B = /u1D7061LpDE + /u1D7062L0 + /u1D7063LbC
+(7)LROe,I
+B = /u1D7061LpDE + /u1D7062L0 + /u1D7063LbC + /u1D7064Ldata
+(8)Ldata = 1
+n Σ
+/bracketleft.s2
+u(x, t)− /uni0302.s5u(x, t)
+/bracketright.s22
+References
+Data source 
+and geometry
+Physics 
+formulation
+Validation 
+strategy
+Reporting and 
+reproducibility
+Overall risk 
+of bias
+Y. Ling et al.  2022 Moderate Low Low Low Moderate
+Cai et al.  2021 Low Low Low Low Low
+Note: This assessment focuses on data quality, physics implementation, validation strategy, and reproducibility. The judgment categories are low risk, moderate risk, 
+high risk, or unclear.
+TABLE 2     |    (Continued)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 6 =====
+6 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+Equation ( 9) and /u1D6FC represents the momentum flux correction co-
+efficient, p represents the pressure, /u1D70C represents the blood den -
+sity, /u1D707 the dynamic viscosity, and gx the contribution of a body 
+force. The area functional A(x, t) was explicitly in several terms 
+which inherently couples geometry to the dynamics of a flow in 
+a way that is non- intuitive to traditional PINNs.
+where A(x, t) was the cross-  sectional area, U (x, t) was the 
+cross- sectionally averaged axial velocity, x was the axial coor -
+dinate, and t was time. The corresponding momentum equa -
+tion included additional terms arising from area variation in 
+Equation ( 10).
+The innovation of the Area-  Specific PINN consists in the fact 
+that, unlike composite materials feature representations, the 
+explicit inclusion of the area-  function information in the net -
+work arrangement of the system with the help of geometric 
+embedding layers that convert a standard spatial system into 
+geometry-  aware representations. Rather than simply pro -
+viding position coordinates (x, y, z) as network inputs, Area-  
+Specific PINN constructed augmented input features that 
+included both position and geometric descriptors, denoted as 
+vector /u1D709input.
+(9)/u1D715A
+/u1D715t + /u1D715(AU)
+/u1D715x = 0
+(10)
+/u1D715(AU)
+/u1D715t +
+/u1D715/parenleft.s1/u1D6FCAU2/parenright.s1
+/u1D715x +
+/parenleft.s3
+A
+/u1D70C
+/parenright.s3
+/u1D715P
+/u1D715x =
+/parenleft.s38/u1D70B/u1D707
+/u1D70C
+/parenright.s3
+U + Agx = 0
+FIGURE 1     |    PRISMA style diagram illustrating the study selection process such as searching the database and other sources to identify the re -
+cords, eliminating duplicates, screening titles and abstracts, evaluating the articles.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 7 =====
+7 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+In the Equation ( 11), the local reference cross-  sectional area de-
+noted by A and the partial derivatives reflect area gradients that 
+affect the acceleration of flow, local curvature was denoted by /u1D705 
+and local torsion denoted by /u1D70F. Such geometric properties were 
+estimated at an initial processing step on segmented medical 
+imaging data and the resulting interpolated to offer continuous 
+functions across the vascular domain. These geometric charac -
+teristics were imprinted in the geometry architecture by using 
+specialized geometric embedding layers that encode raw geo -
+metric descriptors into higher- dimensional feature spaces which 
+are then consumed by other fully-  connected layers.
+The embedding transformation summarized as shown in 
+Equation ( 12), in which, Wgeom and bgeom were trainable embed -
+ding parameters and /u1D70E was a non linear activation operation. 
+This embedding layer provided the network with rich geometric 
+information as opposed to bare position numbers, allowing it to 
+learn geometry-  flow coupling interactions appropriate to car -
+diovascular problems as well as to learn more rapidly by show -
+ing area-  sensitive geometry flow patterns in a format that can 
+be learned.
+The standard physics-  informed loss was generalized to in -
+clude area-  based conservation laws and geometric consistency 
+constraints in the loss function formulation of Area Specific 
+PINN. The overall loss includes the terms of data fitting, the 
+PDE residual terms which include area terms, boundary con -
+ditions and the new geometrical consistency term given in 
+Equation (13).
+The geometric consistency loss term given in Equation ( 14) en-
+forced that predicted flow quantities had to be consistent with 
+geometric constraints such as mass conservation in area varying 
+vessels.
+where the sum extends over collocation points along vessel 
+centerlines.
+3.3   |   Warm- Start PINN (WS- PINN)
+Warm- start PINNs were developed to overcome the limitations 
+of PINN such as difficulty in training for stiff PDEs where opti -
+mization becomes unstable, slow convergence by initializing the 
+network with prior knowledge, such as approximate numerical 
+solver solutions rather than random weights, resulting in accel -
+erated convergence with fewer training iterations.
+The architectural framework of Warm Start PINN implemented 
+a hierarchical curriculum learning strategy that progressively 
+increased problem complexity during training, combined with 
+transfer learning that initialized network parameters from solu -
+tions to simpler related problems. The network was first trained 
+on a simplified version of the target problem where complex 
+physical effects were neglected or linearized as in Equations ( 15) 
+and (16), respectively.
+(11)/u1D709input =
+/bracketleft.s3
+x, y, z, A(x, y, z), /u1D715A
+/u1D715x , /u1D715A
+/u1D715y , /u1D715A
+/u1D715z , /u1D705, /u1D70F
+/bracketright.s3
+(12)fgeom = /u1D70E/parenleft.s1Wgeom. [A, ∇A, /u1D705, /u1D70F]T /parenright.s1+ bgeom
+(13)Ltotal = Ldata + /u1D706pdeLpde + /u1D706bcLbc + /u1D706geomLgeom
+(14)Lgeom =
+/uni2211.s1
+i
+/uni2016.x/uni2016.x/uni2016.x/uni2016.x
+/u1D715A
+/u1D715t + /u1D715(AU)
+/u1D715x
+/uni2016.x/uni2016.x/uni2016.x/uni2016.x
+2
+i
+(15)∇ . u = 0
+(16)∇ p = /u1D707∇2u
+FIGURE 2     |    The schematic overview of physics- informed neural network (PINN) methodologies can be organized into four major domains: 
+Training and learning strategies, incorporation of physical principles, architectural modifications, and problem-  formulation strategies.
+FIGURE 3    |    Schematic illustration of the Roe- PINN architecture en -
+ables the use of predictions of the neural network at discrete spatial and 
+temporal points to test the governing partial differential equation resid -
+uals and then integrates the residuals into the composite loss function.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 8 =====
+8 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+where p was pressure, /u1D707 was viscosity, and u was velocity. These linear 
+equations were significantly easier to solve than the full nonlinear  
+Navier–Stokes equations, enabling rapid convergence to an ap -
+proximate solution that captured basic flow patterns in Equation 
+(17). The simplified physics solution provided the initialization for 
+training on progressively more complex formulations. The convec-
+tive nonlinearity was gradually introduced through a continuation 
+parameter /u1D6FD, which transformed the momentum equation.
+The continuation strategy modified the convective term as fol -
+lows:in Equation ( 18):
+where /u1D6FD started near zero and was gradually increased toward 
+unity over the course of training. This continuation approach 
+systematically transformed the linear Stokes problem into the 
+nonlinear Navier–Stokes problem while avoiding the conver -
+gence difficulties associated with attempting to solve the fully 
+nonlinear problem from random initialization.
+The transfer learning mechanism in Warm Start PINN ex -
+ploited the observation that neural network parameters trained 
+on source problems contained learned physical knowledge that 
+could accelerate convergence on target problems. The transfer 
+proceeded by initializing the target problem network with pa -
+rameters from the source problem network, then fine-  tuning 
+through continued training on the target problem. if /u1D703source rep-
+resented the optimized parameters for a source problem and /u1D703t 
+represented parameters being optimized for a target problem, 
+the transfer learning initialization sets.
+where /u1D700 represented small random perturbations to break sym -
+metry and allow adaptation to target-  specific features. The fine- 
+tuning optimization on the target problem then proceeded from 
+this informed initialization rather than from random initializa -
+tion, dramatically reducing the number of iterations required for 
+convergence as in Equation ( 19).
+The loss function formulation in Equation ( 20) for Warm Start 
+PINN included an additional regularization term that prevents 
+catastrophic forgetting of source problem knowledge during tar-
+get problem fine- tuning.
+where Ltarget was the standard PINN loss for the target problem 
+and the regularization term penalized excessive deviation from 
+source problem parameters. The regularization weight /u1D706reg was 
+typically set to decay gradually during training, initially con -
+straining the solution to remain near the source problem so 
+lution, then progressively allowing greater deviation as target- 
+specific features were learned.
+3.4   |   Variable Separated Physics Informed Neural 
+Network (VS- PINN)
+Variable Separated Physics Informed Neural Network (VS)- 
+PINN solved two main limitations of traditional PINNs. PINNs 
+do not easily train multivariable problems and cannot balance 
+the various loss components. Although PINNs have been use -
+ful in solving governing partial differential equations, they have 
+been found to have problems with one-  dimensional or three- 
+dimensional blood- flow equations which contain discontinuous 
+wave propagation, which tend to oscillate about discontinuities 
+because of intrinsic neural bias functions and loss term imbal -
+ance. VS- PINN addressed these problems by using several sub- 
+neural networks with adaptive weighted (AW) loss functions.
+The network structure included an input layer, several hidden 
+layers and an output layer with the input vector being space 
+time coordinates, z = (x, t). Vs- PINNs were not model all the 
+variables on a single network, but rather builds individual sub -
+networks: the cross-  sectional area, which is denoted as A(x, t), 
+the velocity, which is denoted as u(x, t), and the pressure, which 
+is denoted as p(x, t). The subnetworks have common input layer 
+and couple with other variables only via the partial differential 
+equation residuals, but have specific parameters. In this design, 
+the smooth approximator will not have the incentive to blur dis-
+continuities in all outputs. In addition, the adaptive weighting 
+mechanism (AW vs. PINN) makes the loss weights L(/u1D703, w) them-
+selves a learnable hyperparameter, and thus allows balancing 
+the enabler of physical stability by enforcing the governing PDEs 
+with the enabler of accuracy by enforcing the boundary or data 
+terms as expressed in Equation ( 21).
+where w represented the weight fuctions. The weight w func -
+tions trained as hyperparameter along with the network pa -
+rameter /u1D703. The loss was minimized with respect to network 
+parameter and maximized with respect to adaptive weights, 
+given by Equation (22),
+The optimization was implemented using gradient- based update 
+rules, /u1D703 was updated by descending along /u1D6E5/u1D703L and each adaptive 
+weight was updated by ascending along its respective gradient 
+/u1D6E5wL, with step sizes controlled by distinct learning rates. As a 
+result, the model reduced oscillations around discontinuities, 
+improved stability, and increased the overall training efficiency.
+3.5   |   Integral Conservation PINN (IC- PINN)
+The Integral Conservation Physics Informed Neural Networks 
+(ICPINNs) provided a direct solution to one of the main limita -
+tions of the classical PINNs, namely the imposition of physical 
+laws at discrete collocation points. This restriction might cause 
+local anomalies and, more importantly, flouting of fundamental 
+conservation principles. ICPINNs also included a loss term in 
+the form of the integral of the governing equations, which made 
+the mass and momentum conserving throughout the entire do -
+main shown in Figure  4.
+The underlying idea behind the Integral Conservation PINNs 
+based on a set of basic principles of continuum mechanics and 
+CFD, where conservation laws were formulated in terms of in -
+tegrals over finite volumes of control instead of being written 
+(17)/u1D70C(u. ∇ )u = −∇ p + /u1D707∇ 2u
+(18)u. ∇ u → /u1D6FD(u. ∇ )u
+(19)/u1D703target = /u1D703source + /u1D700
+(20)Ltotal = Ltarget + /u1D706reg
+/uni2016.x/uni2016.x/uni2016.x/u1D703target − /u1D703source
+/uni2016.x/uni2016.x/uni2016.x
+2
+(21)L(/u1D703, w)= wresLres + wbcLbc + winLin + wdataLdata
+(22)min
+/u1D703
+max
+w
+L(/u1D703, w)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 9 =====
+9 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+as a differential equation over a point. The conservation laws 
+of mass, momentum and energy in a control volume, denoted Vi 
+with boundary surface denoted /u1D715Vi, that the time derivative of 
+any conserved quantity in the volume minus the flux out of the 
+volume equal to zero as in the Equation ( 23). Even though the 
+individual collocation points can make a small error, the com -
+pounded result could lead to a huge amount of violating con -
+servation across the globe, making the solution inconsistent.
+where /u1D70C was blood density, u was velocity, n was the outward 
+normal vector, and dS indicated surface integration. The first 
+term represented the rate of accumulation of mass within the 
+control volume, while the second term represented the net mass 
+flux out through the boundary.
+The architectural framework of Integral Conservation PINN 
+incorporated these global conservation constraints directly into 
+the neural network loss function through integral-  based loss 
+terms in Equation ( 24) that were evaluated using numerical in -
+tegration over control volumes covering the computational do -
+main. The total loss function extended the conventional PINN 
+formulation.
+where /u1D703 represented network parameters, Lin and Lout en -
+forced inlet and outlet boundary conditions, Lwall enforced  
+wall conditions, Lq represented differential equation residuals 
+at collocation points, and LIr was the novel integral conser -
+vation loss term that explicitly enforces global conservation. 
+The weighting parameters /u1D706 had to be carefully balanced 
+to ensure that both point-  wise differential constraints and  
+global integral constraints were adequately satisfied during 
+training.
+The integral conservation loss term LIr was formulated in 
+Equation ( 25) by partitioning the computational domain into a 
+set of overlapping control volumes /braceleft.s1Vj
+/braceright.s1 and computing conser -
+vation violations over each volume:
+The integrals were evaluated numerically using Monte Carlo in-
+tegration or quadrature rules, with the neural network provid -
+ing solution values u and derivatives at integration points. This 
+explicit enforcement of integral conservation laws ensured that 
+even if point- wise differential equation residuals were non-  zero 
+at individual collocation points, the global conservation proper -
+ties were maintained throughout the training process.
+ICPINN was designed as a fully connected neural network with 
+a crucial enhancement in the activation function. A global adap-
+tive activation function /u1D70Ea (x) was incorporated with a trainable 
+scaling factor, which was updated during training alongside the 
+network parameters to dynamically adjust the slope of the acti -
+vation function.
+This adaptive mechanism allowed the network to model oscilla -
+tory behaviors more effectively by tuning the derivative values 
+of the activation function according to the problem's specifics. 
+Mathematically, this adaptive activation function was expressed 
+in Equation ( 26). Where /u1D70E(a) was the base activation function, 
+and a was a trainable parameter that globally scales the input, 
+allowing the slope of the activation to adapt during training.
+The training of PINNs faced issues which may be addressed by 
+adapting weights of the loss terms with Neural Tangent Kernel 
+theory (NTK) and a gradient- based procedure. PINNs minimize 
+a multi- component loss which includes the following: boundary 
+(23)d
+dt /uni222B.dspV/u1D70CdV + /uni222B.dsp/u1D715V/u1D70Cu. ndS = 0
+(24)L(/u1D703)= /u1D706inLin + /u1D706wallLwall + /u1D706qLq + /u1D706outLout + /u1D706IrLIr
+(25)LIr =
+/uni2211.s1
+i
+/bracketleft.s3/uni2016.x/uni2016.x/uni2016.x/uni2016.x
+d
+dt /uni222B.dspV/u1D70CdV + /uni222B.dsp/u1D715V/u1D70Cu. ndS
+/uni2016.x/uni2016.x/uni2016.x/uni2016.x
+2/bracketright.s3
+(26)/u1D70Ea (x) = /u1D70E(a. x)
+FIGURE 4     |    Schematic representation of IC-  PINN having neural inputs as (x,y,z) coordinates, multiple hidden layers with activation function 
+and the output variables (u,v,w,p). Automatic differentiation calculates spatial derivatives that used to compute the loss terms in PDEs and imposes 
+physical constraints during training.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 10 =====
+10 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+conditions, PDE residuals, where each component contributes 
+differently to the total inaccuracy. The NTK framework illus -
+trates that the eigenvalues of the respective kernel matrix con -
+trol the rate with which each component trains. It results in an 
+imbalance between components related to small eigenvalues 
+training slower than those with large eigenvalues and limits the 
+training efficiency.
+The Jacobian of the output with respect to the network param -
+eters of a single loss term produces the kernel matrices and the 
+eigenvalue spectrum determines how fast the corresponding 
+loss term can be optimized. To reset the contribution of each 
+loss component during training, weights were allocated, deter -
+mined by the trace of their kernel matrices in Equation ( 27). 
+PINNs were mesh- free approach to the solution of PDEs, which 
+trained neural networks to minimize the residual obtained 
+through governing equations, boundary, and initial conditions. 
+PINNs used the method of automatic differentiation to esti -
+mate derivatives with high accuracy, which eliminates mesh- 
+discretization errors. Nevertheless, traditional PINNs were slow 
+in convergence, training noise, have challenges in enforcing 
+high- frequency or oscillatory solutions, and were inefficient in 
+high- dimensional tasks.
+where Tr denoted the trace operator and kj represented the ker-
+nel matrix for loss component j. As a result, all components con-
+verged at about the same rate as each loss weight was inversely 
+proportional to their kernel's trace. Because of different PDE- 
+related losses had varied scales and rates of convergence, manu -
+ally adjusting these weights was time-  consuming and difficult.
+The ideal weights for each PDE could vary greatly.
+The gradients of the loss terms with respect to network parame -
+ters were used to adaptively update weights rather than requir -
+ing manual adjustment.
+3.6   |   Gravity Informed Physics Neural 
+Network(GRINN)
+GRINN framework were the extension of the PINNs, which 
+uses the sine activation functions providing a more stable oscil -
+latory PDE solution and training performance. GRINN applied 
+warm- start pre- training as a remedy to minimize noise and en -
+hance convergence, applies well to nonlinear PDEs with steep 
+gradients and scales more efficiently in three-  dimensional sim-
+ulations than conventional techniques. GRINN keeps the mesh- 
+free benefit and out of the errors that PINN has, but moreover, 
+it provides a more stable, efficient, and correct solution to self- 
+gravitating hydrodynamic systems. GRINNs were specifically 
+aimed at the modeling of self-  gravitating gas flows. Though it 
+followd the fundamental PINN scheme, the major difference 
+was incorporating a gravity term in the governing equations and 
+best applied to astrophysical problems where self-  gravity and 
+fluid dynamics were in critical interaction. GRINN extends the 
+classical theory of hydrostatic pressure and its generalization to 
+the dynamical flow cases involving the forces of gravity and the 
+forces of inertia and viscosity as in Equation (28). The equations 
+of momentum conservation with body forces form the equations 
+with a direct source of gravity.
+where the gravitational acceleration vector, which depends on 
+both the magnitude of gravity and the body orientation relative 
+to the gravitational field. For a patient in supine position, g was 
+primarily oriented perpendicular to the primary flow direction 
+in horizontal vessels, while for upright posture, g aligns with the 
+cranio- caudal direction and creates large hydrostatic pressure 
+gradients. The challenge for neural network modeling is that 
+body orientation is not a fixed parameter but rather a dynamic 
+variable that must be incorporated into the network architecture 
+to enable prediction of hemodynamic changes with postural 
+variations.
+After training, the PINN model can closely predict the answers 
+to the PDEs. The training method optimizes network param -
+eters iteratively, taking derivatives of outputs with respect to 
+network parameters to compute MSEs. θ was adjusted in each 
+step to minimize the MSE given in Equation ( 29). A smooth ac-
+tivation function utilized to assure the differentiability of the 
+output, which was the neural network's approximated solution. 
+PINNs use the auto-  differentiation technique to estimate the 
+derivative of the outputs and finally produce PDE solutions. 
+Furthermore, numerical approaches like FD are inefficient 
+when used to model complex nonlinear functions. Automatic 
+differentiation addresses these restrictions while also demon -
+strating no approximation (truncation) error. This allows the 
+network to approximate any PDE with the specified boundary 
+conditions without numerically discretizing the equations, elim-
+inating the need for a mesh.
+3.7   |   Auxiliary Physics Informed Neural Network 
+(A- PINN)
+Traditional PINNs relied on numerical discretization of inte -
+gral operations when applied to Integro Differential Equations 
+(IDEs), which contained integral operators that neural networks 
+were unable to automatically separate. In order to solve this, 
+traditional PINN approaches discretized the integral operator 
+using numerical quadrature such as Gaussian quadrature and 
+transformed IDEs into PDEs or ODEs that PINNs could solve. 
+However, this discretization significantly raised processing 
+costs and caused truncation, discretization errors, especially for 
+high- order quadrature with several collocation points.
+These drawbacks of traditional PINNs were rectified by 
+Auxiliary Physics-  Informed Neural Networks (A- PINNs) by 
+treating the integral terms differently as in Equation ( 30).
+This framework used a multi-  output deep neural network 
+(DNN) to simultaneously approximate two functions, the 
+(27)/u1D706j =
+Tr/parenleft.s1kin
+/parenright.s1+ Tr/parenleft.s1kw
+/parenright.s1+ Tr/parenleft.s1k0
+/parenright.s1+ Tr/parenleft.s1kQ
+/parenright.s1+ Tr/parenleft.s1kI
+/parenright.s1
+Tr
+/parenleft.s1
+kj
+/parenright.s1
+(28)/u1D70C
+/parenleft.s2/u1D715u
+/u1D715/u1D70F+ u. ∇ u
+/parenright.s2
+= −∇ P + μ∇2u
+(29)/u1D703= min /parenleft.s1MSEPDE + MSE0 + MSEb
+/parenright.s1
+(30)z(x) = /uni222B.dspK(x, t)y(t)dt
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 11 =====
+11 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+primary output yPred
+/parenleft.s1xi, /u1D703/parenright.s1
+, which represented the IDE solution 
+zPred
+/parenleft.s1xi, /u1D703/parenright.s1
+, and an auxiliary output, which represented the in -
+tegral part of the equation. A- PINNs established a new physi -
+cal relation, usually a differential equation, that connected the 
+auxiliary function to the principal solution in place of externally 
+discretizing the integral operator. For a Volterra integral, this 
+relationship was given by differentiating Equation ( 31).
+In the simplified case where the kernel allows, this often sim -
+plifies to a direct ODE constraint. This approach eliminated the 
+discretization and truncation errors that occurred with integral 
+evaluation. This method was mesh-  free, enabling evaluation at 
+any point without interpolation. A- PINNs also enabled effective 
+inverse problem training by optimizing unknown parameters, 
+neural network weights, and data-  driven residuals simultane -
+ously, addressing the challenges faced by integral discretiza -
+tion in conventional PINNs. The IDE was thus reformulated as 
+Equation (32),
+A- PINN was designed as a fully connected deep neural network 
+with shared hidden layer which extracted the common features 
+by both output branches. The input layer took the spatial (x) and 
+time (t) coordinates as independent variable, producing two out-
+puts yPred
+/parenleft.s1xi, /u1D703/parenright.s1
+, zPred
+/parenleft.s1xi, /u1D703/parenright.s1
+ and while automatic differentiation 
+compute their derivatives y/uni2032.var
+Pred
+/parenleft.s1xi, /u1D703/parenright.s1
+, z/uni2032.var
+Pred
+/parenleft.s1xi, /u1D703/parenright.s1
+. The total loss 
+function combined the initial condition loss ( MSEi), the gov -
+erning equation residual ( MSEf ), and the auxiliary output con -
+straint (MSE0) represented in Equation ( 33).
+The goal of the entire training procedure was to minimize the 
+weighted sum of three mean square errors. Weights /bracketleft.s1wm, wf , w0
+/bracketright.s1 
+were adaptively changed during training to ensure that each 
+component's convergence was balanced.
+3.8   |   Statical- Physics Informed Neural Network 
+(Stat- PINN)
+Statistical Physics-  inspired Neural Networks (Stat- PINNs) were 
+proposed to overcome the major drawback of traditional PINNs, 
+which was the non- uniqueness of the solution. Stat- PINNs ad -
+dressed this weakness by including the statistical mechanical 
+relationships of entropy and gradient flows as part and parcel of 
+the network training objective. The methodology started with 
+the works of constructing dissipative dynamics that obey the 
+second law of thermodynamics in a gradient flow. It worked 
+not only on the macroscopic evolution equation but also on its 
+Lyapunov functional and the kinetic operator of the same. Thus, 
+it ensured that the trained model used physically significant 
+foundations and could be generated according to first principles, 
+due to the extra predictive power of statistical constructs, such 
+as Boltzmann entropy. Practically Stat- PINNs were able to redis-
+cover the macroscopic equations as well as the thermodynamic 
+logic underlying them using only raw information based on 
+short time simulations, in even those cases where conventional 
+PINNs were unable to yield a unique result.
+Statistical PINN used variational-  based methods to achieve ap -
+proximation Bayesian inference, which was scalable to large 
+neural networks with the architectural framework of Statistical 
+PINN. Imprecise-  Bayesian inference, Networks with millions 
+of parameters were too large to compute precisely, and would 
+require to compute high-  dimensional integrals in parameter 
+space. Variational inference solved this problem by fitting the 
+intractable posterior distribution, P(/u1D703/uni007C.varD/uni007C.var), to a tractable varia -
+tional distribution, q/parenleft.s1/u1D703; /uni2205.var/parenright.s1
+ with variational parameters /u1D719 as in 
+Equation (34). The choice of these parameters was done to min -
+imize the Kullback–Leibler divergence between the true poste -
+rior and q in order to give a principled approximation.
+The variational distribution was typically chosen to be a factor -
+ized Gaussian given by Equation (35),
+This mean-  field approximation enabled efficient optimization 
+while capturing parameter uncertainty through the learned 
+variance parameters /u1D70E. The loss function in Equation ( 36) for 
+Statistical PINN combined the standard physics-  informed loss 
+with a Kullback–Leibler regularization term enforcing consis -
+tency with the prior.
+The expectation Eq indicated that loss evaluations were per -
+formed with parameters sampled from the variational distribu -
+tion, q typically implemented through reparameterization as in 
+Equation (37), 
+where ∗ denoted element- wise multiplication and /u1D700 was the stan-
+dard normal random variable. This reparameterization enabled 
+gradient- based optimization of the variational parameters { /u1D707, /u1D70E} 
+through backpropagation, as gradients can flow through the 
+sampling operation via the mean and variance parameters.
+3.9   |   Physics Informed Graph Neural Network 
+(PIGNN)
+Physics- informed graph neural network (PIGNN) based on the 
+graph neural network (GNN) that used to process graph-  based 
+data, where a node corresponded to a component and an edge 
+allowed to encode interaction or a connection as shown in 
+Figure  5. The topology and geometry of systems including vas -
+cular networks captured by the GNN used by PIGNNs as op -
+posed to traditional PINNs that assumed multi-  layer perceptron 
+taking spatial coordinates as input. Loss function comprised a 
+data term, physics- informed term although the physics loss was 
+plotted in the graph. The physics loss was obtained by solving 
+the one-  dimensional equations of blood-  flow at the nodes and 
+the edges of a graph. The biggest enhancement was the complex 
+(31)yn(x)= f (x)+ /u1D706/uni222B.dspK(x, t)y(t)dt
+(32)yn
+(x) = f (x)+ /u1D706. z(x)
+(33)MSETotal = wiMSEi + wf MSEf + w0MSE0
+(34)/u1D719∗ = arg min � KL�q�/u1D703; � �‖P(/u1D703�D �)‖�
+(35)q(/u1D703; /u1D719)=Π i N/parenleft.s1/u1D703i; ui, /u1D70E2
+i
+/parenright.s1
+(36)Ltotal = Eq
+�Ldata + LPDE
+� + kL[q�/u1D703; � �‖P(/u1D703)]‖
+(37)/u1D703= /u1D707+ /u1D70E∗ /u1D700, /u1D700∼ N(0, 1)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 12 =====
+12 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+geometries, like arterial networks, were represented through 
+graphs, which made the model to adapt the topology of the sys -
+tem dynamically and, thus, overcoming one of the most signif -
+icant limitations of the traditional PINNs, as they usually work 
+with structured spaces. Physics-  GNN applied the theory of the 
+graph neural network to physical systems, which were defined 
+by network topology. A graph G = (V , E) made up of a collection 
+of nodes V (each node corresponds to a segment of a vessel or bi-
+furcation point) and edges E (each edge corresponds to a connec-
+tion between vessels). The nodes in a vessel network connected 
+by an edge (i, j) ∈ E, and the features were captured in each node 
+i ∈ V  by xiz to denote the cross-  sectional area, length, and local 
+flow variables of a vessel. Graph neural networks propagate and 
+aggregate information through the information passing succes -
+sively through the graph structure represented by Equation (38), 
+where h(k)
+i  was the hidden state of node i at layer k, N(i) denoted 
+the neighbors of node i, AGGREGATE combined information 
+from neighboring nodes, and UPDATE transformed the aggre -
+gated information to produce the next- layer representation. This 
+message- passing architecture naturally accommodated arbi -
+trary graph topology and enabled learning of flow patterns that 
+respect network connectivity.
+The architectural framework of Physics- GNN for cardiovascular 
+networks implemented specialized message-  passing operations 
+that encoded physical conservation laws at vessel junctions. At 
+bifurcation nodes where a parent vessel split into daughter ves -
+sels, mass conservation required as in Equation ( 39).
+where Q denoted volumetric flow rate. Physics-  GNN enforced 
+this conservation principle through specialized aggregation 
+functions that computed flow partitioning based on daughter 
+vessel resistances as in Equation ( 40).
+where Ri was the resistance of daughter vessel, computed  
+from Poiseuille's law for cylindrical vessels. This physics-  
+informed aggregation ensured that predicted flow dis -
+tributions automatically satisfy mass conservation at all 
+bifurcations, eliminating a major source of error in conven -
+tional approaches.
+The edge features in Physics-  GNN encoded vessel-  specific geo -
+metric and hemodynamic properties that determined local flow 
+resistance and pulse wave propagation. For each vessel segment 
+represented as an edge e = (i, j), the feature vector included 
+shown in Equation (41).
+where L was vessel length, A was cross-  sectional area, h was 
+wall thickness, E was elastic modulus, R was flow resistance, 
+C was vessel compliance, and Z0 was characteristic impedance. 
+These features enabled the graph network to learn how local 
+vessel properties influence flow patterns and pressure distribu -
+tions throughout the network.
+The loss function formulation for Physics-  GNN in Equation 
+(42) combined node-  level predictions (such as pressure at bi -
+furcation points), edge-  level predictions (such as flow rates and 
+velocities in vessel segments), and graph-  level conservation 
+constraints:
+The conservation loss in Equation ( 43) explicitly enforced mass 
+and momentum conservation at all network junctions.
+(38)
+h(k+1 )
+i = UPDATE
+/parenleft.s2
+h(k)
+i , AGGREGATE
+/parenleft.s2/braceleft.s2
+h(k)
+j : j ∈ N(i)
+/braceright.s2/parenright.s2/parenright.s2
+(39)QParent =Σ Qdaughtetr
+(40)Qdaughter = Qparent.
+⎛
+⎜
+⎜⎝
+R(−1 )
+i
+R(−1 )
+j
+⎞
+⎟
+⎟⎠
+(41)fe = /bracketleft.s1L, A, h, E, R, C, Z0
+/bracketright.s1
+(42)Ltotal = Lnode + Ledge + Lconservation + Lboundary
+FIGURE 5     |    Architecture of the physics- informed graph neural network (PIGNN) model illustrating the workflow from graph-  structured input 
+data to prediction. The model consists of stacked graph convolution layers with message passing, aggregation, and MLP updates to produce node- 
+wise predictions.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 13 =====
+13 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+where the pressure continuity constraint ensured proper pres -
+sure coupling at bifurcations. This graph-  level supervision 
+provided strong regularization that guided network learning 
+toward physically consistent solutions.
+4   |   Applications of PINN in Hemodynamics
+There were inherent problems with non-  invasive measurement 
+of arterial pressure. Although CFD could provide highly precise 
+numerical solutions based on the governing equations of fluid 
+mechanics, its reliance on accurate boundary conditions and the 
+time- consuming preprocessing required for solving these equa -
+tions limits its applicability in real-  time clinical environments. 
+To address these limitations, Du Toit and Laubscher ( 2023) in-
+troduced a physics-  based neural-  network model for pressure 
+estimation. A model of the aortic arch was constructed using 
+idealized human aortic geometrical data and a CFD simulation 
+using bidirectional fluid–solid coupling computation was done. 
+The spatiotemporal velocity and pressure fields obtained were 
+used for the training and validation data of the PINNs. To de -
+termine the distribution of velocities and relative pressures, the 
+nondimensional Navier–Stokes and continuity equations were 
+used in the loss function. Relative pressure was then derived 
+using a post- processing step which takes advantage of the linear 
+relationship between relative pressure and elastic modulus as 
+well as the displacement of the vessel wall.
+Isaev et  al.  ( 2024) introduced a unified process involving the 
+synthesis of data and advanced neural- network models. The pro-
+cess of work began with the construction of three-  dimensional 
+meshes of vascular bifurcations with the help of a generator that 
+was built on the GMSH library. These meshes were used to per -
+form 3D bloodflow simulations, which vary the physiological 
+parameters such as, vessel radii, bifurcation angles, inlet/outlet/
+pressures, producing a heterogeneous dataset.
+PINNs learned the unknown physical phenomena, particularly 
+when the equations of the relevant physical systems were im -
+plemented into a neural network architecture, thus incorporat -
+ing the available data that is held empirically with the help of 
+PINNs. Neural networks were also biased to smooth functions, 
+and this became difficult to represent cardiovascular flows that 
+have a large range of spatial frequencies as seen in the case of 
+aneurysms and stenoses. Activation functions based on Fourier- 
+based activation functions showed promising reduction in spec -
+tral bias (Aghaee and Khan  2024).
+The existing technology of the transcranial Doppler ultrasound 
+was limited to measuring the velocity of blood at a limited num-
+ber of intracranial sites because of the availability of the skull. 
+More invasive modalities, such as computed tomography angi -
+ography and magnetic resonance pulse-  sequence modalities, 
+were invasive and could not be used repeatedly. The suggested 
+method combines sparse clinical data with three-  dimensional 
+imaging and reduced- order modeling simulations to create high- 
+resolution spatiotemporal images of velocity, vessel-  to- vessel 
+cross- sectional area, and pressure across cerebral vasculature. 
+ASPINN and PINN models have transformer modules and an 
+adaptive activation to enforce physical laws and predict hemo -
+dynamic evolution throughout the vascular network without 
+specifying boundary conditions (Sarabian et al.  2022).
+Dynamic contrast-  enhanced magnetic resonance imaging 
+(DCE- MRI) had extensive applications in the evaluation of vas -
+cularization of tissues especially in cancer settings. Traditional 
+pharmacokinetic models often neglected diffusion of the con -
+trast agent between the neighboring voxels. As a result, failed 
+to yield accurate data in heterogeneous tumors. A PINN-  based 
+framework presented by Sainz-  DeMena et  al.  ( 2024) opted for 
+measured DCE-  MRI data and included mass-  conservation con-
+straints and accounting for inter-  voxel diffusion. The suggested 
+approach was compared to some of the algorithms that exist in 
+the literature on 1D test cases.
+H. J. Ling et  al.  ( 2024) addressed the challenges of modeling 
+patient- specific hemodynamics, where initial and boundary 
+conditions and model parameters were usually indeterminate 
+and highly variable, with the implementation of PINNs based 
+on the Navier–Stokes equations. L. Li et al. ( 2024) suggested the 
+new direction where the real-  time blood-  pressure information 
+fitted through the training of the mappings between the simple 
+physiological data to the flow solutions, without the specifica -
+tion of an initial or a final condition. The windkessel boundary 
+conditions of time periodicity, which combined with a hyper- 
+parameter network, allow the transformation of hard model 
+coefficients to be estimated at training, which provides physi -
+ologically realistic, continuous wave prediction. The presented 
+methodology enabled the constant, spatially and temporally 
+resolved measurements of blood pressure and velocity through 
+wearable devices, thus providing substantial benefits in the 
+fields of cardiovascular-  disease identification, as well as, indi -
+vidually tailored therapy. The method could forecast complete 
+hemodynamic waveforms through space and time which made 
+it more clinically applicable.
+To improve the accuracy of deep neural networks in smooth and 
+discontinuous functions, along with the solutions of linear and 
+nonlinear partial differential equations (Jagtap et al.  2020), pro-
+posed adaptive activation functions in deep neural networks and 
+PINNs. The proposed approach enhanced the performance of 
+the network, convergence speed and solution accuracy by add -
+ing a trainable hyperparameter to the activation function, espe -
+cially at the beginning of the training process. The approach was 
+evaluated using classical equations of forward and inverse prob -
+lems. Frequency-  domain analysis exhibits effective learning in 
+a variety of frequencies. Overall, the approach was shown to be 
+more efficient as well as robust and assisted gradient- descent op-
+timization to leave suboptimal stationary points and decreased 
+loss objectives faster over traditional deep- learning benchmarks 
+and different datasets.
+In fluid dynamics, numerical simulations normally involved 
+discretization and mesh generation that computationally pro -
+hibitive with real-  time applications. To address this limitation, 
+Sun et al. ( 2020) adopted a physics- constrained neural- network- 
+based approach, which produced mesh-  free surrogate models 
+to predict the dynamics of fluid-  flow with great accuracy and 
+(43)
+Lconservation =
+/uni2211.s1/uni2016.x/uni2016.x/uni2016.xQparent −ΣQdaughters
+/uni2016.x/uni2016.x/uni2016.x
+2
++ /uni2016.x/uni2016.x/uni2016.xpparent − pparent
+/uni2016.x/uni2016.x/uni2016.x
+2
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 14 =====
+14 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+efficiency by embedding structured neural networks with loss 
+functions that combine partial differential equations and physi -
+cal boundary conditions (Sun et al.  2020).
+Inverse estimate of velocity fields based on images through in -
+traventricular flow mapping (VFM) had been widely reported. 
+However, this method could be subject to error in cases of poor 
+quality of measurement. S. Wang et al. ( 2023) presented a PINN 
+framework with the capability to synthesize high-  resolution 
+three- dimensional flow fields of the left ventricle of the cardiac 
+heart over a local time range. The framework utilized supervi -
+sion by color Doppler measurements which had low resolution 
+and signal- to- noise ratio. Furthermore, PINN solvers were cou -
+pled across successive time frames with discrete temporal nu -
+merical differentiation. Consequently, the model referred as 
+coupled sequential frame PINN (CSF- PINN).
+Diffusion Contrast Agents (CA) between neighboring vox -
+els often represented in traditional pharmacokinetic models, 
+which led to an imprecise heterogeneous tumor environment. 
+Although previous algorithms have tried to consider diffusion 
+effects, they were often faced with convergence problems be -
+cause of the ill-  posed nature of the problem. Sainz-  DeMena 
+et al. ( 2024) proposed a PINN- based fitting of dynamic contrast- 
+enhanced magnetic resonance imaging (DCE-  MRI) data, where 
+the mass-  conservation equation of the pharmacokinetic model 
+is imposed, but the CA diffusion is explicitly considered. PINNs 
+prove to be better at predicting parameters of vascularization 
+using diffusion-  corrected tracer-  kinetic models and behave 
+well in the presence of noisy or incomplete data. Therefore, the 
+method is an opportunity that can be appreciated as the means 
+of even more specific and accurate data related to the DCE-  MRI 
+analysis when diffusion effects play an important role.
+The forward and inverse problems that characterize blood flow 
+dynamics were a determining factor in many biomedical stud -
+ies. Their numerical discretization linked to the spatial (Orera 
+et  al.  2025) variability of mechanical and geometrical proper -
+ties required sophisticated numerical solvers to ensure sta -
+bility and proper description of the dynamics of the systems. 
+Orera et  al.  ( 2025) presented Roe PINNs, a hybrid model that 
+incorporated sophisticated CFD solutions in physics-  informed 
+neural networks (PINNs). Orera et al. ( 2025) demonstrated an 
+example of a Roe PINNs application to both forward and in -
+verse problems involving the propagation of nonlinear waves in 
+elastic arteries in the presence of geometric type source terms. 
+Orera et al. ( 2025) showed that the augmented Riemann solvers 
+could be integrated into the PINN architecture with relatively 
+small modifications to its hyperparameters, thus potentially 
+being a benefits-  based alternative to automatic differentiation 
+(AD), in particular, in the case where the solution had strong 
+nonlinearities.
+Predictive modeling of cardiovascular flows offers a useful tool in 
+cardiovascular monitoring, diagnostics, and surgical planning. 
+The advanced methods of computation were highly dependent 
+on time-  consuming pre-  processing and calibration steps that 
+were normally costly in computation, thus restricting their use 
+in the clinical setting. Kissas et al. ( 2020) suggested a machine- 
+learning system that could combine a smooth synthesis of non- 
+invasive in vivo measurement methods and computational flow 
+dynamics models based on first-  principle physical laws. The 
+framework guaranteed that the results of deep neural networks 
+met the requirements of conservation of mass and momentum 
+by demonstrating how to constrain the output of such systems 
+using one- dimensional models of pulsatile flow.
+Modeling patient- specific hemodynamics using images increas -
+ingly used as a diagnostic instrument in a wide range of car -
+diovascular conditions. Although the potential of the models to 
+improve the diagnostic accuracy and hence clinical outcomes 
+was broadly recognized, they typically require extensive compu-
+tational resources since most models rely on traditional numer -
+ical methods like CFD. In place of these numerical approaches 
+(Yevtushenko et al.  2022), presented a machine-  learning (ML)- 
+based model for identifying patient-  specific hemodynamic 
+parameters. This method had the advantage over CFD-  based 
+strategies that compute patient- specific hemodynamic results in 
+real time with significantly lower computational effort.
+Computational hemodynamic models were crucial in optimis -
+ation of surgical plans and understanding of the mechanism of 
+cardiovascular diseases. Recent progress in machine-  learning 
+methods explored to reduce the computational overhead of 
+these models. In an effort to forecast the behavior of blood-  flow 
+velocity changes and lumen-  area pulsatile changes along arte -
+rial segments (Sen et  al.  2024), suggested using PIGNN along 
+with one- dimensional equations of blood-  flow, the dynamics of 
+both blood- flow velocity and lumen- area pulse changes. The ap-
+proach built a graph that described the topology of the arteries 
+and the edges modeled by 1- D lines and the nodes were modeled 
+by the points in the flow analysis. The new system decoding 
+of mathematical relationships among nodes that produced ve -
+locity and lumen pulse waveforms of each node. The empirical 
+measurement data used as the basis of the training protocol of 
+PIGNNs included inlet and outlet velocity waves and diastolic 
+lumen- area measurements in each vessel.
+To address challenges associated with integrals in the governing 
+equations, A- PINN introduced an Adapted Physics-  Informed 
+Neural Network (A- PINN), which using automatic differenti -
+ation of these auxiliary outputs instead of traditional integral 
+operators (Yuan et al.  2022). In contrast to the original PINN, 
+which only provides approximations of variables in the govern -
+ing equations, the modified framework builds a multi-  output 
+neural network that can at the same time approximate primary 
+outputs as well as auxiliary outputs estimating both the variables 
+and the integrals. Thereafter, the connection between primary 
+and auxiliary outputs is limited by newly brought output con -
+ditions imposing adherence to physical laws (Yuan et al.  2022).
+Recent studies have examined PINN architectures to learn to 
+simulate the hemodynamics by combining mathematical mod -
+els of blood flow with empirical data much faster. A variable- 
+separated PINN, which was grounded on adaptive weighted loss 
+functions (AW- vsPINN), had been created in order to model 
+blood flow in arteries. In this architecture, the sub-  neural 
+networks were set up to produce predictions of unknown sca -
+lar state variables when shared a common input layer (Jagtap 
+et  al.  2020). The Adaptive Weighted PINN (AWsPINN) opti -
+mally tuned the weights in the loss term through a minmax 
+optimization paradigm; the weights were adjusted alongside 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 15 =====
+15 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+the network parameters and, as a result, provide a reasonable 
+balance between the contribution of the different loss terms in 
+training. The neural networks trained in two stages to optimize 
+the Adam optimizer with an inverse-  time- decay learning rate 
+and L-  BFGS optimizer until the loss value reached a stopping 
+point (Jagtap et al.  2020).
+PINNs have been used to predict blood flow by coded nonlinear 
+Navier–Stokes equations and training data into the neural net -
+work framework. Non- invasive, real- time, and accurate acquisi-
+tion of hemodynamic variables was a problem that the existing 
+invasive detection and simulation algorithms faced. To achieve 
+prediction of the velocity, pressure, and WSS without using sim-
+ulation data, Liu et al. ( 2025) suggested an integral conservation 
+physics- informed neural network (ICPINN) that used adaptive 
+activation functions to predict the quantities since they were 
+dependent on patient-  specific vessel geometries. To obtain un -
+supervised learning, the loss function used mass- flow- rate resid-
+uals of the mass- conservation law which significantly improved 
+the accuracy and efficiency of the predictions (Liu et al.  2025).
+Near- wall blood flow and WSS had a central role in the patho -
+genesis of significant cardiovascular diseases. However, ac -
+curate measurement of WSS in  vivo remains challenging. 
+Computational and experimental measurements of WSS 
+tailored to the patient have weaknesses in uncertainty, low 
+resolution, and noise. PINNs offered a highly adaptable deep- 
+learning framework with the capability to combine the equa -
+tions governing blood flow with measurement data. PINNs did 
+not have the large-  data bottleneck associated with deep learn -
+ing because of the understanding of the governing equations. 
+Arzani et al. ( 2021) established that a PINN had the potential to 
+enhance WSS measurements of diseased arteries without issues 
+with unknown inlet and outlet boundary conditions by convert -
+ing very few measurement points. One of the most typical char -
+acteristics of patient- specific CFD models was the uncertainty of 
+boundary conditions, and (Arzani et al.  2021) also demonstrated 
+that PINNs utilized the sparse measurements of velocity further 
+out of the wall to measure WSS with extremely high accuracy 
+without knowing full information about the wall conditions.
+In order to simulate blood circulation in the coronary arteries, 
+the PINN-  CFD hybrid framework for coronary hemodynam -
+ics proposed a methodology that integrates deep learning with 
+the general laws of physics. Their methodology was effective in 
+predicting fractional flow reserve (FFR) by integrating physics- 
+based models with clinical data as this enables them to over -
+come the difficulties of non- invasive measurements. The quality 
+and effectiveness of the suggested model were supported by the 
+validation on CFD and invasive fractional flow reserve (FFR) 
+methods (Alzhanov et al.  2024).
+Training PINNs for specific flow was usually more time- 
+consuming than in traditional CFD methods, which hampered 
+their extensive use. In both strategies explored, a multi-  case 
+parameterized PINN approach was proposed where the differ -
+ent geometry cases were parameterized and pre-  trained on the 
+PINN (Wong et al.  2024). First, additional inputs to the PINN, 
+like distance to the wall and distance to the centerline, were the 
+coordinate parameters depending on tube geometry that could 
+improve the accuracy and minimize the computational load of 
+the model at a significant level. Second, the use of additional 
+loss terms was applied to impose zero derivatives of the existing 
+physics constraints on the PINN and hypernetwork, enhanc -
+ing the performance of the mixed network and hypernetwork 
+(Wong et al.  2024).
+In many cases, discovering the hemodynamic models from 
+macroscopic measurements was inherently non- unique. Many 
+pairs of possibles and operators could produce an identical set 
+of macroscopic dynamics, which was a barrier to physical in -
+terpretation of the learnt models. To solve this non- uniqueness 
+problem, Statistical- Physics- Informed Neural Networks (Stat- 
+PINNs) introduced a machine-  learning framework that incor -
+porates knowledge of statistical mechanics (Huang et al.  2025). 
+The framework had been formulated in dissipative isothermal 
+systems. Interestingly, it employed data from short time particle 
+simulations to learn the thermodynamic structure that could be 
+used to predict long time macroscopic evolutions and method -
+ology to the dynamics of particle systems with Arrhenius-  type 
+interaction and included a wide range of phenomena including 
+diffusion of defects in solid materials, surface absorption, and 
+chemical reactions (Huang et al.  2025).
+Aortic dissection (AD) was a life- threatening condition that con-
+tributes significantly to morbidity and mortality in the strands of 
+different ages. Hemodynamic variables measured quantitatively 
+in aneurysmal and dissected aortas have increased the prognos -
+tic data in AD and aortic aneurysms (Daneker et al.  2024). To 
+achieve better results, warm-  start physics-  informed neural net -
+works (WS- PINNs) have been proposed that allowed training 
+through transfer learning and physics. WS- PINNs reduced the 
+reliance on large-  scale measurements and reduced the effects 
+of prescribed inflow/outflow boundary conditions on predictive 
+accuracy, which provided better predictive performance in clin -
+ical decision- making. The framework was promising in the ap -
+plication to other aortic pathologies such as arterial stenosis and 
+other types of aneurysms (Daneker et al.  2024).
+Artificial-  intelligence- based physiological monitoring on wear -
+able devices had great potential to create precise medicine. 
+However, traditional data-  driven AI paradigms need a lot of 
+ground- truth training data to predict complex cardiovascular 
+parameters. In biomedical applications, it was difficult, tedious, 
+and impossible to collect large amounts of personalized ground- 
+truth data, making these methods impractical in the context 
+of widespread, personalized healthcare implementation (Sel 
+et al.  2023). To address this limitation, a PINN- based framework 
+for cuffless blood pressure estimation continuous cuffless blood 
+pressure using minimum ground-  truth. The major innovation 
+was the addition of Taylor series approximations to the train -
+ing of the neural networks, hence including known, gradually 
+developing associations among sensor inputs and cardiovascu -
+lar outputs. The physics-  based loss term, which was based on 
+partial differential equation proposed approximations, imposed 
+known dynamics and relations between variables even in  sit -
+uations where direct supervisory information was thin and 
+thereby diminished the amount of training information needed 
+(Sel et al.  2023).
+Mesh deformation was an essential component in applications 
+involving moving boundaries, such as FSIs. In a linear-  elasticity 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 16 =====
+16 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+computation, traditionally nodes in the mesh would be up -
+dated without affecting the connectivity or the distortion of the 
+mesh. This required a strict implementation of the conditions 
+of boundary conditions (especially Dirichlet conditions defin -
+ing the positions of nodes). However, the standard PINNs only 
+provided an approximation of the conditions, which resulted in 
+errors in the boundaries and a reduced degree of simulation fi -
+delity when considering large or complex deformations. Aygun 
+et al. ( 2023) presented an approach that used a collocation- based 
+PINN to solve mesh-  deformation problems, where the posi -
+tions of mesh node modified with the help of linear-  elasticity 
+equations without considering the inter-  mesh connectivity. In 
+order to achieve accurate agreement of the boundary condi -
+tions, Aygun et al. ( 2023) employed a specific PINN by means of 
+a hard- boundary- condition approach that included the anteced-
+ent solution along with an accurate boundary map. The network 
+was optimized based on the governing physics alone, including 
+the fixing of the boundary nodes in explicitly known locations, 
+ensuring the accurate accuracy of the requested location of the 
+boundaries.
+The hemodynamic parameters were very crucial in clinical 
+diagnosis and treatment of cardiovascular diseases. However, 
+obtaining non-  invasive, real-  time measurement of the patient- 
+specific hemodynamics remained a significant challenge to 
+the existing invasive detection and simulation algorithms. J.-  X. 
+Wang et al. ( 2017) and X. Zhang et al. ( 2023) combined a custom- 
+designed analysis system with CFD, based on the multi- attribute 
+point- cloud dataset and deep-  learning system using PINN aug -
+mentation modules. This workflow was used to produce flow- 
+field data in two categories of patient-  specific models such as 
+aortic models adding fine coronary branches and abdominal 
+aorta models to allow a full hemodynamic analysis.
+Numerical modeling of industrial flows based on the Reynolds- 
+averaged Navier–Stokes (RANS) equations relied on turbulence 
+modeling. Although, Generalized RANS models were predictive 
+and strong enough to be used. The major constraint to model 
+accuracy with large disparities in the RANS-  predicted Reynolds 
+stresses. In order to resolve these discrepancies, suggested that 
+data- driven, physics-  informed machine-  learning should be 
+used to retrieve the discrepancies in RANS-  modeled Reynolds 
+stresses. The discrete formulations were developed as functions 
+of mean flow characteristics and developed by random- forest al-
+gorithm on available DNS databases, which were subsequently 
+applied to predict the Reynolds stresses. The offered approach is 
+tested on the two types of flows. a fully developed turbulent flow 
+in a square duct at different Reynolds numbers, and flows with 
+strong separation (J.- X. Wang et al.  2017).
+Intraventricular vector flow mapping (VFM) was a recently 
+used echocardiographic modality that generated time-  resolved 
+two- dimensional flow maps in the left ventricle (LV) using color- 
+Doppler sequences. The existing models of VFM were based 
+on kinematic limits that were caused by planar-  flow incom -
+pressibility without incorporating any important information 
+of flow-  physics, especially the pressure and shear stresses and 
+the corresponding accelerations. This shortcoming negatively 
+affected the ability of VFM to aggregate data over time or to gen-
+erate pressure maps at varying times. Maidu et al. ( 2025) took 
+advantage of the recent developments of artificial intelligence 
+to create AI- VFM a visual-  flow- modeling modality that implic -
+itly included PINNs to recover mass conservation and momen -
+tum conservation at the left ventricle (LV) and impose no-  slip 
+boundary conditions at the left ventricle endocardium. AI-  VFM 
+recovered the flow and pressure fields of the LV using regular 
+echocardiographic images.
+PINNs have already proven promising applications in a wide 
+range of engineering fields, especially in the management of 
+noisy data and inverse problems that were modeled by partial 
+differential equations (PDEs). However, PINN not completely 
+proven that they were effective when it comes to predicting any 
+nonlinear phenomenon in multi-  physics regimes, particularly 
+when it comes to predicting turbulence. Shukla et al. ( 2025) pro-
+posed a Neuro SEM hybrid architecture that combined PINNs 
+and the high-  fidelity Spectral Element Method (SEM) solver 
+(Nektar++). Neuro SEM utilized the strengths of PINNs and 
+SEM, providing strong solutions to multi-  physics problems. In 
+this context, PINNs learned data and physical processes on par -
+ticular subdomains and then were used in Nektar++.
+In the cavopulmonary circulation created by the Fontan proce -
+dure, Dobroserdova et al. ( 2024) suggested a new methodology, 
+which utilized Physics-  Informed Neural Network (PINN) as a 
+junction condition of a one-  dimensional blood-  flow network 
+model. The scheme had a complex, physically regular geometry 
+of a neural network and a three-  dimensional mesh-  generation 
+scheme based on junction-  geometry parameterization. Also, 
+synthetic costumes were produced through the 3D steady-  state 
+Stokes- flow simulations with prescribed boundary conditions to 
+validate the method.
+Existing MRI diffusion methodologies, particularly two-  
+compartment incoherent motion (IVIM) models, were not de -
+tailed enough in describing the complex micro-  architecture of 
+the brain. Such strategies lack the ability to solve a series of 
+diffusion elements such as the interstitial fluid (ISF), which 
+was relevant to cerebrovascular and neurodegenerative dis -
+eases (Voorter et  al.  2023). The physics-  informed neural 
+network (PINN) architecture had been used to fit a three-  
+component IVIM (3C-  IVIM) model to multispectral b- value 
+diffusion MRI data. PINNs fitted to estimate three diffusion 
+components, namely parenchymal diffusion, intermediate ISF 
+diffusion, and microvascular pseudo-  diffusion, using six par -
+allel neural sub-  networks that learned the necessary model 
+parameters.
+A new hybrid computational framework integrated PINNs with 
+CFD and FSI models to simulate a stenotic coronary artery tree 
+and predict fractional flow reserve (FFR), a key diagnostic pa -
+rameter of coronary stenosis, in the context of simulating hae -
+modynamic flow (Alzhanov et  al.  2024). The core component 
+of this framework was a one-  dimensional PINN that predicted 
+outflow boundary conditions; therefore, it eliminated the chal -
+lenges related to direct measurement or estimation of boundary 
+conditions in complicated vascular systems. The approach to 
+predict the flow with high precision by imposing physical laws 
+into the PINN loss and by introducing generated initial condi -
+tions into full FSI flow simulations produced realistic and phys -
+iologically compliant flow predictions that were accurate across 
+CFD benchmarks.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 17 =====
+17 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+Cardiovascular assessment heavily relied on accurate haemody -
+namic analysis. However, the classical CFD models were com -
+putationally expensive and had not support transfer learning. 
+In contrast, the classical machine-  learning models require la -
+beled data which was scarcely available in clinical practice. The 
+limitations were mitigated by PINNs, which included physical 
+laws in the loss function to obtain strong modeling in a vari -
+ety of geometries. However, traditional PINNs tend to be less 
+effective in areas with a complicated vessel outline, including 
+stenoses, and thus their efficiency and accuracy were reduced. 
+To address this, Boundary Progressive PINN (BP- PINN) frame -
+work had proposed. In this framework, X. Chen et al. ( 2025) in-
+troduced the adaptive complexity of boundary, redeveloping of 
+vascular boundaries with different smoothness to improve flow 
+characterization.
+Intracranial aneurysms (IAS) were associated with a high prob -
+ability of rupture, and they required accurate haemodynamic 
+assessment in their successful clinical management. Kim and 
+Koo ( 2025) examined the use of PINNs as a CFD- free solution to 
+simulate the velocity of blood flow, pressure, and WSS inside the 
+aortic wall. The PINN forecasted velocity fields, flow vectors, 
+pressure, and WSS using inputs of three-  dimensional and two- 
+dimensional domains and reproduced several important physi -
+ological characteristics that included the reduction of velocity in 
+the aneurysm and the high WSS in the aneurysm neck.
+The accurate modeling of self- gravitating gaseous flows was the 
+fundamental issue in the field of astrophysics, affecting a variety 
+of phenomena, including planetary and stellar formation, gal -
+axy and large-  scale structure formation processes. The primary 
+challenge lied in solving of highly nonlinear, time-  dependent, 
+three- dimensional partial differential equations (PDEs) that 
+represented the combined action of gravity and fluid dynam -
+ics. Using their universal and mesh free formulation as well as 
+property of approximation of functions in PINNs, represented 
+a new opportunity to tackle these complicated systems at scale. 
+To simulate three-  dimensional self-  gravitating hydrodynamics 
+with a PINN, Auddy et al. ( 2024) suggest a architecture named 
+GRINN. GRINN had been found to predict gravitational in -
+stabilities and wave propagation in isothermal gases and has a 
+high fidelity, in the linear regime and in the nonlinear regime. 
+One notable benefit of this method was computational scaling, 
+whereas conventional grid-  based solvers of PDEs will grow ex -
+ponentially in cost with the dimensions added, GRINN essen -
+tially scaled runtime independent of dimensions and especially 
+efficient in simulations of three dimensions.
+The accurate characterization of the infiltration of glioblastoma 
+(GBM) based on the medical MRI data was essential for under -
+standing the tumor dynamics and personalized radiotherapy 
+planning. Mathematical reaction–diffusion models were use -
+ful supplements to imaging data because they predicted the lo -
+calisation of tumor cells (X. Zhang et  al.  2023). Nevertheless, 
+patient- specific model parameters were difficult to determine 
+using clinical data, and the task was difficult because patients 
+were limited in terms of time resolution and sparse informa -
+tion. To overcome this issue, a PINN- based parameter inference 
+glioblastoma multiforme (GBM) growth model was proposed 
+to predict patient-  specific parameters based on a single, three- 
+dimensional structural MRI scan. The framework combined 
+theoretical knowledge with clinical data as both the PDE and 
+clinical data were incorporated into the loss function of the neu-
+ral network (X. Zhang et al.  2023). The major advances were the 
+discovery and rough determination of non-  dimensional model 
+parameters, pre-  training using model parameters, fine-  tuning 
+personal patient inferences, and the use of a diffuse domain 
+method in the PINN to precisely approximate complex cerebral 
+geometries (X. Zhang et al.  2023).
+PINNs were a novel class of machine learning algorithms that 
+were able to solve parameterised problems in parallel with 
+high efficiency, resulting in favorable computational scaling. 
+However, the method was still in the early stage of development, 
+and a number of open challenges were still present. Training dy-
+namics tend to be numerically stiff; powerful mechanisms for re-
+solving turbulent flows were still scarce, and the optimal choice 
+of hyperparameters were unclear. Du Toit and Laubscher ( 2023) 
+approach the research systematically to examine the accuracy 
+and efficiency of PINNs to simulate the transvascular blood 
+flow in the aorta in both laminar and turbulent flow conditions, 
+with various advanced literature-  based methods to make the 
+simulations as realistic as possible.
+In echocardiography, the intraventricular vector flow mapping 
+(IVFM) used to approximate two-  dimensional blood flow veloc-
+ity fields in the left ventricle using color Doppler ultrasound im -
+ages. However, the traditional IVFM approach had significant 
+drawbacks. It was based on a least-  squares optimisation sub -
+ject to a limited set of regularization parameters and required 
+explicit boundary conditions, which were often challenging to 
+obtain clinically. Moreover, the method was computationally in-
+tensive and not capable of real- time implementation. To address 
+this issue, PINNs for intraventricular flow reconstruction pro -
+posed a framework based on PINNs in governing fluid- dynamics 
+equations that were learnable through the neural-  network loss, 
+since radial and angular velocity components could be learned 
+directly by looking at Doppler data (H. J. Ling et  al.  2024). 
+There were two types of such a framework, RB- PINNs based on 
+adaptive loss balancing through dynamic penalty coefficients, 
+and AL- PINNs (Augmented Lagrangian) based on the use of 
+Lagrange multipliers to strengthen constraint satisfaction (H. J. 
+Ling et al.  2024).
+Mechanics of blood-  flow in microcirculation were important 
+to understand the physiology of vascular health and diseases 
+like diabetic retinopathy. However, in  vivo imaging processes 
+have not succeeded in resolving instantaneous 3D flow in small 
+vessels; existing in vitro methods such as micro- Particle Image 
+Velocimetry, optical flow or CFD approaches have serious lim -
+itations in determining velocity and stress fields in small vessels 
+with complicated geometries (Wong et  al.  2025). Specifically, 
+CFD methods were based on assumed boundary conditions that 
+leave significant uncertainty, and there was no significant meth-
+odology available to reliably infer full 3D hemodynamic fields 
+(velocity, pressure, WSS) using limited 2D experimental data.
+Artificial Intelligence Velocimetry (AIV), which was another 
+new framework suggested by Cai et  al.  ( 2021), used to com -
+bine two-  dimensional imaging information with physical con -
+straints using PINNs. The need to define a parameter of inlet/
+outlet was bypassed with AIV via the learning of the velocity 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 18 =====
+18 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+and stress fields using sequences of test images. This procedure 
+was confirmed on a Microaneurysm-  on- a- Chip (MAOAC) sys -
+tem that aimed to reproduce saccular microaneurysms, which 
+was the feature of DR pathology. Learning the governing equa -
+tions directly on top of the loss function and requiring only 
+two- dimensional inputs to provide 3D blood-  flow fields, AIV 
+could predict essential near-  wall dynamics and localized flow 
+behavior.
+5   |   Pros and Cons of Various PINN
+The pros and cons of various PINN frameworks in the field of 
+hemodynamics were tabulated in Table  3.
+6   |   Experimental Set up
+Experimental setup of the evaluation of PINNs in the biofluid 
+dynamics space must be based on a rigid structure that can 
+support the complexity of interdependence between fluid me -
+chanics and biological structures. Recent studies have shown 
+that PINNs have the capability to very accurately recapitulate 
+the haemodynamic patterns of a range of physiological states, 
+both laminar and turbulent-  like, in the aorta (Aghaee and 
+Khan  2025) and also more complex simulations of the coro -
+nary arterial tree network (Alzhanov et al.  2024). Moreover, the 
+combination of weak empirical evidence and PINNs has been 
+effective in solving near-  wall hemodynamics, which was one of 
+the core elements to explain vascular pathophysiology (Arzani 
+et al.  2021). In line with this, this part outlines the methodolog -
+ical aspects and computational settings that were used to sim -
+ulate such biofluidic environments and highlight the trade-  off 
+between data fidelity, neural network architecture and imple -
+mentation of physical constraints.
+The structure of PINNs had a fundamental control on its abil -
+ity to approximate complex physical phenomena accurately. 
+Most existing studies have taken the fully connected feedfor -
+ward neural networks with different depths and widths, which 
+were adjusted to the complexity of the problem which shown in 
+Table  4. This highlights the necessity of custom architectural 
+designs, advanced loss-  function engineering, and advanced 
+training procedures in the exploitation of the maximum poten -
+tial of PINNs. The change of traditional activation functions to 
+adaptive and fourier-  based variants, the ability to include inte -
+gral conservation and solver-  driven loss functions, and the ap -
+plication of hybrid optimization methods and specialized types 
+of networks were the major experimental novelties. These meth-
+odological choices were necessary to tackle the issues that were 
+present with multi- physics cardiovascular flow problems.
+7   |   Results and Discussion
+The Numerical studies discussed in the reviewed paper, which 
+focused on the geometric generalization, and the efficiency of 
+the computations. Showed that PINNs brought benefits than 
+traditional CFD in a setting characterized by missing boundary 
+conditions and a shortage of clinical data. Summary of studies 
+applying PINNs to model cardiovascular and fluid-  flow systems 
+that highlight common differences in the type of task, data type, 
+data properties, geometric complexity, availability of boundary 
+conditions, level of noise, and metrics of evaluation of in vivo, 
+clinical, synthetic, and hybrid datasets as in Table  5.
+PIGNN used to predict the blood- flow parameters such as lumen 
+area and velocity. In arterial network using PIGNN. Figure  6 
+showed that the prediction of both velocity and lumen area for 
+single ascending aorta providing better results, where R2 crossed 
+0.99. Comparison between internal and external arteries shown 
+in Table  6 vivo measurements matching with PIGNN results. 
+The table shows the result of vivo measurements and PIGNN 
+results (Sen et al.  2024).
+PIGNN models demonstrated good consistency with the in vivo 
+measurements in all the arterial regions. In the case of the 
+Common Carotid artery, the in vivo velocity was 180.2128 mm/s 
+and this is precisely what the PIGNN-  3 model predicted. 
+Nonetheless, PIGNN7 model slightly overestimating the veloc -
+ity to 183.8079 mm/s which implied a small deviation which ex -
+plained as a result of the more complex model or the effects of 
+overfitting. The identical results of both PIGNN-  3 and PIGNN- 7 
+models in the case of the External Carotid Artery (ECA) are both 
+176.4537 mm/s, the ideal result matching the in  vivo results. 
+This shown that both model settings were very good, and no pre-
+diction error could be observed. On the same note, the in vivo 
+values (176.3719 mm/s) of the Internal Carotid Artery (ICA) 
+are in line with the predicted values of PIGNN-  3 and PIGNN-  7 
+(176.3719 mm/s). This continuity underscores the strength of the 
+PIGNN method in the accurate definition of the behavior of the 
+hemodynamic arteries of diverse structures. The findings con -
+firmed that PIGNN was useful in the prediction of the arterial 
+blood flow parameters with high accuracy, and hence it could be 
+used in biomedical and clinical modeling.
+The performance of the three parametric estimates used, 
+namely, LSQ, NNLS, and PINN, was compared, which showed 
+that each of the methods possesses certain performance specif -
+ics regarding diffusion components and fitting accuracy. The 
+estimates of the parameters of both the LSQ and NNLS were 
+practically the same in all the diffusion parameters as shown in 
+Table  7. And measures were very consistent and stable within 
+the traditional optimization methods. Conversely, PINN gives 
+a value of Dmv that was slightly higher and lower values of Dint 
+and Dpar implying that the physical constraint included in the 
+model has a change in the redistribution of parameter values. 
+Concerning fitting performance, PINN had the best Fin, which 
+indicated its ability to better fit the overall signal behavior. 
+Nevertheless, this enhancement was coupled with large error 
+values when PINN had the greatest Fmax. NNLS has the lowest 
+Fmax and MSE mean, which meant that it was more robust and 
+numerically accurate compared to LSQ. Since PINN trained 
+on the vivo data it easily predicted patterns in the noisy mea -
+surements and tried to fit the data rather than LSQ and NNLS 
+(Voorter et al.  2023).
+Artificial intelligence velocimetry model to estimate the 3D 
+flow velocity, blood pressure and WSS using blood-  flow mi -
+croaneurysm (MA). The predicted velocity approximately equal 
+to 1.5 mm/s in main channels and dropped in other regions as 
+shown in Table  8. The decrease in velocity, pressure and WSS 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 19 =====
+19 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+TABLE 3     |    Pros and cons of various PINN frameworks in the field of hemodynamics.
+References Models Key Innovation Pros Cons
+Aghaee and 
+Khan  2024
+Fourier- based Activation 
+Functions in PINNs
+Evaluation of Fourier based sine 
+activation functions against traditional 
+activation functions (tanh, swish) to 
+model the cardiovascular. SIREN based 
+weight- initialization and multiscale 
+validation, including one- dimensional 
+advection tests and one dimension of 
+patient- specific simulations of the aorta.
+Demonstrated that the convergence 
+performance of the sine activation 
+was better with an error reduction of 
+about two orders of magnitude when 
+compared to the tanh and swish.
+Bias in neural network was found in 
+turbulent flow structures, and it was 
+found to come at the high frequency 
+hyperparameter. No validation on a 
+variety of patient population has been 
+performed and the data set available 
+was confined to artificial situations.
+Jagtap 
+et al.  2020
+Adaptive Activation Functions 
+for PINN Convergence
+Introduction of adaptive activation 
+functions with learnable 
+hyperparameters which tune the 
+network topology dynamically. 
+Convergence assurances and theorems 
+of world optimal are provided.
+Strict mathematical demonstrations 
+of the nonexistence of suboptimal 
+local minima are given, as well as 
+an illustration of strong frequency 
+component capture acceleration.
+Multiple hyperparameters requiring 
+optimization, performance depends 
+on proper initialization, additional 
+trainable parameters increase 
+computational cost, tested primarily 
+on idealized functions, unclear scaling 
+to high- dimensional problems.
+Sainz- DeMena 
+et al.  2024
+D- ETM PINN for DCE-  MRI 
+Vascularization Analysis
+First method accounting for contrast 
+agent diffusion in DCE-  MRI.
+A diffusion model that considers 
+the bowel agent diffusion in 
+dynamic contrast enhanced 
+magnetic resonance imaging (DCE- 
+MRI) that was shown in only one 
+dimension in a circular region that 
+associated with the tumor tissue.
+Uses synthetic data, which does not 
+readily generalize to a wide range 
+of tumors and imaging protocols; 
+both two-  and three- dimensional 
+representations would require 
+significant compute resources.
+Orera 
+et al.  2025
+Roe PINNs CFD solver added as into the PINN loss 
+dynamics through the use of support 
+points through augmentation with 
+Roe finite- volume discretizations as 
+well as numerical differentiation of 
+source terms intrinsic to arterial flow, 
+formulating hybrid PINN models.
+Demonstrates a higher level of 
+robustness and generalization, it can 
+correctly resolve flow discontinuities, 
+well represent geometric source terms
+Limited to hyperbolic systems 
+with discontinuities, requires 
+more computation power
+Rehman 
+et al.  2025
+TAAA Rupture Risk 
+Analysis (CFD + PINN 
+validation framework)
+Validating PINN by the comparison 
+of PINN accuracy to classical 
+CFD simulations on the tissue 
+thoracoabdominal aortic aneurysm 
+(TAAA) cases in both laminar 
+and turbulent flow conditions.
+Capture rupture- risk signatures, 
+such as asymmetric and turbulent 
+flow structures, achieved large 
+concordance in PINN-  CFD 
+predictions, made learning 
+fluid–structure interaction
+Confined to six TAAA morphologies. 
+The main objective is the comparison 
+of CFD with validation, and the overall 
+applicability to other phenotypes 
+of aneurysms is not studied.
+(Continues)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 20 =====
+20 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+References Models Key Innovation Pros Cons
+Kissas 
+et al.  2020
+1D PINN from 4D Flow MRI Directly training PINNs on noisy, 
+sparsely sampled four- dimensional 
+flow MRI data enables prediction of 
+velocity, pressure and wall movement 
+in arterial networks simultaneously.
+Removes the exquisite boundary- 
+condition specification requirements, 
+makes physically consistent 
+predictions with imperfect 
+data, avoids the overhead of 
+conventional CFD simulator.
+Limited to one- dimensional network 
+models, its precision depends on 
+the quality of input MRI images.
+Yevtushenko 
+et al.  2022
+Centerline- Aggregated Instant 
+Hemodynamics (Deep ANN)
+Deep neural networks of inferring 
+centerline- aggregated haemodynamics 
+directly based on aortic geometry, 
+which are specific to patients with 
+coarctation, are based on statistical 
+shape models, used to generate synthetic 
+cohorts with labels obtained by CFD.
+Accuracy improvements through data 
+augmentation, generates clinically 
+relevant centreline- based outputs, 
+and has potential to translate to 
+practice in clinical practice.
+limited to centreline- aggregated 
+representations, sensitivity to synthetic 
+data quality, applicability to aortic 
+coarctation only, lack of detailed 
+three- dimensional flow patterns.
+Sen et al.  2024 PIGNN (Physics- Informed 
+Graph Neural Networks)
+Model based on arterial network, vessel 
+segments are one dimensional and 
+the cross- reference point edges form a 
+Graph, illustrate mass and momentum 
+conservation by means of a Graph loss 
+as well as interfaces fixations which 
+just supply experimental loss levels.
+The values of reported coefficient 
+of determination are larger 
+than 0.99 with in silico data and 
+larger than 0.80 with in vivo 
+murine data and indicates that 
+topology- aware learning in 
+conservation is maintained by 
+the branching structures.
+Limited to 1D network models, 
+has mainly been successfully 
+tested on murine models, requires 
+proper anatomical mapping of 
+networks, may not capture complex 
+3D flow phenomena, requires 
+accurate anatomical network 
+mapping, performance on human 
+clinical data needs validation.
+Yuan et al.  2022 A- PINN (Auxiliary PINN) Addition of auxiliary outputs of integral 
+terms and derivatives are calculated 
+using automatic differentiation removes 
+discretisation and truncation errors 
+of Integro- differential equations
+More accurate than traditional 
+PINNs, and integrates with mesh- 
+free fashion and exhibits steady and 
+high- fidelity integral constraints.
+Only applicable to problems with 
+integral operators, it imposes 
+extra computing cost on the 
+form of auxiliary outputs
+Liu et al.  2024 AW- vsPINN (Adaptive Weighted 
+Variable- Separated PINN)
+Cross- sectional area, velocity and 
+pressure can be predicted jointly using 
+sub- network architectures that share an 
+input layer and adaptive min- max loss 
+weighting balances the data-  fidelity.
+Reduces unphysical oscillations 
+in discontinuous wave modeling, 
+adaptive weighting effectively 
+balances competing objectives, two- 
+stage optimization improves training 
+stability, variable separation enhances 
+accuracy/generalization, handles 
+sparse/noisy data and abrupt changes.
+Architecture complexity increases 
+with variable separation, requires 
+careful tuning of adaptive weighting 
+strategies, two-  stage optimization 
+computationally intensive, limited 
+to 1D arterial flow applications.
+(Continues)
+TABLE 3     |    (Continued)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 21 =====
+21 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+References Models Key Innovation Pros Cons
+Liu et al.  2025 ICPINN (Integral 
+Conservation PINN)
+The PINN loss functional with a 
+mass- conservation enforcement 
+strategy, which incorporates the 
+residuals of the integral balance 
+laws in the loss function.
+Adaptive activation functions 
+facilitate stability of training, 
+and that the technique does 
+not need labeled data.
+Requires a large amount of 
+computational resources, and 
+currently only applicable to steady- 
+state flows, and abilities on complex 
+geometry should be validated.
+Arzani 
+et al.  2021
+Sparse Sensor PINN for 
+Near- Wall Reconstruction
+PINN recovering near-  wall flow/
+WSS from sparse off-  wall velocity 
+measurements without full boundary 
+condition specifications.
+Extremely accurate in reconstruction 
+of wall- shear stresses and meets 
+an important requirement in the 
+diagnostics of the vascularities under 
+the usual conditions of clinical data.
+Extensive use of idealized 
+geometries sensitivity to the level 
+of sensor placement density, the 
+requirement of validation of highly 
+complicated geometries of patients
+Alzhanov 
+et al.  2024
+3D PINN for Coronary FFR The first non- invasive PINN to 
+estimate three-  dimensional non- 
+invasive fractional flow reserve 
+in coronary artery trees.
+A non- invasive variant of 
+catheter- based FFR saving fluid- 
+dynamical justness during the 
+several coronary arteries.
+Performance depends on the assumption 
+of the boundary conditions.
+Wong 
+et al.  2025
+Multi- case PINNs for tube 
+flows (Mixed, Hypernetwork, 
+Modes networks)
+Comparison of three architectures 
+giving multi- case training in 
+heterogeneous parameter space, 
+the spatial decomposition and 
+modal analysis strategies.
+Establishes the effectiveness of modal 
+decomposition when applied to the 
+case of tubular flow, and presents 
+a clear benchmarking model.
+May not necessarily generalize 
+to other complex geometries, the 
+training becomes more complex as the 
+number of training cases increases.
+Huang 
+et al.  2025
+Stat- PINNs (Statistical- Physics- 
+Informed Neural Networks)
+Incorporates statistical mechanics 
+principles (GENERIC formalism, 
+fluctuation- dissipation relations) 
+into PINN framework. Enhances 
+interpretability/robustness via 
+thermodynamic operators and 
+free energy functionals.
+Bridges statistical mechanics and 
+deep learning, provides theoretical 
+foundation for uncertainty 
+quantification, maintains 
+thermodynamic consistency, 
+enables modeling of stochastic 
+processes, theoretical rigor with 
+practical implementation.
+Needs expert expertise, its applicability 
+to problems that can be formulated 
+in a statistical- mechanics form, 
+and computational scale
+Daneker 
+et al.  2024
+Transfer learning on PINNs 
+(WS- PINNs) for dissected 
+aorta hemodynamics
+WS- PINNs (warm- start PINNs) are 
+utilized to perform transfer learning 
+and perform domain adaptation in 
+patient- specific aortic geometries, 
+and use anatomical knowledge to 
+transfer features among cases.
+Saving the training time, ability 
+to model patients in a patient- 
+specific manner when scarce data 
+are available, leverage between 
+anatomical similarity across subjects
+Performance is dependent on the 
+source- target domain similarity, can 
+be impaired in using very different 
+anatomies, and in this instance.
+(Continues)
+TABLE 3     |    (Continued)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 22 =====
+22 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+References Models Key Innovation Pros Cons
+Voorter 
+et al.  2023
+Multi- b- value diffusion MRI 
+with PINN integration
+First application of PINNs to improve 
+the image quality of diffusion MRI 
+of the cerebro- vascular disease uses 
+basic models of diffusion physics 
+and the micro- structure of tissues.
+Enhances image fidelity on physics 
+limitations, allows multi-  scale models 
+of microstructural and macro- 
+circulatory effects, is potentialized 
+on disease- specific controls.
+Requires a significant amount of 
+computing time, and is only proven 
+to work with cerebrovascular 
+settings and might require retraining 
+in other imaging protocols.
+Alzhanov 
+et al.  2024
+Hybrid CFD- PINN FSI 
+model for left ventricular 
+hemodynamics
+Modeling left- dependent blood 
+flow and wall interaction of the left 
+ventricles with the use of PINNs and 
+computational fluid dynamics (CFD) 
+was based on the reliability of CFD 
+and using the power of PINNs.
+Enabling the incorporation of multi- 
+physics (fluid–structure interaction) 
+and achievement of possible real- time 
+capability surpassing pure CFD, 
+direct clinical applicability to the 
+evaluation of cardiac functions
+Needs CFD/PINNs knowledge, has 
+been tested only with simplified 
+geometry of the ventricles to date, 
+and computationally expensive 
+with complex problems
+X. Chen 
+et al.  2025; Liu 
+et al.  2025
+Hemodynamics modeling with 
+PINNs: Progressive boundary 
+complexity approach
+Progressive introduction of boundary 
+conditions to stabilize training in 
+complex vascular geometries.
+Provides a systematic method 
+of treating complex geometries, 
+and convergence in tough 
+hemodynamic problems.
+Only applicable on hemodynamics, 
+requires rigorous development of the 
+progressive training schedule, was not 
+necessarily applicable to non- vascular 
+issues boundary condition progression.
+J.- X. Wang 
+et al.  2017
+Physics- informed machine 
+learning using random forests 
+(Reynolds stress modeling)
+Development of turbulence- 
+closure models, which provides a 
+reconstruction of the Reynolds stress 
+model deficiencies as an alternative 
+to the neural- networks methods
+Solves turbulence- closure problems, 
+can be thought of as interpretable 
+machine- learned, resistant to noisy 
+inputs, was a potential substitute 
+to opaque neural networks, and 
+inferences are computationally cheap.
+Applicable only in situations of 
+turbulence, does not necessarily 
+represent highly nonlinear associations
+Shukla 
+et al.  2025
+Neuro SEM (Hybrid PINN- 
+SEM framework)
+An integrated architecture between 
+PINNs and the method of the 
+Nektar++ spectral element solver.
+Provides strong data assimilation of 
+complicated multi- physic problems, 
+can smoothly interoperate with 
+present solvers, have the ability to 
+accept both noisy and sparse data
+Requires high-  quality training data to 
+be able to perform optimally, complex 
+to integrate and requires specialist 
+knowledge, can show performance 
+deterioration at large levels of noise.
+X. Chen 
+et al.  2025; Liu 
+et al.  2025
+Multi- scale hemodynamic 
+modeling in cerebral aneurysms
+A multi- scale methodology linking 
+small- scale blood, flow physics to 
+large- scale cerebral aneurysms 
+development, and its breakage- 
+prone evaluation is outlined.
+Created multi- scale integration, 
+between molecules and tissues, 
+aneurysm- specific modeling, 
+prediction of rupture risk with 
+clinically- relevant levels of accuracy
+Computationally demanding, it needs 
+a lot of validation data to identify the 
+parameters, and also not applicable 
+to other parts of the human body.
+(Continues)
+TABLE 3     |    (Continued)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 23 =====
+23 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+References Models Key Innovation Pros Cons
+Kim and 
+Koo  2025
+PINN- based hemodynamic 
+prediction of intracranial 
+aneurysms
+Direct application of the Physics- 
+Informed Neural Networks to capture 
+the Navier 2- Stokes equations and 
+related boundary conditions to 
+predict hemodynamic parameters 
+in intracranial aneurysms.
+Direct PINN application with full 
+physics constraints, aneurysm- 
+specific design optimized for 
+cerebrovascular geometries, 
+wall shear stress prediction 
+(critical for rupture risk).
+Accuracy was dependent on the 
+accuracy of the specifications of 
+the boundary conditions, the scope 
+of validation is limited to a set of 
+clearly outlined aneurysm types.
+Auddy 
+et al.  2024
+GRINN (Generalized Residual- 
+based PINN for elliptic PDEs)
+Generalized residual- based PINN 
+framework for solving elliptic PDEs, 
+with enhanced residual- based 
+training and mathematical rigor.
+Better stability and computational 
+efficiency convergence, contains 
+biomedical steady issues on a steady 
+basis, and has a strong theoretical 
+basis of mathematical analysis
+Restricted to elliptic problems (not 
+time- dependent dynamics), and 
+its efficiency has so far only been 
+ascertained on synthetic tests.
+Du Toit and 
+Laubscher  2023
+Advanced CFD analysis 
+of ascending aortic 
+aneurysm flow patterns
+CFD methodology guided by the 
+blood flow in ascending aortic 
+aneurysms that was full of refined 
+turbulence modeling, wall, and 
+fluid interaction, as well as patient- 
+specific geometric reconstruction.
+Increased the accuracy with detailed 
+turbulence modeling, integrates 
+structure consequences of the wall 
+interaction, and as a decision support 
+device to layout surgery planning.
+Requires detailed patient imaging data 
+to be properly configured, has been 
+validated only in limited case studies
+H. J. Ling 
+et al.  2024
+Physics- guided neural networks 
+(PG- NN) for intraventricular 
+vector flow mapping
+Hybrid PINNs and nnU- Net that 
+combines the supervised learning 
+and physics- based restrictions 
+into echocardiography- based 
+intraventricular vector flow mapping.
+Cardiac- optimized hybrid 
+architecture that improves the 
+Doppler velocity estimation, provides 
+an increased precision in the 
+mapping of the velocity vectors, and 
+does not require updating standard 
+ultrasound imaging systems.
+Ignores dynamics of transient 
+cardiac flow because of simplified 
+models and must be optimized 
+in terms of computational cost to 
+achieve real- time practicability.
+Williams 
+et al.  2025
+PINN- based blood perfusion 
+and hemodynamics for 
+stroke severity assessment
+PINNs to identify blood perfusion 
+or hemodynamic data during acute 
+ischemic stroke, appertaining to the 
+combination of perfusion imaging data 
+with physics- constrained flow model.
+Enables a direct clinical use of 
+stroke severity measurements, 
+combines physics constrained- flow 
+modeling, permits quantification 
+of critical perfusion
+Validation was not obtained fully, 
+and further elaboration is needed 
+to facilitate clinical translation and 
+real- time implementation is very 
+heavy in the computational burden.
+Cai et al.  2021 AIV (Artificial Intelligence 
+Velocimetry) with 
+Microaneurysm-  on- a- Chip
+Integrating PINNs with microfluidic 
+microaneurysm-  on- a- chip technology 
+permitting extraction of three- 
+dimensional flow fields with two- 
+dimensional microscopy data by 
+encoded microscopic physics laws.
+3- D hemodynamics using 2-  D 
+measurements that automatically 
+estimates boundary conditions 
+on the inlays and outlets, more 
+accurate near the walls with 
+minimal error compared to 
+other traditional methods
+Requires multi- GPU computing 
+when it needs to treat complicated 
+situations, and currently only able 
+to analyze steady-  state cases.
+TABLE 3     |    (Continued)
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 24 =====
+24 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+TABLE 4     |    Experimental step and architectural design of various PINN models.
+PINN 
+type
+Key 
+reference Hidden layers Neurons per layer
+Activation 
+function
+Loss function 
+composition Optimization technique
+Application 
+domain
+Governing 
+equations
+Roe- 
+PINN
+(Orera 
+et al.  2025)
+4–8 (Inferred 
+Deep FC)
+50–100 (Inferred) Tanh (Inferred 
+Standard)
+Physics residual 
++ boundary 
+conditions 
+(inferred)
+Integration with 
+Roe CFD solver
+Arterial flow 
+modeling
+1D/3D Navier–
+Stokes with 
+Roe flux 
+scheme
+AS- 
+PINN
+(Sarabian 
+et al.  2022)
+5–10 (Improved 
+FC + Transformer)
+100–200 (Inferred 
+for complexity)
+Sin/Tanh 
+(Inferred from 
+advanced 
+PINNs)
+Measurement 
++ residual + 
+interface + slope 
+recovery losses
+Adam optimizer (Inferred) Brain 
+hemodynamics
+1D reduced- 
+order 
+Navier–Stokes
+WS- 
+PINN
+(Daneker 
+et al.  2024)
+6–10 (Inferred 
+Deep FC)
+60–120 (Inferred) Tanh or SiLU/
+ReLU (Inferred)
+Transfer 
+learning- based 
+initialization
+Transfer learning 
++ fine- tuning
+Type B aortic 
+dissection
+3D 
+Navier–Stokes
+VS- 
+PINN
+(Liu 
+et al.  2025)
+4–6 (typical range) 20 –50 (adaptive) Tanh, Sine, 
+Adaptive LAAF
+Weighted PDE 
+residual + 
+data mismatch 
++ continuity 
+constraints
+Adam with adaptive 
+learning rate
+Blood flow 
+models
+1D/3D 
+Navier–Stokes
+ICPINN (Liu 
+et al.  2025)
+4–6 50–100 Adaptive 
+activation 
+functions
+Mass flow rate 
+residuals + PDE 
+conservation laws
+Adam + L- BFGS hybrid 3D 
+cardiovascular 
+flows
+Integral form of 
+Navier–Stokes
+GRINN (Auddy 
+et al.  2024)
+6 20–50 Tanh Physics residual 
+(hydrodynamic + 
+Poisson equation)
+Adam optimizer Self- gravitating 
+astrophysical 
+flows
+3D Euler 
+equations + 
+Poisson gravity
+A- PINN (Yuan 
+et al.  2022)
+4 (multi- output) 50 per layer Tanh (primary), 
+custom 
+(auxiliary)
+PDE residual + 
+auxiliary variable 
+constraints
+Adam Nonlinear 
+integro- 
+differential 
+equations
+Volterra/
+Fredholm IDEs
+Stat- 
+PINN
+(Huang 
+et al.  2025)
+2 networks: 
+Operator + Energy
+30–50 per network Custom 
+(structure- 
+preserving)
+Statistical 
+mechanics- 
+informed loss 
++ macroscopic 
+data fit
+Sequential training strategy Dissipative 
+particle 
+dynamics
+GENERIC 
+framework
+PIGNN (Sen 
+et al.  2024)
+Graph 
+convolutional 
+layers: 3–5
+Node embedding: 16–32 ReLU, Tanh Physics- informed 
+edge loss + node 
+conservation
+Graph neural network 
+optimizer
+1- D arterial 
+network flows
+1D blood flow 
+equations 
+on graphs
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 25 =====
+25 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+shows that as the MA gets larger, the blood flow slows down 
+(Cai et al.  2021).
+PINN model estimated near WSS using a sparse data and pre -
+dicted the 1D advection diffusion using the PINN framework. 
+The PINN solution matches the analytical solution and matches 
+the identify the solutions at boundaries with unknown bound -
+ary conditions as shown in the Figure  7. This shows that the 
+PINN reconstruct the flow filed in the regio of interest (Arzani 
+et al.  2021).
+8   |   Research Challenges
+PINNs were commonly used for solving complex partial differ -
+ential equations (PDEs) in hemodynamic flow and vascular me -
+chanics that intrinsically generate unsteady learning dynamics 
+and slow convergence. Neural Tangent Kernel (NTK) provided 
+a learning process based on the induced kernel of the network 
+Jacobian. As a result, such networks became responsive to 
+sharp gradients, layers of shear, and transitional or turbulent 
+flows (J.- X. Wang et al.  2017). The above weakness was further 
+compounded by the spectral bias; traditional coordinate-  based 
+Multilayer Perceptrons (MLPs) exhibit a bias toward low fre -
+quency representations. Thus, limiting their ability to capture 
+near- wall gradients and small-  scale vortical structures. In addi -
+tion, NTK generally made the assumptions of loss and ignored 
+the effects of boundary conditions and multi-  physics couplings, 
+which were inherent to the biofluid problems.
+Physics informed neural networks used adaptive activation 
+functions which made gradient pathologies to reduce in highly 
+nonlinear regimes. However, optimization was a difficult task 
+(Jagtap et al.  2020). Consequently, it continued to be a tedious 
+task to train PINNs on realistic cardiovascular flows. Wong 
+et  al.  ( 2024) investigated the implementation of multi-  case 
+PINNs to turbulent flows and found that optimization chal -
+lenges grow exponentially with the complexity of the flow, thus 
+requiring a large amount of hyper-  parameter optimization and 
+long- term training.
+Progressive boundary-  complexity hemodynamics model PINN 
+application was a modeling method that adds boundary condi -
+tions steadily to improve training stability and solution accuracy 
+(X. Chen et al.  2025). In spite of these developments, it was still 
+not feasible to enforce physiologically realistic boundary condi -
+tions, including pulsatile flow and compliant vessel walls, which 
+have led to problem- specific ad- hoc adaptations, thus restricting 
+the cases of PINN models in biofluid dynamics.
+GRINN model demonstrated the multi-  scale complexity that 
+became difficult to represent in a single PINN architecture 
+in the situation of hydrodynamic systems, which include self- 
+gravity (Auddy et al.  2024). The governing equations that were 
+related to the problem were often stiff, which slowed down the 
+convergence and causes numerical instability. Moreover, the dy-
+namics of blood flow were non-  smooth with sudden changes in 
+the flow variables and vessel elasticity, which made the learn -
+ing process a challenge for physics-  informed neural operators. 
+Computational costs were further enhanced by the high dimen -
+sionality of the problem of vascular flow and the need to resolve 
+TABLE 5     |    Classification of studies included in the numerical evaluation based on different criteria.
+Study Task type Data modality Dataset type Geometry
+Boundary 
+conditions Noise level Metrics
+Sen et al. Velocity and lumen 
+area prediction
+In vivo clinical data Real (in vivo) Arterial network 
+(complex)
+Partially known Low–Medium R2, RMSE
+Voorter et al. Parameter estimation 
+(diffusion coefficient)
+MRI Real (clinical imaging) Patient- specific 
+(complex)
+Implicit High MSE
+Cai et al. Flow, pressure, 
+WSS estimation
+Synthetic/experimental Hybrid (synthetic 
++ experimental)
+Microaneurysm 
+(complex)
+Prescribed Medium Velocity, Pressure, WSS
+Arzani et al. WSS estimation and 
+PDE reconstruction
+Sparse data Synthetic/analytical 1D simplified 
+domain
+Unknown/
+partially known
+Low Analytical comparison
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 26 =====
+26 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+the flow problem at fine spatial and temporal scales. The current 
+surrogate models based on physics were not scaled to vascular 
+networks considered to be complicated. Besides, the integration 
+of traditional CFD solvers with PINNs added more extra compu-
+tational load. In turn, the research area of enhancing training 
+algorithms, parallelization approaches, and model compres -
+sion algorithms was a significant research question to consider 
+for the application of practically relevant PINN-  based biofluid 
+simulations.
+The nature of turbulence was highly problematic in modeling 
+turbulent blood flow using PINNs because it was chaotic and 
+multiscale. Turbulence significantly reduced the prediction 
+accuracy and training stability (Aghaee and Khan  2024). 
+Physics- informed machine learning had been utilized to recover 
+Reynolds stress discrepancies but faced challenges in represent -
+ing turbulence with no explicit turbulence modeling expressions 
+(J.- X. Wang et al.  2017). These issues underscored the necessity 
+of PINN architectures that were turbulence-  conscious or hy -
+brid architectures that more accurately described turbulent bio -
+fluid flows.
+Hybrid CFD- PINN FSI simulations have proven to increase 
+the accuracy, but at the same time, increase the complexity of 
+the model as well as training (Alzhanov et  al.  2024). PINNs 
+and CFD have been used to forecast the risk of rupture in tho -
+racoabdominal aneurysm and perform FSI studies. This leads 
+to nonlinearities in the interactions between the fluids and the 
+structures and hinders PINN convergence (Rehman et al.  2025). 
+To solve these complexities, complicated PINN structures were 
+required that could solve coupled multi- physics. PINNs were not 
+very accurate and stable at high Reynolds numbers, thus limit -
+ing their use to realistic cardiovascular flows.
+Training problems were also complicated by the nonlinear -
+ity and steep gradient of the Reynolds numbers (Aghaee and 
+Khan  2024). The conditions of high Reynolds numbers demand 
+the finely tuned PINN architecture and loss functions that were 
+able to resolve flow features with accuracy (Kim and Koo  2025). 
+To remove these drawbacks, the credible PINN-  based modeling 
+of physiological blood flow is necessary. Although PINNs could 
+FIGURE 6     |    Results of PIGNN for velocity and lumen area for both R2 and RMSE in single ascending aorta (Sen et al.  2024).
+TABLE 6     |    Results analysis of physics- informed graph neural 
+network for arteries.
+Region
+In 
+Vivo_V 
+(mm/s)
+PIGNN3_V 
+(mm/s)
+PIGNN7_V 
+(mm/s)
+Common 
+carotid
+180.2128 180.2128 183.8079
+External 
+carotid (ECA)
+176.4537 176.4537 176.4537
+Internal 
+carotid (ICA)
+176.3719 176.3719 176.3719
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 27 =====
+27 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+compute near- wall blood flow using sparse measurements, spar-
+sity negatively affects reconstruction quality and increases un -
+certainty (Arzani et  al.  2021). The sparsity of data makes the 
+formulations for inverse problems difficult, and they require 
+effective regularization schemes.
+PINNs including diffusion magnetic resonance imaging in -
+formation have been applied to microstructural and microcir -
+culatory imaging; however, the method futilely highlights the 
+difficulty of integrating sparse and heterogeneous sources of 
+data (Voorter et al.  2023). Physiological time series PINNs with 
+objectives of estimating cuffless blood pressure have revealed 
+the significance of uncertainty measurements in the determi -
+nation of predictive reliability (Sel et al.  2023). But the existing 
+models of PINN rarely include processes of uncertainty estima -
+tion. Statistical- PINNs were hypothesized to add uncertainty to 
+the dissipative-  dynamics models, which could be a potentially 
+productive direction (Huang et  al.  2025). However, systematic 
+quantification of uncertainty in PINNs on complex biofluid 
+problems was a major challenge that was worth researching 
+further.
+9   |   Future Research Directions
+The next- generation PINN implementation derived to be beyond 
+the conventional settings of a non- learning heuristics of optimi -
+zation optimistic techniques. It included the use of meta learned 
+optimizers, which were automatically tuning the training pro -
+cess by PDE residuals and the stiffness variations between the 
+domains. Furthermore, physics-  informed regularization could 
+be used to decrease the oscillations of the solution predicted.
+Modeling high frequency flow features using the NTK urging for 
+more advanced architectures. Neural operators could be used to 
+train for more complicated problems in fluid dynamics. Future 
+architectures are expected to make use of random expansions 
+based on the eigenfunctions of the linearized Navier–Stokes 
+operator, and thus bring the inductive bias of the network into 
+agreement with the natural spectral properties of the underlying 
+partial differential equation.
+Diffusion probabilistic models were an interesting approach 
+to the process of creating physically realistic velocity fields 
+TABLE 8     |    Result analysis of blood-  flow parameters for aneurysm region using WS-  PINN.
+Parameter Main channel Aneurysm region Overall/Global
+Maximum velocity 1.5 mm/s 0.2–0.5  mm/s 1.5 Â ± 0.1 mm/s
+Mean velocity 0.8–1.0 mm/s — 0.9 Â ± 0.2 mm/s
+Maximum pressure 100 Pa Local variations 100 Â ± 5 Pa
+Pressure drop across channel 100 Pa — Gradient: ~50 Pa/mm
+Maximum wall shear stress 0.5–1.0 Pa 0.1–0.2 Pa 1.0 Â ± 0.1 Pa
+FIGURE 7    |    Comparison of PINN and analytical solution for 1D advection diffusion (Arzani et al.  2021).
+TABLE 7     |    Results analysis of three diffusion components of MRI image fitting approach.
+Method Dpar [10−2 mm/s] Dint [10−2 mm/s] Dmv [10−2 mm/s] Fint [10−2] Fmv [10−2] MSEmean [10−2]
+LSQ 0.00238 0.000722 0.022312 0.583664 0.121036 0.00018052
+NNLS 0.002386 0.000719 0.022353 0.579818 0.119542 0.00018038
+PINN 0.002963 0.000623 0.020911 0.609259 0.129214 0.00022209
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 28 =====
+28 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+in complex aortic flow conditions. A forward diffusion model 
+adds stochastic perturbations to high-  resolution 4D Flow 
+MRI images. Afterwards, a reverse diffusion network is 
+trained to refine the original flow fields using sparse clinical 
+measurements.
+The reconstruction of sparse data was to be revolutionized 
+through foundation PINNs trained on synthetic vascular at -
+lases, which were broad and heterogeneous and based on the 
+simulated CFD, which captures anatomical variability. A uni -
+versal encoding of the relationship between vascular geometry, 
+flow waveforms, and wall-  shear stress would be internalized in 
+such a foundational model and would be applicable in arbitrary 
+patients in a common latent space. This reconstruction of sparse 
+clinical data can be improved by constructing Physics-  informed 
+neural network (PINN) architectures that are trained on large 
+synthetic vascular data.
+Quantification of uncertainty was one of the most important 
+directions of refining hemodynamic PINN models. Stochastic 
+differential equations were used in PINN where the net -
+work parameters are developed according to probabilistic 
+dynamics. Another promising direction is the development 
+of Bayesian PINNs, which aim to estimate the posterior dis -
+tribution of solutions in high-  dimensional function spaces 
+while maintaining computational efficiency. Besides, hybrid 
+probabilistic–deterministic models integrating the synergistic 
+Normalizing Flows with Gaussian Processes are positioned 
+to provide well-  calibrated uncertainty estimates. These ap -
+proaches will be able to increase the accuracy of PINN fore -
+casts of hemodynamics.
+10   |   Conclusion
+Physics- informed neural network plays a vital role in the field 
+of hemodynamics. Many models have been introduced to ad -
+dress the problems in hemodynamics. In this review, we pro -
+vide a systematic analysis of PINN models in the hemodynamics 
+and classify the models into nine taxonomies based on the ad -
+vancements in terms of computational cost, boundary progres -
+sion, and clinical use. The numerical evaluation indicated that 
+the PIGNN models showed precise and highly accurate pre -
+dictions even when limited data were provided. However, the 
+performance remained sensitive to the boundary conditions. 
+Moreover, we critically examined the most recent PINN models, 
+assessing them in terms of the advantages and drawbacks in the 
+field of hemodynamics. We also discussed the existing short -
+comings and the unsolved problems that exist in current models 
+of PINN as well as outline promising prospects in their further 
+development. Despite several challenges, PINN-  based models 
+have consistently delivered impressive results.
+11   |   System Environment
+The Numerical evaluation was done on a workstation computer 
+with an Intel i7 11th Generation (2.5 Hz) as a processor, 64 GB 
+RAM, and with the Hard Disk 2 TB SATA HDD, 256 GB SSD, 
+used Graphics Card- 12 GB NVIDIA GPU.
+Author Contributions
+Dhanush R:  writing – review and editing, visualization, conceptual -
+ization. Niraimathi K. R.:  methodology, conceptualization, writing 
+– original draft. Surendiran B:  writing – review and editing, methodol-
+ogy, conceptualization, project administration. Amutha S:  validation, 
+writing – original draft.
+Conflicts of Interest
+The authors declare no conflicts of interest.
+Data Availability Statement
+Data sharing not applicable to this article as no datasets were generated 
+or analysed during the current study.
+References
+Aghaee, A., and M. O. Khan. 2024. “Performance of Fourier-  Based 
+Activation Function in Physics-  Informed Neural Networks for Patient- 
+Specific Cardiovascular Flows.” Computer Methods and Programs in 
+Biomedicine  247: 108081. https:// doi. org/ 10. 1016/j. cmpb. 2024. 108081.
+Aghaee, A., and M. O. Khan. 2025. “Pinning Down the Accuracy of 
+Physics- Informed Neural Networks Under Laminar and Turbulent- 
+Like Aortic Blood Flow Conditions.” Computers in Biology and Medicine  
+185: 109528. https:// doi. org/ 10. 1016/j. compb iomed. 2024. 109528.
+Alzhanov, N., E. Y. K. Ng, and Y. Zhao. 2024. “Hybrid CFD PINN FSI 
+Simulation in Coronary Artery Trees.” Fluids 9, no. 12: 280. https:// doi. 
+org/ 10. 3390/ fluid s9120280.
+Apraiz, J., A. Doubova, E. Fernandez-  Cara, and M. Yamamoto. 2024. 
+“Inverse Problems for One-  Dimensional Fluid-  Solid Interaction 
+Models.” Communications on Applied Mathematics and Computation  8: 
+309–323. https:// doi. org/ 10. 1007/ s4296 7-  024-  00437 -  3.
+Arzani, A., J.-  X. Wang, and R. M. D'Souza. 2021. “Uncovering Near- 
+Wall Blood Flow From Sparse Data With Physics-  Informed Neural 
+Networks.” Physics of Fluids 33, no. 7: 071905. https:// doi. org/ 10. 1063/5. 
+0055600 .
+Auddy, S., R. Dey, N. J. Turner, and S. Basu. 2024. “GRINN: A Physics- 
+Informed Neural Network for Solving Hydrodynamic Systems in the 
+Presence of Self-  Gravity.” Machine Learning: Science and Technology  5, 
+no. 2: 025014. https:// doi. org/ 10. 1088/ 2632-  2153/ ad3a32.
+Aygun, A., R. Maulik, and A. Karakus. 2023. “Physics-  Informed Neural 
+Networks for Mesh Deformation With Exact Boundary Enforcement.” 
+Engineering Applications of Artificial Intelligence  125: 106660. https:// 
+doi. org/ 10. 1016/j. engap pai. 2023. 106660.
+Bai, X., Y. Wang, and W. Zhang. 2020. “Applying Physics Informed 
+Neural Network for Flow Data Assimilation.” Journal of Hydrodynamics 
+32, no. 6: 1050–1058. https:// doi. org/ 10. 1007/ s4224 1-  020-  0077-  2.
+Bateman, A. R., J. Lechner- Scott, T. Barber, G. A. Bateman, S. Ramadan, 
+and R. Lea. 2025. “A Longitudinal Investigation of the Cerebral Venous 
+Hemodynamics in Multiple Sclerosis Using Computational Fluid 
+Dynamics.” Multiple Sclerosis and Related Disorders  100: 106555. 
+https:// doi. org/ 10. 1016/j. msard. 2025. 106555.
+Berger, C. S., and S. C. Malpas. 1998. “Modelling of the Dynamic 
+Relationship Between Arterial Pressure, Renal Sympathetic Nerve 
+Activity and Renal Bloodflow in Conscious Rabbits.” Journal of 
+Experimental Biology  201, no. 24: 3425–3430.
+Bessonov, N., A. Sequeira, S. Simakov, Y. Vassilevskii, and V. Volpert. 
+2016. “Methods of Blood Flow Modelling.” Mathematical Modelling 
+of Natural Phenomena  11, no. 1: 1–25. https:// doi. org/ 10. 1051/ mmnp/ 
+20161 1101.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 29 =====
+29 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+Cai, S., H. Li, F. Zheng, et al. 2021. “Artificial Intelligence Velocimetry 
+and Microaneurysm-  On- a- Chip for Three-  Dimensional Analysis of 
+Blood Flow in Physiology and Disease.” Proceedings of the National 
+Academy of Sciences of the United States of America  118, no. 13: 
+e2100697118. https:// doi. org/ 10. 1073/ pnas. 21006 97118 .
+Candreva, A., G. De Nisco, M. L. Rizzini, et  al. 2022. “Current and 
+Future Applications of Computational Fluid Dynamics in Coronary 
+Artery Disease.” Reviews in Cardiovascular Medicine  23, no. 11: 377. 
+https:// doi. org/ 10. 31083/ j. rcm23 11377 .
+Chen, L., X. Leng, C. Zheng, et al. 2023. “Computational Fluid Dynamics 
+(CFD) Analysis in a Ruptured Vertebral Artery Dissecting Aneurysm 
+Implanted by Pipeline When Recurrent After LVIS-  Assisted Coiling 
+Treatment: Case Report and Review of the Literatures.” Interventional 
+Neuroradiology  29, no. 4: 442–449. https:// doi. org/ 10. 1177/ 15910 19922 
+1097766.
+Chen, X., J. Yang, X. Liu, et  al. 2025. “Hemodynamics Modeling 
+With Physics-  Informed Neural Networks: A Progressive Boundary 
+Complexity Approach.” Computer Methods in Applied Mechanics and 
+Engineering  438: 117851. https:// doi. org/ 10. 1016/j. cma. 2025. 117851.
+Cilla, M., M. Casales, E. Pena, M. A. Martinez, and M. Malve. 2020. 
+“A Parametric Model for Studying the Aorta Hemodynamics by Means 
+of the Computational Fluid Dynamics.” Journal of Biomechanics  103: 
+109691. https:// doi. org/ 10. 1016/j. jbiom ech. 2020. 109691.
+Daneker, M., S. Cai, Y. Qian, et al. 2024. “Transfer Learning on Physics- 
+Informed Neural Networks for Tracking the Hemodynamics in the 
+Evolving False Lumen of Dissected Aorta.” Nexus (New York, N.Y.)  1, 
+no. 2: 100016. https:// doi. org/ 10. 1016/j. ynexs. 2024. 100016.
+Dobroserdova, T. K., A. A. Isaev, A. A. Danilov, and S. S. Simakov. 2024. 
+“Junction Conditions for One-  Dimensional Network Hemodynamic 
+Model for Total Cavopulmonary Connection Using Physically Informed 
+Deep Learning Technique.” Russian Journal of Numerical Analysis and 
+Mathematical Modelling  39, no. 5: 259–271. https:// doi. org/ 10. 1515/ 
+rnam-  2024-  0023.
+Donnelly, J., A. Daneshkhah, and S. Abolfathi. 2024. “Physics- Informed 
+Neural Networks as Surrogate Models of Hydrodynamic Simulators.” 
+Science of the Total Environment  912: 168814. https:// doi. org/ 10. 1016/j. 
+scito tenv. 2023. 168814.
+Du Toit, J. F., and R. Laubscher. 2023. “Evaluation of Physics-  Informed 
+Neural Network Solution Accuracy and Efficiency for Modeling 
+Aortic Transvalvular Blood Flow.” Mathematical and Computational 
+Applications  28, no. 2: 62. https:// doi. org/ 10. 3390/ mca28 020062.
+Farea, A., O. Yli-  Harja, and F. Emmert-  Streib. 2024. “Understanding 
+Physics- Informed Neural Networks: Techniques, Applications, Trends, 
+and Challenges.” Ai 5, no. 3: 1534–1557. https:// doi. org/ 10. 3390/ 
+ai503 0074.
+Farias, C., C. Bayona-  Roa, E. Castillo, R. C. Cabrales, and R. Reyes. 
+2023. “Reduced Order Modeling of Parametrized Pulsatile Blood 
+Flows: Hematocrit Percentage and Heart Rate.” International Journal of 
+Engineering Science  193: 103943. https:// doi. org/ 10. 1016/j. ijeng sci. 2023. 
+103943.
+Hu, B., Z. Shi, U. J. Schoepf, A. Varga-  Szemes, W. E. Few, and L. J. 
+Zhang. 2021. “Computational Fluid Dynamics Based Hemodynamics 
+in the Management of Intracranial Aneurysms: State-  Of- The- Art.” 
+Chinese Journal of Academic Radiology  4, no. 3: 150–159. https:// doi. 
+org/ 10. 1007/ s4205 8-  021-  00081 -  3.
+Huang, S., Z. He, N. Dirr, J. Zimmer, and C. Reina. 2025. “Statistical- 
+Physics- Informed Neural Networks (Stat-  PINNs): A Machine Learning 
+Strategy for Coarse-  Graining Dissipative Dynamics.” Journal of the 
+Mechanics and Physics of Solids  194: 105908. https:// doi. org/ 10. 1016/j. 
+jmps. 2024. 105908.
+Isaev, A., T. Dobroserdova, A. Danilov, and S. Simakov. 2024. 
+“Physically Informed Deep Learning Technique for Estimating Blood 
+Flow Parameters in Arterial Bifurcations.” Lobachevskii Journal of 
+Mathematics  45, no. 1: 239–250. https:// doi. org/ 10. 1134/ S1995 08022 
+4010219.
+Jagtap, A. D., K. Kawaguchi, and G. E. Karniadakis. 2020. “Adaptive 
+Activation Functions Accelerate Convergence in Deep and Physics- 
+Informed Neural Networks.” Journal of Computational Physics  404: 
+109136. https:// doi. org/ 10. 1016/j. jcp. 2019. 109136.
+Jiang, F., H. Liu, X. Chen, and T. Tsuji. 2022. “A Coupled LBM-  DEM 
+Method for Simulating the Multiphase Fluid- Solid Interaction Problem.” 
+Journal of Computational Physics  454: 110963. https:// doi. org/ 10. 1016/j. 
+jcp. 2022. 110963.
+Jo, J., Y. Jeong, J. Kim, and J. Yoo. 2024. “Thermal Conductivity 
+Estimation Using Physics-  Informed Neural Networks With Limited 
+Data.” Engineering Applications of Artificial Intelligence  137: 109079. 
+https:// doi. org/ 10. 1016/j. engap pai. 2024. 109079.
+Kim, K. H., and H.-  W. Koo. 2025. “Hemodynamic Prediction in a 
+Simplified 3D Sidewall Saccular Aneurysm Model Using Physics- 
+Informed Neural Networks.” Journal of the Korean Physical Society  87: 
+1024–1034. https:// doi. org/ 10. 1007/ s4004 2-  025-  01431 -  5.
+Kissas, G., Y. Yang, E. Hwuang, W. R. Witschey, J. A. Detre, and 
+P. Perdikaris. 2020. “Machine Learning in Cardiovascular Flows 
+Modeling: Predicting Arterial Blood Pressure From Non-  Invasive 4D 
+Flow MRI Data Using Physics-  Informed Neural Networks.” Computer 
+Methods in Applied Mechanics and Engineering  358: 112623. https:// doi. 
+org/ 10. 1016/j. cma. 2019. 112623.
+Li, L., X.- C. Tai, and R. H.- F. Chan. 2024. “A New Method to Compute the 
+Blood Flow Equations Using the Physics-  Informed Neural Operator.” 
+Journal of Computational Physics  519: 113380. https:// doi. org/ 10. 1016/j. 
+jcp. 2024. 113380.
+Li, Q., X. Li, Y. Li, et al. 2025. “A Hybrid Two- Way Fluid- Solid Interaction 
+Method for Intermittent Fluid Domains: A Case Study on Peristaltic 
+Pumps.” Advanced Engineering Informatics  65: 103191. https:// doi. org/ 
+10. 1016/j. aei. 2025. 103191.
+Ling, H. J., S. Bru, J. Puig, et al. 2024. “Physics-  Guided Neural Networks 
+for Intraventricular Vector Flow Mapping.” IEEE Transactions on 
+Ultrasonics, Ferroelectrics, and Frequency Control  71, no. 11: 1377–1388. 
+https:// doi. org/ 10. 1109/ TUFFC. 2024. 3411718.
+Ling, Y., T. Schenkel, J. Tang, and H. Liu. 2022. “Computational Fluid 
+Dynamics Investigation on Aortic Hemodynamics in Double Aortic 
+Arch Before and After Ligation Surgery.” Journal of Biomechanics  141: 
+111231. https:// doi. org/ 10. 1016/j. jbiom ech. 2022. 111231.
+Liu, Y., L. Cai, Y. Chen, and Q. Chen. 2025. “ICPINN: Integral 
+Conservation Physics-  Informed Neural Networks Based on Adaptive 
+Activation Functions for 3D Blood Flow Simulations.” Computer 
+Physics Communications  311: 109569. https:// doi. org/ 10. 1016/j. cpc. 
+2025. 109569.
+Liu, Y., L. Cai, Y. Chen, P. Ma, and Q. Zhong. 2024. “Variable Separated 
+Physics- Informed Neural Networks Based on Adaptive Weighted 
+Loss Functions for Blood Flow Model.” Computers & Mathematics 
+with Applications  153: 108–122. https:// doi. org/ 10. 1016/j. camwa. 2023. 
+11. 018.
+Maidu, B., P. Martinez-  Legazpi, M. Guerrero-  Hurtado, et  al. 2025. 
+“Super- Resolution Left Ventricular Flow and Pressure Mapping by 
+Navier- Stokes- Informed Neural Networks.” Computers in Biology and 
+Medicine 185: 109476. https:// doi. org/ 10. 1016/j. compb iomed. 2024. 
+109476.
+Mason, E. C., S. McGhee, K. Zhao, T. Chiang, and L. Matrka. 2019. 
+“The Application of Computational Fluid Dynamics in the Evaluation 
+of Laryngotracheal Pathology.” Annals of Otology, Rhinology, and 
+Laryngology  128, no. 5: 453–459. https:// doi. org/ 10. 1177/ 00034 89419 
+826601.
+Misaki, K., K. Futami, T. Uno, et  al. 2021. “Inflow Hemodynamics 
+of Intracranial Aneurysms: A Comparison of Computational Fluid 
+Dynamics and 4D Flow Magnetic Resonance Imaging.” Journal of 
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 30 =====
+30 of 31
+ Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+Stroke and Cerebrovascular Diseases  30, no. 5: 105685. https:// doi. org/ 
+10. 1016/j. jstro kecer ebrov asdis. 2021. 105685.
+Nakajima, S., S. Sugiyama, H. Oishi, et  al. 2022. “Prediction of 
+Atherosclerotic Changes in Cavernous Carotid Aneurysms Based on 
+Computational Fluid Dynamics Analysis: A Proof-  Of- Concept Study.” 
+Neuroradiology  64, no. 3: 575–585. https:// doi. org/ 10. 1007/ s0023 4-  021-  
+02803 -  x.
+Ning, J., Z. Jin, and X. Xu. 2023. “A Multigrid Partition Coupled 
+Eulerian- Lagrangian Method for Fluid-  Solid Interaction Problems.” 
+Physics of Fluids  35, no. 9: 097134. https:// doi. org/ 10. 1063/5. 0165975.
+Oliveira, I. L., G. B. Santos, J. Militzer, C. E. Baccin, R. T. Tatit, and 
+J. L. Gasche. 2021. “A Longitudinal Study of a Lateral Intracranial 
+Aneurysm: Identifying the Hemodynamic Parameters Behind Its 
+Inception and Growth Using Computational Fluid Dynamics.” Journal 
+of the Brazilian Society of Mechanical Sciences and Engineering  43, no. 3: 
+138. https:// doi. org/ 10. 1007/ s4043 0-  021-  02836 -  6.
+Orera, J., J. Ramirez, P. Garcia-  Navarro, and J. Murillo. 2025. 
+“RoePINNs: An Integration of Advanced CFD Solvers With Physics- 
+Informed Neural Networks and Application in Arterial Flow Modeling.” 
+Computer Methods in Applied Mechanics and Engineering  440: 117933. 
+https:// doi. org/ 10. 1016/j. cma. 2025. 117933.
+Qiao, A., X. Dai, J. Niu, and L. Jiao. 2016. “Hemodynamics in Stented 
+Vertebral Artery Ostial Stenosis Based on Computational Fluid 
+Dynamics Simulations.” Computer Methods in Biomechanics and 
+Biomedical Engineering  19, no. 11: 1190–1200. https:// doi. org/ 10. 1080/ 
+10255 842. 2015. 1123253.
+Rehman, M. A. U., O. Ekici, M. A. Farooq, R. M. Talha, and S. 
+Amir. 2025. “Application of Computational Fluid Dynamics and 
+Physics Informed Neural Networks in Predicting Rupture Risk of 
+Thoracoabdominal Aneurysms With Fluid-  Structure Interaction 
+Analysis.” Chinese Journal of Physics  95: 433–454. https:// doi. org/ 10. 
+1016/j. cjph. 2025. 02. 015.
+Sainz- DeMena, D., M. A. Pérez, and J. M. García-  Aznar. 2024. 
+“Exploring the Potential of Physics-  Informed Neural Networks to 
+Extract Vascularization Data From DCE-  MRI in the Presence of 
+Diffusion.” Medical Engineering & Physics  123: 104092. https:// doi. org/ 
+10. 1016/j. meden gphy. 2023. 104092.
+Sarabian, M., H. Babaee, and K. Laksari. 2022. “Physics-  Informed 
+Neural Networks for Brain Hemodynamic Predictions Using Medical 
+Imaging.” IEEE Transactions on Medical Imaging  41, no. 9: 2285–2303. 
+https:// doi. org/ 10. 1109/ TMI. 2022. 3161653.
+Sarma, A. K., S. Roy, C. Annavarapu, P. Roy, and S. Jagannathan. 2024. 
+“Interface PINNs (I-  PINNs): A Physics-  Informed Neural Networks 
+Framework for Interface Problems.” Computer Methods in Applied 
+Mechanics and Engineering  429: 117135. https:// doi. org/ 10. 1016/j. cma. 
+2024. 117135.
+Sel, K., A. Mohammadi, R. I. Pettigrew, and R. Jafari. 2023. “Physics- 
+Informed Neural Networks for Modeling Physiological Time Series for 
+Cuffless Blood Pressure Estimation.” npj Digital Medicine  6, no. 1: 110. 
+https:// doi. org/ 10. 1038/ s4174 6-  023-  00853 -  4.
+Sen, A., E. Ghajar-  Rahimi, M. Aguirre, L. Navarro, C. J. Goergen, and 
+S. Avril. 2024. “Physics-  Informed Graph Neural Networks to Solve 
+1- D Equations of Blood Flow.” Computer Methods and Programs in 
+Biomedicine  257: 108427. https:// doi. org/ 10. 1016/j. cmpb. 2024. 108427.
+Shukla, K., Z. Zou, C. H. Chan, A. Pandey, Z. Wang, and G. E. 
+Karniadakis. 2025. “NeuroSEM: A Hybrid Framework for Simulating 
+Multiphysics Problems by Coupling PINNs and Spectral Elements.” 
+Computer Methods in Applied Mechanics and Engineering  433: 117498. 
+https:// doi. org/ 10. 1016/j. cma. 2024. 117498.
+Sikora, M., P. Krukowski, A. Paszynska, and M. Paszynski. 2024. 
+“Comparison of Physics Informed Neural Networks and Finite Element 
+Method Solvers for Advection- Dominated Diffusion Problems.” Journal 
+of Computational Science  81: 102340. https:// doi. org/ 10. 1016/j. jocs. 
+2024. 102340.
+Singh, V., D. Harursampath, S. Dhawan, M. Sahni, S. Saxena, and R. 
+Mallick. 2024. “Physics-  Informed Neural Network for Solving a One- 
+Dimensional Solid Mechanics Problem.” Modelling 5, no. 4: 1532–1549. 
+https:// doi. org/ 10. 3390/ model ling5 040080.
+Steinman, D. A., J. B. Thomas, H. M. Ladak, J. S. Milner, B. K. Rutt, 
+and J. D. Spence. 2002. “Reconstruction of Carotid Bifurcation 
+Hemodynamics and Wall Thickness Using Computational Fluid 
+Dynamics and MRI.” Magnetic Resonance in Medicine  47, no. 1: 149–
+159. https:// doi. org/ 10. 1002/ mrm. 10025 .
+Sun, L., H. Gao, S. Pan, and J.-  X. Wang. 2020. “Surrogate Modeling for 
+Fluid Flows Based on Physics-  Constrained Deep Learning Without 
+Simulation Data.” Computer Methods in Applied Mechanics and 
+Engineering  361: 112732. https:// doi. org/ 10. 1016/j. cma. 2019. 112732.
+Tawhai, M. H., and K. S. Burrowes. 2008. “Modelling Pulmonary Blood 
+Flow.” Respiratory Physiology & Neurobiology  163, no. 1–3: 150–157. 
+https:// doi. org/ 10. 1016/j. resp. 2008. 02. 016.
+Voorter, P. H. M., W. H. Backes, O. J. Gurney-  Champion, et  al. 2023. 
+“Improving Microstructural Integrity, Interstitial Fluid, and Blood 
+Microcirculation Images From Multi-  b- Value Diffusion MRI Using 
+Physics- Informed Neural Networks in Cerebrovascular Disease.” 
+Magnetic Resonance in Medicine  90, no. 4: 1657–1671. https:// doi. org/ 
+10. 1002/ mrm. 29753 .
+Wang, J.- X., J.-  L. Wu, and H. Xiao. 2017. “Physics-  Informed Machine 
+Learning Approach for Reconstructing Reynolds Stress Modeling 
+Discrepancies Based on DNS Data.” Physical Review Fluids  2, no. 3: 
+034603. https:// doi. org/ 10. 1103/ PhysR evFlu ids.2. 034603.
+Wang, S., H. Bi, Y. Li, and Y. Yang. 2023. “The Finite Element Method 
+for Modified Transmission Eigenvalues for Inverse Scattering in a 
+Fluid- Solid Interaction Problem.” Applied Mathematics Letters  145: 
+108771. https:// doi. org/ 10. 1016/j. aml. 2023. 108771.
+Williams, K., S. V. S. Nagesh, D. Bednarek, et al. 2025. “Determination 
+of Blood Perfusion and Hemodynamics Using Physics-  Informed Neural 
+Networks for Use in Stroke Severity Assessment.” Neurosurgery  71: 
+234–235. https:/ / doi. org/ 10. 1227/ neu. 00000 00000 003360_ 1378.
+Wong, H. S., W. X. Chan, B. H. Li, and C. H. Yap. 2024. “Strategies for 
+Multi- Case Physics- Informed Neural Networks for Tube Flows: A Study 
+Using 2D Flow Scenarios.” Scientific Reports  14, no. 1: 11577. https:// doi. 
+org/ 10. 1038/ s4159 8-  024-  62117 -  9.
+Wong, H. S., W. X. Chan, W. Mao, and C. H. Yap. 2025. “3D Velocity and 
+Pressure Field Reconstruction in the Cardiac Left Ventricle via Physics 
+Informed Neural Network From Echocardiography Guided by 3D Color 
+Doppler.” Computer Methods and Programs in Biomedicine  263: 108671. 
+https:// doi. org/ 10. 1016/j. cmpb. 2025. 108671.
+Xu, J., H. Wei, and H. Bao. 2023. “Physics-  Informed Neural Networks 
+for Studying Heat Transfer in Porous Media.” International Journal 
+of Heat and Mass Transfer  217: 124671. https:// doi. org/ 10. 1016/j. ijhea 
+tmass trans fer. 2023. 124671.
+Yevtushenko, P., L. Goubergrits, L. Gundelwein, et  al. 2022. “Deep 
+Learning Based Centerline-  Aggregated Aortic Hemodynamics: An 
+Efficient Alternative to Numerical Modeling of Hemodynamics.” IEEE 
+Journal of Biomedical and Health Informatics  26, no. 4: 1815–1825. 
+https:// doi. org/ 10. 1109/ JBHI. 2021. 3116764.
+Yuan, L., Y.-  Q. Ni, X.-  Y. Deng, and S. Hao. 2022. “A-  PINN: Auxiliary 
+Physics Informed Neural Networks for Forward and Inverse Problems 
+of Nonlinear Integro-  Differential Equations.” Journal of Computational 
+Physics 462: 111260. https:// doi. org/ 10. 1016/j. jcp. 2022. 111260.
+Zhang, R. Z., I. Ezhov, M. Balcerak, et al. 2025. “Personalized Predictions 
+of Glioblastoma Infiltration: Mathematical Models, Physics-  Informed 
+Neural Networks and Multimodal Scans.” Medical Image Analysis  101: 
+103423. https:// doi. org/ 10. 1016/j. media. 2024. 103423.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+
+===== PAGE 31 =====
+31 of 31
+Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery, 2026
+Zhang, X., B. Mao, Y. Che, et  al. 2023. “Physics-  Informed Neural 
+Networks (PINNs) for 4D Hemodynamics Prediction: An Investigation 
+of Optimal Framework Based on Vascular Morphology.” Computers 
+in Biology and Medicine  164: 107287. https:// doi. org/ 10. 1016/j. compb 
+iomed. 2023. 107287.
+Zhao, Y. C., P. Vatankhah, T. Goh, et  al. 2021. “Hemodynamic 
+Analysis for Stenosis Microfluidic Model of Thrombosis With Refined 
+Computational Fluid Dynamics Simulation.” Scientific Reports  11, no. 
+1: 6875. https:// doi. org/ 10. 1038/ s4159 8-  021-  86310 -  2.
+ 19424795, 2026, 3, Downloaded from https://wires.onlinelibrary.wiley.com/doi/10.1002/widm.70108 by Politecnico Di Torino Sist. Bibl Del Polit Di Torino, Wiley Online Library on [17/07/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License

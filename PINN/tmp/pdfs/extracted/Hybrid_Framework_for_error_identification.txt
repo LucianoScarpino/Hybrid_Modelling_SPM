@@ -1,0 +1,1089 @@
+===== PAGE 1 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+Available online 4 April 2022
+0888-3270/© 2022 Elsevier Ltd. All rights reserved.
+Contents lists available at ScienceDirect
+Mechanical Systems and Signal Processing
+journal homepage: www.elsevier.com/locate/ymssp
+Physics-integrated hybrid framework for model form error
+identification in nonlinear dynamical systems
+Shailesh Garg a, Souvik Chakrabortya,b,∗, Budhaditya Hazrac
+a Department of Applied Mechanics, Indian Institute of Technology Delhi, Hauz Khas 110 016, India
+b Yardi School of Artificial Intelligence (ScAI), Indian Institute of Technology Delhi, Hauz Khas 110 016, India
+c Department of Civil Engineering, Indian Institute of Technology Guwahati, Assam 781 039, India
+A R T I C L E I N F O
+Communicated by S. Laflamme
+Keywords:
+Model form error
+Dual Bayesian filters
+Gaussian process
+Gray-box modeling
+A B S T R A C T
+For real-life nonlinear systems, the exact form of nonlinearity is often not known and the
+known governing equations are often based on certain assumptions and approximations. Such
+representation introduce model-form error into the system. In this paper, we propose a novel
+gray-box modeling approach that not only identifies the model-form error but also utilizes it
+to improve the predictive capability of the known but approximate governing equation. The
+primary idea is to treat the unknown model-form error as a residual force and estimate it using
+dual Bayesian filter based joint input-state estimation algorithms. For improving the predictive
+capability of the underlying physics, we first use machine learning algorithm to learn a mapping
+between the estimated state and the input (model-form error) and then introduce it into the
+governing equation as an additional term. This helps in improving the predictive capability of
+the governing physics and allows the model to generalize to unseen environment. Although in
+theory, any machine learning algorithm can be used within the proposed framework, we use
+Gaussian process in this work. To test the performance of proposed framework, case studies
+discussing four different dynamical systems are discussed; results for which indicate that the
+framework is applicable to a wide variety of systems and can produce reliable estimates of
+original system’s states. Apart from this, the algorithm has also been tested for a case where
+the data has been taken from an experimental setup (Silver box dataset). The results produced
+further showcase the efficacy of the proposed framework.
+1. Introduction
+Majority of the physical processes occurring in nature exhibit dynamical behavior and thus can be modeled using linear or
+nonlinear differential equations. For processes conforming to complex nonlinear or chaotic behavior, the exact form of nonlinearity
+is often not known and hence, one often uses parametric models to represent the same [ 1]. Even for cases where the exact form
+of nonlinearity is known, working with the same might be difficult from a computational point-of-view. Under such circumstances
+one often resorts to approximate methods such as linearization [ 2]. However, these approximations introduce a model form error
+which left unchecked can potentially result in non optimized solutions. Naturally, it is important to develop algorithms that can
+estimate model form error and use it to correct the underlying approximate governing equation.
+Over the past decade or so, machine learning [ 3] and deep learning [ 4] algorithms have gained a lot of traction in various
+domains including aerospace [5], automobile [6,7], medical [8,9], and manufacturing [10]. Researchers and practitioners are now
+∗ Corresponding author at: Department of Applied Mechanics, Indian Institute of Technology Delhi, Hauz Khas 110 016, India.
+E-mail addresses: shaileshgarg96@gmail.com (S. Garg), souvik@am.iitd.ac.in (S. Chakraborty), budhaditya.hazra@iitg.ac.in (B. Hazra).
+https://doi.org/10.1016/j.ymssp.2022.109039
+Received 12 August 2021; Received in revised form 10 February 2022; Accepted 9 March 2022
+
+===== PAGE 2 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+2
+S. Garg et al.
+looking at data-driven approaches as a possible alternative to classical physics-based approaches. Some of path-breaking work in
+these domains include those by [11–13]. The basic idea in all these papers is to train data-driven deep learning algorithms to model
+the system. However, such approaches suffer from three major challenges. First, deep learning algorithms often need huge amount of
+data, which is often expensive to collect. Second, unlike physics-based models, data-driven algorithms may not generalize to unseen
+environment. Last but not the least, purely data-driven algorithms have limited predictive capability. For instance, if acceleration
+time history is provided as training data, these models are only capable of predicting acceleration time history, and it is extremely
+difficult to predict displacement and velocity time histories.
+For addressing issue associated with purely data-driven algorithms discussed above, physics-informed machine learning algo-
+rithms have been proposed in the literature [14]. The idea here is to train the machine learning model directly from the governing
+equation. This is achieved by developing a physics-informed loss function. To that end, researchers have developed strong form [15]
+and weak form [16] based physics-informed loss functions. For time dependent systems, one can find continuous time [15] and
+discrete time [17] variants of physics-informed machine learning algorithms. Since its introduction in 2019, physics-informed
+machine learning algorithms have been used for solving different types of problems including fracture mechanics [18], fluid
+mechanics [19], heat transfer [20], and reliability analysis [21]. In recent studies, physics based neural networks have been explored
+to identify dynamical systems with some type of parametric uncertainty [22,23]. However, these methods are only applicable when
+the governing equations are known in its exact form. In case the governing equation has some modeling error, the final predicted
+results will be erroneous, as the modeling error is propagated to the physics-informed machine learning solution.
+One possible alternative for eliminating model form error is the multi-fidelity framework [24,25]. The basic premise here is
+first train a model based on low-fidelity data and then update it by using an auto-regressive like algorithm and few high-fidelity
+data. While low-fidelity data is generated from the approximate governing equation, high-fidelity data corresponds to actual field
+measurement or laboratory experiments. Specifically multi-fidelity schemes like co-Kriging [26–29] and multi-level Monte Carlo
+(MLMC) [30–33] methods have been explored in the past and are well established in the available literature. Of late, nonlinear data
+fusion based [34], transfer learning based physics-informed [24], and Bayesian [35] multi-fidelity algorithms have been proposed.
+However, similar to conventional machine learning algorithms, multi-fidelity frameworks often have poor generalization and do not
+generalize to unseen environment.
+In this paper, we propose a novel gray-box modeling framework that first estimates the model form error and then incorporate
+it in form of a corrective term into the governing equation. The proposed approach utilizes Bayesian filters and machine learning
+algorithms to blend sensor data with known but approximate governing physics. The advantage of the proposed approach over
+multi-fidelity approaches are as follows:
+• Unlike multi-fidelity schemes, the proposed approach is capable of quantifying the model form error. As we will see later,
+Dual Bayesian filter (DBF) is used within the proposed framework for quantifying the model form error.
+• Unlike machine learning and multi-fidelity frameworks, the proposed approach does not attempt to replace the governing
+equation with a machine learning model; instead machine learning is used to enhance the known but approximate governing
+equation. This results in better generalization to unseen environment.
+Although in theory, the proposed approach can be used with any machine learning algorithms (e.g., polynomial chaos [36], support
+vector machine [37], analysis-of-variance decomposition [38]), we use Gaussian process [39,40] because of its proven performance
+in past studies conducted by the authors [41].
+The remainder of the paper is organized as follows. Section 2 discusses mathematical description of the problem at hand. In
+Section 3, the proposed approach along with its sub-components are elaborated. We present numerical examples involving a wide
+class of nonlinear oscillators in Section 4 to illustrate the applicability of the proposed approach. Section 5 includes the results
+for when the proposed algorithm is tested against Silver box [42] benchmark data and finally, Section 6 provides the concluding
+remarks.
+2. Problem statement
+Consider an 𝑛−DOF system subjected to deterministic and stochastic forces. The governing equation for such a system is as
+follows:
+𝐌 ̈𝑿 + 𝐂 ̇𝑿 + 𝐊𝑿 + 𝑵(𝑿, ̇𝑿; 𝜽𝑵 ) = 𝑭 + Σ ̇𝑾 , (1)
+where 𝐌 ∈ R𝑛×𝑛, 𝐂 ∈ R𝑛×𝑛 and 𝐊 ∈ R𝑛×𝑛 are the mass, damping and linear stiffness matrices respectively. 𝑵(𝑿, ̇𝑿; 𝜽𝑵 ) ∈ R𝑛 is
+the non-linearity vector such that 𝑁𝑖 will be the nonlinear force associated with the 𝑖−th DOF and 𝜽𝑁 represent the parameters
+controlling the behavior of non-linearity present in the system. 𝑿 ∈ R𝑛 is the displacement vector. 𝑭 ∈ R𝑛 is the deterministic force
+vector and ̇𝑾 ∈ R𝑛 is the stochastic force vector, intensity of which is governed by the matrix 𝜮 ∈ R𝑛×𝑛. In a realistic scenario, the
+exact form of non-linearity and the exact system parameters are often not known. Mathematically this is represented as:
+̃𝐌 ̈ + ̃𝐂 ̇ + ̃𝐊 + ̃𝑵( , ̇ ; 𝜽 ̃𝑵 ) = 𝑭 + Σ ̇𝑾 , (2)
+where ̃𝐌 ∈ R𝑛×𝑛, ̃𝐂 ∈ R𝑛×𝑛 and ̃𝐊 ∈ R𝑛×𝑛 are the known (but not exact) parameters, and ̃𝑵(⋅) ∈ R𝑛 represent the appropriate
+non-linearity. ̃𝑵(⋅) = 0 represent the scenario where for the sake of simplicity non-linearity is ignored. It should be noted that
+because of model form error,  is only approximately equal to 𝑿.
+
+===== PAGE 3 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+3
+S. Garg et al.
+Fig. 1. Schematic of the proposed framework to resolve model form uncertainty. It makes use of Bayesian filters to estimate the residual forces and then maps
+them to the estimated states using Gaussian process regression.
+We now imagine a dynamical system with following governing equation ( 𝐌 = ̃𝐌 for the scope of current study):
+𝐌 ̈𝑿 + ̃𝐂 ̇𝑿 + ̃𝐊𝑿 + ̃𝑵(𝑿, ̇𝑿; 𝜽 ̃𝑵 ) + 𝑹 = 𝑭 + Σ ̇𝑾 , (3)
+where 𝑹 ∈ R𝑁 is the residual force vector representing the model form error and can be represented as:
+𝑹 = (𝐂 − ̃𝐂) ̇𝑿 + (𝐊 − ̃𝐊)𝑿 + (𝑵 − ̃𝑵) (4)
+Eq. (3) represents a dynamical system with known dynamics and unknown force vector 𝑹. Since, the values of 𝐂, 𝐊, 𝑵 and 𝑾
+are unknown, calculating the values for 𝑹 directly would not be possible. The main goal of this paper is to estimate the model
+form error without actually knowing the exact parameters and non-linearity associated with the original system. Also unknown are
+the stochastic forces acting on the system. Accelerations or displacements or both along with the deterministic component of input
+forces acting on the original system are available as measurements. The proposed algorithm should be able to adequately estimate
+the residual forces and map the same to the estimated states. It should also be able to approximate the state of the system for when
+original system is subjected to a different loading.
+3. Proposed framework
+This section introduces the algorithm for the proposed framework and briefly discusses Bayesian filters and Gaussian process
+(GP) regression [40,43,44] which form core of the framework. The idea here is to jointly estimate the residual force 𝑹 using dual
+Bayesian filters along with the state vector. Thereafter, Gaussian process is used to map the estimated state vector to the estimated
+residual forces.
+𝑹 = 𝑓 (𝑿, ̇𝑿) (5)
+Eq. (3) can then be modified as,
+𝐌 ̈𝑿 + ̃𝐂 ̇𝑿 + ̃𝐊𝑿 + ̃𝑵 + 𝑓 (𝑿, ̇𝑿) = 𝑭 + 𝜮 ̇𝑾 (6)
+Since, values for ̃𝐂, ̃𝐊, ̃𝑵 and 𝑭 in Eq. (6) are now known, this becomes a forward problem which can be solved to obtain the system
+states corresponding to the original system. With such a setup, the proposed approach is able to generalize to unknown environment
+(unseen forces). A schematic of the proposed framework has been shown in Fig. 1. A high level algorithm of the proposed approach
+is provided in Algorithm 1.
+The algorithm proposed above has two key components: (a) an algorithm for jointly estimating the input and state and (b) a
+machine learning algorithm for mapping the estimated states and inputs. In this work, we propose to use DBF for jointly estimating
+the input and state vectors. As for learning the mapping between the estimated state and the force vectors, we use Gaussian
+process [39,44] because of its already proven performance.
+Details on how Bayesian filter and Gaussian process are used within the proposed framework is discussed next.
+
+===== PAGE 4 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+4
+S. Garg et al.
+Algorithm 1: High-level algorithm for the proposed framework
+1 Input: Governing equation (approximate) and parameters (approximate) of the system under consideration.
+2 Estimate the residual force 𝑹 and the state vectors using DBF using joint input-state estimation algorithm.
+3 Map the estimated states to the estimated residual force.; ⊳ Eq. (5)
+4 Update the known governing equation (approximate) by including the machine learning model.; ⊳ Eq. (6)
+5 Outcome: A gray-box model capable of predicting responses corresponding to different operating conditions.
+Fig. 2. Probabilistic graphical model for state space model. Because of Markovian assumption, the hidden variable 𝒀 𝑡 is only dependent on 𝒀 𝑡−1 and the
+observation 𝒁 𝑡 is dependent on current state only.
+3.1. Bayesian filters
+Bayesian filters (BFs) work on the principals of Bayesian statistics and aim at estimating the hidden states given some
+observations. BFs are used in a variety of domains ranging from target tracking, GPS to health industry. The recursive nature of
+Bayesian filter which makes them useful for large datasets, is possible because of the Markovian assumption wherein the current
+state of system is assumed to be influenced by previous state only and the current measurement is assumed to be affected by
+current state only. Rest of the state histories can therefore be ignored while analysis, reducing the computational cost drastically.
+A probabilistic graphical model representing the first-order Markov assumption is shown in Fig. 2 . Kalman filter [45–47], Extended
+Kalman filter [45], Unscented Kalman filter [ 48] are special types of recursive Bayesian filters, each catering to different types of
+filter model. KF takes on linear filter models while EKF and UKF are used for nonlinear filter model. UKF differs from EKF in the
+way that it uses unscented transform instead of linearization to analyze the nonlinear models. While KF, EKF and UKF individually
+can be used for force state estimation, dual Bayesian filters give better convergence and thus produce better estimates. Differences
+between the process flow of Bayesian and dual Bayesian filters are shown using schematic in Fig. 3 . While conventional filters
+augment unknown states and forces in a single vector of the form [𝑋, ̇𝑋, 𝑅 ]𝑇 , dual filters makes two separate state-space models.
+One of the models outlines the behavior of force while the other is based on system states. A generic state space model for DBF is
+as follows:
+𝐟𝑘 ∼ 𝑝(𝐟𝑘|𝐟𝑘−1)
+𝐲𝑘 ∼ 𝑝(𝐲𝑘|𝐲𝑘−1, 𝐟𝑘−1)
+𝐳𝑘 ∼ 𝑝(𝐳𝑘|𝐲𝑘, 𝐟𝑘),
+(7)
+where 𝐟𝑘 is the unknown force vector at time step 𝑘, 𝐲 is the state vector representing state of system at time step 𝑘. 𝐳𝑘 is
+the measurement vector observed at time step 𝑘. 𝑝(𝐟𝑘|𝐟𝑘−1) is the force model describing the trend of the unknown forces. 𝐲𝑘 ∼
+𝑝(𝐲𝑘|𝐲𝑘−1, 𝐟𝑘−1) is the dynamic model describing the dynamics of the system and 𝑝(𝐳𝑘|𝐲𝑘, 𝐟𝑘) is the measurement model, which shows
+the distribution of measurements given the state of system.
+Remark 1. We note that DBF is a generic term and can encompass a wide array of algorithms. The choice of DBF algorithm
+depends on the system at hand. In this paper, we propose to use Dual Kalman Filter (DKF) [49] when the known governing equation
+(approximate) is linear. On the other hand, if the known governing equation is nonlinear, we use Dual Unscented Kalman Filter
+(DUKF) [50].
+DKF is a popular algorithm that is used in literature for joint input-state estimation. The filtering model in DKF is expressed as
+follows:
+𝐟𝑘 = 𝐓𝐟𝑘−1 + 𝒒(1)
+𝑘−1
+𝐲𝑘 = 𝐀𝑠𝐲𝑘−1 + 𝐀𝑖𝑭 (𝑖)
+𝑘−1 + 𝐀𝑓 𝐟𝑘−1 + 𝒒(2)
+𝑘−1
+𝐳𝑘 = 𝐇𝑠𝐲𝑘 + 𝐇𝑓 𝐟𝑘 + 𝒓𝑘
+(8)
+where the state vector is defined as 𝐲 = [𝑿, ̇𝑿]𝑇 . 𝒒(1) ∼ 𝑁(0, 𝐐(1)) and 𝒒(2) ∼ 𝑁(0, 𝐐(2)) are the process noises with co-variance 𝐐(1)
+and 𝐐(2) respectively. 𝒓 ∼ 𝑁(0, 𝐑) is the measurement noise with noise co-variance 𝐑. 𝑭 (𝑖) are the known input forces acting on the
+system. Process flow for DKF is given in Algorithm 2. Matrices 𝐀𝑖 relate the previous state dynamics to the current state whereas 𝐇𝑖
+relate the current state of the system to the current observed measurement. Specifically 𝐀𝑠 maps the previous state to the current
+state and 𝐀𝑓 , 𝐀𝑖 map the unknown force and the input forces to the current state. Similarly 𝐇𝑠 and 𝐇𝑓 map the current state and
+force to the current measurement.
+
+===== PAGE 5 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+5
+S. Garg et al.
+Fig. 3. Comparison between process flow of Bayesian and Dual Bayesian filter.
+Algorithm 2: DKF Algorithm
+1 Initialize: Predicted state 𝒑𝑠, covariance of predicted state 𝐂𝑝𝑠, predicted force 𝒑𝑓 , and covariance of predicted force 𝐂𝑝𝑓
+2 Repeat steps 3-14 for time step 𝑘 = 1, 2, ....,end
+// Measurement Update - I (3-6)
+3 𝒆𝑓 = z[𝑘] − (𝐇𝑠𝒑𝑠 + 𝐇𝑓 𝒑𝑓 )
+4 𝐊𝑓 = (𝐇𝑓 𝐂𝑝𝑓 𝐇𝑇
+𝑓 + 𝑅)−1𝐇𝑓 𝐂𝑝𝑓
+5 f [𝑘] = 𝒄𝑓 = 𝒑𝑓 + 𝐊𝑓 𝒆𝑓 ; ⊳ Force estimated at time step k
+6 𝐂𝑐𝑓 = 𝐂𝑝𝑓 − 𝐊𝑓 𝐇𝑓 𝐂𝑝𝑓
+// Measurement Update - II (7-10)
+7 𝒆𝑠 = z[𝑘] − (𝐇𝑠𝒑𝑠 + 𝐇𝑓 𝒄𝑓 )
+8 𝐊𝑠 = (𝐇𝑠𝐂𝑝𝑠 𝐇𝑇
+𝑠 + 𝐑)−1𝐇𝑠𝐂𝑝𝑠
+9 y[𝑘] = 𝒄𝑠 = 𝒑𝑠 + 𝐊𝑠𝒆𝑠 ; ⊳ States estimated at time step k
+10 𝐂𝑐𝑠 = 𝐂𝑝𝑠 − 𝐊𝑠𝐇𝑠𝐂𝑝𝑠
+// Time Update - I (11-12)
+11 𝒑𝑓 = 𝐓𝒄𝑓
+12 𝐂𝑝𝑓 = 𝐓𝐂𝑐𝑓 𝐓𝑇 + 𝐐(1)
+// Time Update - II (13-14)
+13 𝒑𝑠 = 𝐀𝑠𝒄𝑠 + 𝐀𝑖𝑭 𝑖[𝑘] + 𝐀𝑓 𝒄𝑓
+14 𝐂𝑝𝑠 = 𝐀𝑠𝐂𝑐𝑠 𝐀𝑇
+𝑠 + 𝐐(2).
+15 Outcome: Estimated model-form error and state vectors.
+
+===== PAGE 6 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+6
+S. Garg et al.
+The nonlinear counterpart of DKF is the Dual Unscented Kalman Filter (DUKF). The filter equations in DUKF can be written as:
+𝐟𝑘 = 𝑓 (1)(𝐟𝑘−1) + 𝒒(1)
+𝑘−1
+𝐲𝑘 = 𝑓 (2)(𝐲𝑘−1, 𝑭 𝑖
+𝑘−1, 𝐟𝑘−1) + 𝒒(2)
+𝑘−1
+𝐳𝑘 = ℎ(𝐲𝑘, 𝐟𝑘) + 𝒓𝑘,
+(9)
+where 𝑓 𝑖(⋅) and ℎ(⋅) are the dynamic and measurement model respectively. We approximate the filtering distributions of unknown
+force and state dynamic models described in Eq. (9) as:
+𝑝(𝐟𝑘|𝐳1∶𝑘) ≃ 𝑁(𝐟𝑘|𝒎1𝑘 , 𝐏1𝑘 )
+𝑝(𝐲𝑘|𝐳1∶𝑘) ≃ 𝑁(𝐲𝑘, 𝐟𝑘|𝒎2𝑘 , 𝐏2𝑘 ) (10)
+where 𝒎𝑖 and 𝐏𝑖 are the mean and co-variance matrices governing the properties of the distribution. DUKF used in this paper follows
+the same trend as that followed by DKF i.e., measurement updates for unknown force and states will be followed by their respective
+time updates. However, because of the presence of UKF within the DUKF framework, the computation is more involved. Overall,
+the computation carried out inside the DUKF algorithm can be divided into two steps (a) computation of the DUKF weights and (b)
+joint estimation of the input and state vectors using DUKF. We present calculation of DUKF weights in Algorithm 3 and the overall
+DUKF algorithm in Algorithm 4.
+Algorithm 3: DUKF weights calculation
+// For unknown force vector
+1 Input: Length of unknown force vector 𝐿𝑓 and Length of state vector 𝐿𝑠.
+2 𝛼1 ← 1, 𝛼2 ← 1, 𝛽1 ← 2, 𝛽2 ← 2, 𝜅1 ← 0, 𝜅2 ← 0
+3 𝜆1 = 𝛼2
+1 (𝐿𝑓 + 𝜅1) − 𝐿𝑓
+4 𝑊 (𝑖)
+1𝑚
+= 𝜆1
+𝐿𝑓 + 𝜆1
+; ⊳ for 𝑖 = 0
+5 𝑊 (𝑖)
+1𝑐
+= 𝜆1
+𝐿𝑓 + 𝜆1
++ (1 − 𝛼2
+1 + 𝛽1); ⊳ for 𝑖 = 0
+6 𝑊 (𝑖)
+1𝑚
+= 1
+2(𝐿𝑓 + 𝜆1) ; ⊳ for 𝑖 = 1, ...., 2𝐿𝑓
+7 𝑊 (𝑖)
+1𝑐
+= 𝑊 (𝑖)
+1𝑚
+; ⊳ for 𝑖 = 1, ...., 2𝐿𝑓
+// For unknown state vector
+8 𝜆2 = 𝛼2
+2 (𝐿𝑠 + 𝜅2) − 𝐿𝑠
+9 𝑊 (𝑖)
+2𝑚
+= 𝜆2
+𝐿𝑠 + 𝜆2
+; ⊳ for 𝑖 = 0
+10 𝑊 (𝑖)
+2𝑐
+= 𝜆2
+𝐿𝑠 + 𝜆2
++ (1 − 𝛼2
+2 + 𝛽2); ⊳ for 𝑖 = 0
+11 𝑊 (𝑖)
+2𝑚
+= 1
+2(𝐿𝑠 + 𝜆2) ; ⊳ for 𝑖 = 1, ...., 2𝐿𝑠
+12 𝑊 (𝑖)
+2𝑐
+= 𝑊 (𝑖)
+2𝑚
+; ⊳ for 𝑖 = 1, ...., 2𝐿𝑠
+13 Output: Calculated weights for sigma points.
+For using either DKF or DUKF in practice, we need to estimate the filter models for a given system. Details on filter equations
+are formulated from governing equation is well-documented in the literature [45]. Nonetheless, for details on the same, interested
+readers may refer Appendix A (linear system) and Appendix B (nonlinear system).
+3.2. Gaussian process regression
+Gaussian process regression [39,40] is a popular non-parametric machine learning based regression technique. Being data driven,
+GPR does not require a prior physical model and hence can be used for a wide range of problems. Advantage of GPR over
+conventional regression techniques is that along with estimating the data it gives the uncertainty attached to it which can help
+the user make better decisions while using the data for any particular application. In this paper GPR has been used to map the
+estimated states 𝐲 to the residual forces 𝑅 and obtain a GPR model. The states and forces used to prepare the GPR models are
+obtained from DBFs as discussed earlier.
+GPR treats the whole data as a Gaussian process with some mean and co-variance. As such before starting the regression process
+a mean and co-variance function are assumed and the data is idealized as follows:
+𝑹 ∼ (𝝁(𝐲; 𝐵), 𝜿(𝐲, 𝐲′; 𝑠2𝐈, 𝑙)), (11)
+where the state vector 𝐲 acts like a independent input variable such that 𝑹 = 𝑔(𝐲). 𝜇(., 𝐵) is the mean function which can be
+assumed as a constant or some function of the input variable. 𝜅(., ., 𝑠2𝐈) is the co-variance or kernel function which is assumed based
+on the prior knowledge of the data being analyzed. 𝐵 in Eq. (11) is the hyper-parameter for the mean function and, 𝑠 and 𝑙 are the
+hyper-parameters for the kernel function. A lot of predefined kernel functions exist in the literature namely squared exponential,
+Matern 32, Matern 52, etc. Upon selection of mean and co-variance functions, training data  = [ 𝐲, 𝑹] is used to optimize the
+
+===== PAGE 7 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+7
+S. Garg et al.
+Algorithm 4: DUKF algorithm
+1 Calculate DUKF weight.; ⊳ Alg. 3
+2 Initialize: Predicted mean 𝒎−
+10
+, 𝒎−
+20
+and co-variance 𝐏−
+10
+, 𝐏−
+20
+3 𝒎−
+1𝑘
+= 𝒎−
+10
+, 𝒎−
+2𝑘
+= 𝒎−
+20
+, 𝐏−
+1𝑘
+= 𝐏−
+10
+, 𝐏−
+2𝑘
+= 𝐏−
+20
+for 𝑘 = 1, 2, ...., 𝑡𝑛
+4  −
+𝑘 = [𝒎−
+1𝑘−1
+𝒎−
+1𝑘−1
++ √𝐿𝑓 + 𝜆1
+[√
+𝐏−
+1𝑘−1
+]
+𝒎−
+1𝑘−1
+− √𝐿𝑓 + 𝜆1
+[√
+𝐏−
+1𝑘−1
+]
+]
+5 (𝑖)
+1𝑘
+= ℎ(𝒎−
+2𝑘−1
+,  −(𝑖)
+𝑘 ); ⊳ for 𝑖 = 0, 1, ...., 2𝐿𝑓
+6 𝜇1𝑘
+=
+2𝐿𝑓∑
+𝑖=0
+𝑊 (𝑖)
+1𝑚
+(𝑖)
+1𝑘
+7 𝐒1𝑘
+=
+2𝐿𝑓∑
+𝑖=0
+𝑊 (𝑖)
+1𝑐
+((𝑖)
+1𝑘
+− 𝜇1𝑘
+)((𝑖)
+1𝑘
+− 𝜇1𝑘
+)𝑇 + 𝐑𝑘
+8 𝐂1𝑘
+=
+2𝐿𝑓∑
+𝑖=0
+𝑊 (𝑖)
+1𝑐
+( −(𝑖)
+𝑘 − 𝒎−
+1𝑘−1
+)((𝑖)
+1𝑘
+− 𝜇1𝑘
+)𝑇
+9 𝐊1𝑘
+= 𝐂1𝑘
+𝐒−1
+1𝑘
+10 𝒎1𝑘
+= 𝒎−
+1𝑘−1
++ 𝐊1𝑘
+(z𝑘 − 𝜇1𝑘
+); 𝐏1𝑘
+= 𝐏−
+1𝑘−1
+− 𝐊1𝑘
+𝐒1𝑘
+𝐊𝑇
+1𝑘
+; ⊳ Estimated force mean and co-variance
+11  −
+𝑘 = [𝒎−
+2𝑘−1
+𝒎−
+2𝑘−1
++
+√
+𝐿𝑠 + 𝜆2
+[√
+𝐏−
+2𝑘
+]
+𝒎−
+2𝑘−1
+−
+√
+𝐿𝑠 + 𝜆2
+[√
+𝐏−
+2𝑘
+]
+]
+12 (𝑖)
+2𝑘
+= ℎ(−(𝑖)
+𝑘 , 𝒎1𝑘
+); ⊳ for 𝑖 = 0, 1, ...., 2𝐿𝑠
+13 𝜇2𝑘
+=
+2𝐿𝑠∑
+𝑖=0
+𝑊 (𝑖)
+2𝑚
+(𝑖)
+2𝑘
+14 𝐒2𝑘
+=
+2𝐿𝑠∑
+𝑖=0
+𝑊 (𝑖)
+2𝑐
+((𝑖)
+2𝑘
+− 𝜇2𝑘
+)((𝑖)
+2𝑘
+− 𝜇2𝑘
+)𝑇 + 𝐑𝑘
+15 𝐂2𝑘
+=
+2𝐿𝑠∑
+𝑖=0
+𝑊 (𝑖)
+2𝑐
+( −(𝑖)
+𝑘 − 𝒎−
+2𝑘−1
+)((𝑖)
+2𝑘
+− 𝜇2𝑘
+)𝑇
+16 𝐊2𝑘
+= 𝐂2𝑘
+𝐒−1
+2𝑘
+17 𝒎2𝑘
+= 𝒎−
+2𝑘−1
++ 𝑲2𝑘
+(z𝑘 − 𝜇2𝑘
+); 𝐏2𝑘
+= 𝐏−
+2𝑘−1
+− 𝐊2𝑘
+𝐒2𝑘
+𝐊𝑇
+2𝑘
+; ⊳ Estimated state mean and co-variance
+18 𝑘 = [𝒎1𝑘
+𝒎1𝑘
++ √𝐿𝑓 + 𝜆1
+[√
+𝐏1𝑘
+]
+𝒎1𝑘
+− √𝐿𝑓 + 𝜆1
+[√
+𝐏1𝑘
+]
+]
+19 F(𝑖)
+𝑘 = 𝑓 (1)( −(𝑖)
+𝑘 ); ⊳ for 𝑖 = 0, 1, ...., 2𝐿𝑓
+20 𝒎−
+1𝑘
+=
+2𝐿𝑓∑
+𝑖=0
+𝑊 (𝑖)
+1𝑚
+F(𝑖)
+𝑘 ; 𝐏−
+1𝑘
+=
+2𝐿𝑓∑
+𝑖=0
+𝑊 (𝑖)
+1𝑐
+(F(𝑖)
+𝑘 − 𝒎−
+1𝑘
+)(F(𝑖)
+𝑘 − 𝒎−
+1𝑘
+)𝑇 + 𝐐(1)
+𝑘
+21 𝑘 = [𝒎2𝑘
+𝒎2𝑘
++ √𝐿𝑓 + 𝜆2
+[√
+𝐏2𝑘
+]
+𝒎2𝑘
+− √𝐿𝑓 + 𝜆2
+[√
+𝐏2𝑘
+]
+]
+22 Y(𝑖)
+𝑘 = 𝑓 (2)( −(𝑖)
+𝑘 ); ⊳ for 𝑖 = 0, 1, ...., 2𝐿𝑠
+23 𝒎−
+2𝑘
+=
+2𝐿𝑠∑
+𝑖=0
+𝑊 (𝑖)
+2𝑚
+Y(𝑖)
+𝑘 ; 𝐏−
+2𝑘
+=
+2𝐿𝑠∑
+𝑖=0
+𝑊 (𝑖)
+2𝑐
+(Y(𝑖)
+𝑘 − 𝒎−
+2𝑘
+)(Y(𝑖)
+𝑘 − 𝒎−
+2𝑘
+)𝑇 + 𝐐(2)
+𝑘
+24 Output: Estimated model-form error and state vectors
+hyper-parameters 𝐵, 𝑠, and 𝑙. This is done by minimizing log marginal likelihood of the training data. A schematic for GPR training
+process is shown in Fig. 4.
+For predicting response at a new point 𝐲∗, we utilize the fact that the joint distribution between data at known input points 𝐲
+and unknown input points 𝐲∗ under GPR assumption is as follows:
+[𝑹
+𝑹∗
+]
+∼ 
+([𝝁(𝐲)
+𝝁(𝐲∗)
+]
+,
+[𝜿(𝐲, 𝐲) 𝜿(𝐲, 𝐲∗)
+𝜿(𝐲∗, 𝐲) 𝜿(𝐲∗, 𝐲∗)
+])
+(12)
+Using properties of Gaussian process, it can then be shown that 𝑹∗ is also a Gaussian process with mean 𝐸[𝑹∗|𝑹] and co-variance
+𝐶𝑜𝑣[𝑹∗|𝑹],
+𝐸[𝑹∗|𝑹] = 𝝁(𝐲∗) + 𝜅(𝐲∗, 𝐲) 𝜅(𝐲, 𝐲)−1 (𝑹 − 𝝁(𝐲))
+𝐶𝑜𝑣[𝑹∗|𝑹] = 𝜅(𝐲∗, 𝐲∗) − 𝜅(𝐲∗, 𝐲) 𝜅(𝐲, 𝐲)−1 𝜅(𝐲∗, 𝐲)𝑇 (13)
+The mean and co-variance formulae in Eq. (13) can be easily modified if there is noise in the given training data [51].
+4. Numerical examples
+In this section, we present three numerical examples with simulated data to illustrate the performance of the proposed approach.
+The examples considered involve popular nonlinear oscillators such as duffing oscillator, Bouc–Wen oscillator and duffing Van-der
+Pol oscillator. For the first two examples, we have assumed the known system to be linear and hence, DKF in conjunction with GP
+
+===== PAGE 8 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+8
+S. Garg et al.
+Fig. 4. Schematic for GPR training process.
+Table 1
+System parameters for Case-I.
+System Mass (Kg) Stiffness (N/m) Damping (Ns/m) Nonlinear parameters
+Original 𝑚1 = 30, 𝑚2 = 15 𝑘1 = 1000, 𝑘2 = 1000 𝑐1 = 10, 𝑐2 = 5 𝛼𝑑𝑜 = 100
+Known 𝑚1 = 30, 𝑚2 = 15 ̃𝑘1 = 900, ̃𝑘2 = 850 ̃ 𝑐1 = 12, ̃ 𝑐2 = 4.5 —
+has been used. For the third example, we show the performance of the proposed approach when the known system is also nonlinear.
+Case I and II take accelerations and input forces as measurements while case-III takes both acceleration and displacement along with
+input forces as measurement.
+As discussed earlier, the proposed algorithm uses the measurements to model the model-form error as a residual force and
+produces a GPR model for the same; this is referred to as ‘residual force model’ or ‘RF model’ in the following text. To illustrate the
+robustness of the proposed approach, we examine the predictive capability when the underlying system is subjected to a completely
+different forcing function, referred to here as ‘different input’. We also examine the performance of the proposed approach outside the
+training window. The code to reproduce the results presented can be accesed at https://github.com/csccm-iitd/model-form-error .
+4.1. Case-I : 2-DOF system with duffing oscillators
+For case-I, a 2-DOF system with duffing oscillator attached at both degrees of freedom is considered,
+𝑚1 ̈ 𝑥1 + 𝑐1 ̇ 𝑥1 + 𝑐2( ̇ 𝑥1 − ̇ 𝑥2) + 𝑘1𝑥1 + 𝑘2(𝑥1 − 𝑥2) + 𝛼𝑑𝑜 𝑥3
+1 + 𝛼𝑑𝑜 (𝑥1 − 𝑥2)3 = 𝑓1 + 𝜎1 ̇𝑊1,
+𝑚2 ̈ 𝑥2 + 𝑐2( ̇ 𝑥2 − ̇ 𝑥1) + 𝑘2(𝑥2 − 𝑥1) + 𝛼𝑑𝑜 (𝑥2 − 𝑥1)3 = 𝑓2 + 𝜎2 ̇𝑊2, (14)
+where 𝑚𝑖, 𝑐𝑖 and 𝑘𝑖 are the mass, damping and stiffness respectively for 𝑖−th degree of freedom. 𝑓𝑖 is deterministic force acting at
+𝑖th degree of freedom and 𝜎𝑖 is the intensity of white noise ̇𝑊𝑖. 𝛼𝑑𝑜 is the constant for duffing oscillator in Eq. ( 14). For illustrating
+the proposed approach, we consider the exact form of the governing equation be a-priori unknown; instead, the governing equation
+provided takes the following form:
+𝑚1 ̈ 𝑥1 + ̃ 𝑐1 ̇ 𝑥1 + ̃ 𝑐2( ̇ 𝑥1 − ̇ 𝑥2) + ̃𝑘1𝑥1 + ̃𝑘2(𝑥1 − 𝑥2) + 𝑅1 = 𝑓1 + 𝜎1 ̇𝑊1
+𝑚2 ̈ 𝑥2 + ̃ 𝑐2( ̇ 𝑥2 − ̇ 𝑥1) + ̃𝑘2(𝑥2 − 𝑥1) + 𝑅2 = 𝑓2 + 𝜎2 ̇𝑊2, (15)
+where 𝑚𝑖, ̃ 𝑐𝑖 and ̃𝑘𝑖 are the mass, damping and stiffness respectively for 𝑖−th degree of freedom. Note that while the actual system
+in nonlinear, we only have access to a linear system. Additionally, there is slight variation in stiffness and damping as well. Details
+on the same is shown in Table 1. Naturally not knowing the presence of non-linearity will result in model form error. The objective
+here is to identify the model form error by using the known governing equation in Eq. ( 15) and noisy measurements. Note that
+the identified model form error should be meaningful in the sense that the same can be used for computing responses when the
+system is subjected to different loading scenario. For generating data Taylor 1.5 strong [ 52] algorithm has been used and the
+system is subjected to a realization (deterministic) of amplitude modulated, frequency restricted (0.5–4 Hz) white noise along with
+the stochastic forces having intensity 𝜎𝑖 = 0 .05. It should be noted that while the stochastic forces are considered during data
+simulation, their effect on the system is considered analogous to process noise while generating the DBF model in all the case
+studies (refer Appendix A). We have considered a sampling frequency of 200 Hz.
+
+===== PAGE 9 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+9
+S. Garg et al.
+Fig. 5. RMSE error between the ground truth and the mean prediction of the GP for different lengths of training window (Case-I).
+Fig. 5 shows the error trend observed while predicting model-form error corresponding to observation time-window of 15 s,
+20 s and 35 s. We note that with increase in observation time-window, the proposed approach is able to capture the model form
+error almost exactly. Interestingly, the proposed approach accurately captures the model-form error until 90 s, which is more than
+two times the observation window. This illustrates the extrapolation capability of the proposed approach beyond the observation
+window.
+Having showcased the excellent performance of the proposed approach in identifying the model-form, we proceed to estimating
+the responses of the underlying system. To that end, we include the model-form error model (represented in term of GP) into the
+governing equation as an additional term and solve the forward problem. When forward problem was solved using the same input,
+we observed that even without knowing the duffing oscillator parameters or the exact nature of non-linearity, we could estimate the
+states of original system exactly. However, because of paucity of space, plots for the same input are not included. To illustrate the
+generalization of the proposed approach to unseen environment, we consider a case where the system is subjected to Chi-Chi, Taiwan
+Earthquake ground motion data. We note that the model has not seen this motion during the training phase. The results obtained
+for this case are shown in Fig. 6. We observe that the responses predicted using the proposed approach matches almost exactly with
+the ground truth. This indicate that the proposed approach is able to generalize to unseen environment. To further showcase the
+robustness of the proposed algorithm, the forward problem is tested for amplitude modulated, frequency restricted (0.5–4 Hz) white
+noise with amplitude approximately 75% and 125% of the training white noise. Fig. 7 show the projected displacements for these
+cases and it is observed that the projected states almost exactly match the ground truth.
+
+===== PAGE 10 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+10
+S. Garg et al.
+Fig. 6. Projected states (blue) compared against ground truth (red) when system is subjected to ‘different input’ for case-I.
+4.2. Case-II : MDOF system with Bouc–Wen oscillator
+As the second example, we consider MDOF systems with Bouc–Wen oscillator fixed to the first DOF. The governing equation for
+this system is represented as:
+𝑚1 ̈ 𝑥1 + 𝑐1 ̇ 𝑥1 + 𝑐2( ̇ 𝑥1 − ̇ 𝑥2) + 𝑘1𝑥1 + 𝑘2(𝑥1 − 𝑥2) + (1 − 𝑘𝑟)𝑄𝑦 𝑧 = 𝑓1 + 𝜎1 ̇𝑊1
+𝑚2 ̈ 𝑥2 + 𝑐2( ̇ 𝑥2 − 𝑥1) + 𝑘2( ̇ 𝑥2 − 𝑥1) = 𝑓2 + 𝜎2 ̇𝑊2
+̇ 𝑧= 1
+𝐷𝑦
+(𝛼𝑏𝑤 ̇ 𝑥1 − 𝛾𝑧| ̇ 𝑥1 ∥ 𝑧|𝜂−1 − 𝛽 ̇ 𝑥1|𝑧|𝜂),
+(16)
+where 𝐷𝑦, 𝛼𝑏𝑤, 𝛽, 𝛾, 𝜂, 𝑘𝑟 and 𝑄𝑦 are parameters specific to Bouc–Wen oscillator. Reader can read more about Bouc–Wen system
+here [53,54]. Similar to the previous example, we consider the exact governing equation to be unknown; instead, the known
+governing equation is linear in nature. Additionally, exact system parameters of the underlying system are also known in an
+approximate sense only. System parameters for the original system are taken from [54] and are given in Table 2 along with the
+parameters for the known system. The objective here is to estimate the model-form error and use the same to update the known but
+approximate system. Similar to previous case, synthetic data is generated by subjecting the system to a realization (deterministic)
+
+===== PAGE 11 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+11
+S. Garg et al.
+Fig. 7. Projected states (blue) compared against ground truth (red), when system is subjected to input with different amplitudes for case-I.
+Table 2
+System parameters for 2-DOF Bouc–Wen example.
+System Mass (Kg) Stiffness (N/m) Damping (Ns/m) Nonlinear parameters
+Original 𝑚1 = 5, 𝑚2 = 20 𝑘1 = 1000, 𝑘2 = 2000 𝑐1 = 7.5, 𝑐2 = 20
+𝑄𝑦 = 0.05 ∑
+𝑖
+𝑚𝑖𝑔, 𝑘𝑟 = 1
+6 ,
+𝛼𝑏𝑤 = 1, 𝛽𝑏𝑤 = 0.5, 𝛾 = 0.5, 𝐷𝑦 = 0.013,
+Known 𝑚1 = 5, 𝑚2 = 20 ̃𝑘1 = 900, ̃𝑘2 = 850 ̃ 𝑐1 = 12, ̃ 𝑐2 = 4.5 —
+of frequency restricted (0.5–4 Hz) white noise along with the stochastic forces having intensity 𝜎𝑖 = 0 .01, and analyzing it using
+Taylor 1.5 strong algorithm.
+We employ the proposed framework to estimate the model-form error by using the simulated data and the known but approximate
+governing equation. Similar to previous example, we illustrate the performance by taking observation time-window of 10 s, 20 s and
+40 s. Fig. 8 shows the results comparing the accuracy of GP mapping. As expected, the results produced with longer observation
+
+===== PAGE 12 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+12
+S. Garg et al.
+Fig. 8. RMSE error between the ground truth and the mean prediction of the GP for different lengths of training window (Case-II).
+window better represent the ground truth. Again, the proposed approach is able to identify the model-form error up to 90 s, which
+is more than three time the observation window. This illustrates the capability of the proposed approach in generalizing beyond
+the observation window.
+Next, we proceed to examine the performance of the proposed approach in predicting the systems response. To that end, the
+identified model-form error is included into the governing equation as an additional term. To illustrate the ability of the proposed
+model to generalize to new environment, we subject the system to an unseen input. Similar to previous case, in this example, the
+unseen input is a realization of amplitude modulated, frequency restricted (0.5 Hz–4 Hz) white noise with amplitude approximately
+75% and 125% of the training white noise. The signal with amplitude 125% of testing input is also passed through a Hamming
+window filter. The displacement time history obtained using the proposed approach are shown in Fig. 9 . We observe that the
+proposed approach predicts the responses to a reasonable degree of accuracy.
+Finally, to illustrate the scalability of the proposed approach, we consider a case where the underlying system has five degrees
+of freedom, with Bouc–Wen oscillator connected to the first DOF. The governing equation for this case is as follows:
+𝑚1 ̈ 𝑥1 + 𝑐1 ̇ 𝑥1 + 𝑐2( ̇ 𝑥1 − ̇ 𝑥2) + 𝑘1𝑥1 + 𝑘2(𝑥1 − 𝑥2) + (1 − 𝑘𝑟)𝑄𝑦 𝑧 = 𝑓1 + 𝜎1 ̇𝑊1
+𝑚2 ̈ 𝑥2 + 𝑐2( ̇ 𝑥2 − 𝑥1) + 𝑐3( ̇ 𝑥2 − 𝑥3) + 𝑘2( ̇ 𝑥2 − 𝑥1) + 𝑘3( ̇ 𝑥2 − 𝑥3) = 𝑓2 + 𝜎2 ̇𝑊2
+𝑚3 ̈ 𝑥3 + 𝑐3( ̇ 𝑥3 − 𝑥2) + 𝑐4( ̇ 𝑥3 − 𝑥4) + 𝑘3( ̇ 𝑥3 − 𝑥2) + 𝑘4( ̇ 𝑥3 − 𝑥4) = 𝑓3 + 𝜎3 ̇𝑊3
+𝑚4 ̈ 𝑥4 + 𝑐4( ̇ 𝑥4 − 𝑥3) + 𝑐5( ̇ 𝑥4 − 𝑥5) + 𝑘4( ̇ 𝑥4 − 𝑥3) + 𝑘5( ̇ 𝑥4 − 𝑥5) = 𝑓4 + 𝜎4 ̇𝑊4
+𝑚5 ̈ 𝑥5 + 𝑐5( ̇ 𝑥5 − 𝑥4) + 𝑘5( ̇ 𝑥5 − 𝑥4) = 𝑓5 + 𝜎5 ̇𝑊5
+̇ 𝑧= 1
+𝐷𝑦
+(𝛼𝑏𝑤 ̇ 𝑥1 − 𝛾𝑧| ̇ 𝑥1 ∥ 𝑧|𝜂−1 − 𝛽 ̇ 𝑥1|𝑧|𝜂)
+(17)
+
+===== PAGE 13 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+13
+S. Garg et al.
+Fig. 9. Projected states (blue) compared against ground truth (red), when system is subjected to input with different amplitudes for case-II (2-DOF Bouc–Wen
+example)
+The original equation is not available a-priori; instead, we have been provided the following linear equations,
+𝑚1 ̈ 𝑥1 + ̃ 𝑐1 ̇ 𝑥1 + ̃ 𝑐2( ̇ 𝑥1 − ̇ 𝑥2) + ̃𝑘1𝑥1 + ̃𝑘2(𝑥1 − 𝑥2) + 𝑅1 = 𝑓1 + 𝜎1 ̇𝑊1
+𝑚2 ̈ 𝑥2 + ̃ 𝑐2( ̇ 𝑥2 − 𝑥1) + ̃ 𝑐3( ̇ 𝑥2 − 𝑥3) + ̃𝑘2( ̇ 𝑥2 − 𝑥1) + ̃𝑘3( ̇ 𝑥2 − 𝑥3) + 𝑅2 = 𝑓2 + 𝜎2 ̇𝑊2
+𝑚3 ̈ 𝑥3 + ̃ 𝑐3( ̇ 𝑥3 − 𝑥2) + ̃ 𝑐4( ̇ 𝑥3 − 𝑥4) + ̃𝑘3( ̇ 𝑥3 − 𝑥2) + ̃𝑘4( ̇ 𝑥3 − 𝑥4) + 𝑅3 = 𝑓3 + 𝜎3 ̇𝑊3
+𝑚4 ̈ 𝑥4 + ̃ 𝑐4( ̇ 𝑥4 − 𝑥3) + ̃ 𝑐5( ̇ 𝑥4 − 𝑥5) + ̃𝑘4( ̇ 𝑥4 − 𝑥3) + ̃𝑘5( ̇ 𝑥4 − 𝑥5) + 𝑅4 = 𝑓4 + 𝜎4 ̇𝑊4
+𝑚5 ̈ 𝑥5 + ̃ 𝑐5( ̇ 𝑥5 − 𝑥4) + ̃𝑘5( ̇ 𝑥5 − 𝑥4) + 𝑅5 = 𝑓5 + 𝜎5 ̇𝑊5
+(18)
+Again, the parameters of the known (approximate) and the original systems are not identical. Details on the same are given in
+Table 3. Training data for this case is generated using Taylor 1.5 strong scheme. In this case, we have considered a sampling
+frequency of 1000 Hz. Other settings are kept same as before.
+In this case, we directly proceed to examining the predictive capability of the proposed approach. To illustrate the capability of
+the proposed framework to unseen environment, we predicted the displacement corresponding to an unseen input, an amplitude
+modulated, frequency restricted (0.5 Hz to 4 Hz) white noise with amplitude approximately 90% of the training white noise. Results
+
+===== PAGE 14 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+14
+S. Garg et al.
+Table 3
+System parameters for 5-DOF Bouc–Wen example.
+System Mass (Kg) Stiffness (N/m) Damping (Ns/m) Nonlinear parameters
+Original
+𝑚1 = 400, 𝑚2 = 380
+𝑚3 = 360, 𝑚4 = 340
+𝑚5 = 320
+𝑘1 = 100000, 𝑘2 = 200000
+𝑘3 = 190000, 𝑘4 = 180000
+𝑘5 = 170000
+𝑐1 = 100, 𝑐2 = 200
+𝑐3 = 190, 𝑐4 = 180
+𝑐5 = 170
+𝑄𝑦 = 0.05 ∑
+𝑖
+𝑚𝑖𝑔
+𝑘𝑟 = 1
+6 , 𝛼𝑏𝑤 = 1, 𝛽𝑏𝑤 = 0.5,
+𝛾 = 0.5, 𝐷𝑦 = 0.013,
+Known
+𝑚1 = 400, 𝑚2 = 380
+𝑚3 = 360, 𝑚4 = 340
+𝑚5 = 320
+̃𝑘1 = 105000, ̃𝑘2 = 210000
+̃𝑘3 = 180500, ̃𝑘4 = 171000
+̃𝑘5 = 161500
+̃ 𝑐1 = 110, ̃ 𝑐2 = 210
+̃ 𝑐3 = 171, ̃ 𝑐4 = 198
+̃ 𝑐5 = 161.5
+—
+Table 4
+System parameters for Case-III.
+System Mass (Kg) Stiffness (N/m) Damping (Ns/m) Nonlinear parameters
+Original 𝑚 = 10 𝑘 = 100 𝑐 = 2.5 𝛼𝑑𝑣𝑝 = 10
+Known 𝑚 = 10 ̃𝑘 = 50 ̃ 𝑐= 2.5 𝛼𝑑𝑜 = 11
+for this case are shown in Fig. 10. In this case also, reasonably good match between the estimated displacement and the ground
+truth is observed.
+4.3. Case-III : SDOF duffing Van-der Pol oscillator
+In this example, we consider a SDOF duffing Van-der Pol (DVP) oscillator [52]. The governing equation for DVP oscillator is
+given as follows
+𝑚 ̈ 𝑥+ 𝑐 ̇ 𝑥− 𝑘𝑥 + 𝛼𝑑𝑣𝑝 𝑥3 = 𝑓 + 𝜎𝑥 ̇𝑊 , (19)
+where 𝛼𝑑𝑣𝑝 is the constant for DVP oscillator. However, the governing equation for DVP is not known a priori; instead, the known
+governing equation takes the following form:
+𝑚 ̈ 𝑥+ ̃ 𝑐 ̇ 𝑥+ ̃𝑘𝑥 + 𝛼𝑑𝑜 𝑥3 + 𝑅 = 𝑓 + 𝜎 ̇𝑊 . (20)
+Additionally, the system parameters are also known only in an approximate manner. Details on the system parameters are provided
+in Table 4. The objective is to identify the model-form error arising due to the difference between the actual and the known systems.
+Although this is a relatively simpler system, the difficulty arises from the fact that the known system is nonlinear in nature and
+hence, estimating the model-form error (represented as residual force) becomes challenging. As stated before, we use DUKF for joint
+input-state estimation in this case. For data generation, the system is subjected to a sinusoidal wave with frequency of 1.59 Hz. The
+intensity for white noise is taken as 𝜎 = 0.10. Taylor 1.5 Strong algorithm has been used for generating synthetic data. While testing
+for different input, we consider a sinusoidal wave with frequency of 2.39 Hz.
+Fig. 11 shows the model-form error estimated using the proposed approach. Training data is provided for up-to 20 s and the
+results obtained matches almost exactly with the ground truth.
+Having showcased the performance of the proposed approach in identifying the model-form error, we proceed to examine its
+performance in predicting the states of the system. To that end, we include the identified model-form error (in terms of GP) as
+an additional term into the known but approximate governing equation and solve the forward problem. Fig. 12 shows the results
+for projected states when system is subjected to input different from that used in training. The projected states closely follow the
+ground truths, reflecting the efficacy of the proposed algorithm.
+5. Silverbox benchmark
+Silver box benchmark is a part of set of data-sets presented in European Control Conference [42] and are primarily aimed to
+be used for nonlinear system identification. The data-set can be downloaded from [55]. Silver box system can be understood as an
+electrical representation of a nonlinear dynamical system, which in this case is a duffing oscillator system. The input data for the
+system is a random phase multi sine excitation with maximum frequency of harmonics approximately equal to 200 Hz. Data in the
+benchmark has been collected with a sampling frequency of 610.35 Hz (𝑡𝑛 = 209.7152 s).
+The data used here has been taken from Schroeder80 mV.mat in the Silverbox files and it contains input force and displacement
+measurements (refer Fig. 13). Before implementing, the given data was mean normalized and the acceleration and velocity for the
+system was obtained by performing numerical differentiation on the displacement.
+To implement the proposed algorithm, the approximate governing equation for the known system is taken as follows:
+̃ 𝑚 ̈ 𝑥+ ̃ 𝑐 ̇ 𝑥+ ̃𝑘𝑥 + 𝑅 = 𝑢𝑝𝑓 + 𝜎 ̇𝑊 . (21)
+
+===== PAGE 15 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+15
+S. Garg et al.
+Fig. 10. Projected displacements (blue) compared against ground truth (red) when system is subjected to ‘different input’ for 5-DOF Bouc–Wen example.
+Fig. 11. Projected residual forces (magenta) compared against ground truth (blue) for Case-III. Training length for GPR is given up-to 20 s. Only the predictive
+mean obtained using GPR is shown.
+
+===== PAGE 16 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+16
+S. Garg et al.
+Fig. 12. Projected states (blue) compared against ground truth (red) when system is subjected to ‘different input’ for case-III.
+Fig. 13. Schroeder80 mV.mat file data.
+Table 5
+Known system’s parameters for identification of Silver box system.
+System Mass (Kg) Stiffness (N/m) Damping (Ns/m) Force parameters
+Known ̃ 𝑚= 1 ̃𝑘 = 50000 ̃ 𝑐= 2.5 𝑢𝑝 = 200000
+We note that the exact parameters of the systems are not available with the dataset; the closest possible approximation is perhaps the
+one obtained in [56]. The parameters considered in this study are shown in Table 5. The assumed parameters are taken significantly
+different from those estimated in [ 56], which are presented as close approximations of the actual parameters.
+The acceleration and input force ( 𝑡 = 1 .6𝑠 to 9.6𝑠) are passed through DKF and the estimated system states are mapped to
+estimated residual force after mean normalization. The training length for GP mapping is taken from 𝑡 = 1.6 s to 𝑡 = 5.6 s. Fig. 14
+shows the Normalized RMSE (NRMSE) for different lengths of training data. Similar to the trend observed in the previous cases, as
+the training window increases, more accurate mapping between the residual force and the system states is observed. NRMSE for
+this case is obtained by scaling down the RMSE using the highest magnitude of estimated residual force. Fig. 15 shows a snippet of
+
+===== PAGE 17 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+17
+S. Garg et al.
+Fig. 14. NRMSE error between the ground truth and the mean prediction of the GP for different lengths of training window (Silverbox benchmark).
+Fig. 15. Projected states (blue) compared against ground truth (red) when system is subjected to ‘same input’ for Schroeder80 mV.mat data.
+the predicted displacement and velocity compared against the ground truth for the case when the forcing function is similar to the
+one used for training (𝑡 = 6.4 s to 7.2 s). The results produced show that the projected states obtained using the proposed approach
+approximately follow the ground truth despite based around a linear system (with approximate parameters) without any knowledge
+of the associated non-linearity.
+Fig. 16 shows the prediction results for the case when the forcing function ( 𝑡 = 16 .8 s to 24.8 s) is different (chirp signal) as
+compared to that used for training. The results show that the proposed algorithm is able to adjust the known system (Linear SDOF
+system) in a way that the final estimated states closely resembles the ground truth. Also, since the amplitude of testing force is
+different from the training force (refer Fig. 13 ), it strengthens the prospects of the proposed algorithm.
+6. Conclusion
+In this paper, we proposed a novel gray-box modeling approach for quantifying model-form uncertainty in nonlinear dynamical
+systems. The proposed approach blends known (but approximate) governing physical laws with data-driven machine learning
+
+===== PAGE 18 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+18
+S. Garg et al.
+Fig. 16. Projected states (blue) compared against ground truth (red) when system is subjected to ‘different input’ for Schroeder80 mV.mat data.
+algorithm. The primary idea is to treat the model-form error as a residual force and estimate it using input estimation approach.
+We propose using dual Bayesian filters for jointly estimating the input and the state vector. We argue that only identifying model-
+form error is not sufficient, and should be complemented with a framework allows merging the model-form error into the known
+but approximate governing equation so as to improve its predictive capability. To that end, we propose to express the identified
+model-form error as a function of the state-vector and use a machine learning algorithm to learn the mapping between the two.
+The trained machine learning model is then substituted into the known but approximate governing equation so as to improve its
+predictive capability. Although any machine learning algorithm can be used within the proposed approach, we have used Gaussian
+process regression [39] in this study. It should be noted that while mapping estimated states to the residual force, either all the
+displacements and velocities can be used or only those can be selected which can effect the residual force in a meaningful way. For
+example if in a 5-DOF system, residual forces at third degree of freedom 𝑅3 are to be mapped, displacements and velocities of only
+2nd, 3rd and 4th DOF may be required i.e. 𝑅3 = 𝑓 (𝑿𝟐∶𝟒, ̇𝑿𝟐∶𝟒). This approach can greatly reduce the computational requirements
+but may be employed only when a basic idea of original system is available.
+In spite of the excellent results obtained for the examples presented, we note that the proposed framework can be further
+developed. For example, the dual Bayesian filters used in this study are only conditionally stable hence the proposed framework
+will be able to produce results for a certain set of system parameters only. Also, the dual Bayesian filters used, works best for cases
+where the signal noise ratio is very high, hence requiring high precision instruments for measurements. This condition is intensified
+by the fact that the nonlinear systems being analyzed have an inherent tendency of becoming unstable when subjected to different
+inputs. Similarly, the proposed approach can also be applied to systems governed by partial differential equations. Applications of
+the proposed algorithm in conjunction with different technologies can also be explored, where one possible use for the framework
+could be to merge it with digital twin technology, which in itself is an area of research with vast potential.
+Declaration of competing interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared
+to influence the work reported in this paper.
+Acknowledgment
+SC acknowledges the financial support received from SERB, India via grant no. SRG/2021/000467 and from IIT Delhi,
+India in form of seed grant. Budhaditya Hazra gratefully acknowledges the support from SERB, DST India, under Project No.
+IMP/2019/00276.
+Appendix A. Bayesian filter model for linear dynamical systems
+Discussed briefly here are the basics behind forming the filter model for the known MDOF system. First case is for when the
+prop model for known system is selected as a linear dynamical system with governing equation as follows:
+
+===== PAGE 19 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+19
+S. Garg et al.
+𝐌 ̈𝑿 + ̃𝐂 ̇𝑿 + ̃𝐊𝑿 + 𝑹 = 𝑭 + 𝜮 ̇𝑾 , (A.1)
+Note, that the stochastic forces by nature are random and for the scope of the current study, their effect on dynamical system
+is considered as equivalent to process noise. Thus, there contribution in Bayesian filter model is covered by the process noise
+𝒒(2) ∼  (0, 𝐐(2)) component of the dynamic model. While the knowledge of parameter 𝜮 can help improve the assumed noise
+co-variance matrix, in this study, to maintain flexibility of the proposed algorithm, we take a generic scaled version of identity
+matrix as the co-variance matrix. Hence, as long as deterministic forces are the primary forces acting on the dynamical system,
+knowledge of either 𝜮 or ̇𝑾 is not necessary in the proposed algorithm. Dynamic model function for the filter model can then be
+obtained by following the procedure explained below.
+The state vector for this case can be idealized as 𝐲 = [ 𝑿, ̇𝑿]𝑇 and the unknown force vector will be simply 𝑹. Accelerations
+measured can be mathematically described as:
+𝑨 = −𝐌−1( ̃𝐊𝑿 + ̃𝐂 ̇𝑿 + 𝑹) (A.2)
+Now, the governing Eq. (A.1) can then be rearranged as:
+̇𝐲 = 𝐀𝐜𝐲 + 𝐁𝐜𝑭 + 𝐂𝐜𝑹, (A.3)
+where
+𝐀𝐜 =
+[ 𝟎 𝐈
+−𝐌−1 ̃𝐊 −𝐌−1 ̃𝐂
+]
+and 𝐁𝐜 = −𝐂𝐜 =
+[ 𝟎
+𝐌−1
+]
+(A.4)
+Discretization of Eq. (A.4) at a sampling period of 𝑑𝑡 is as follows:
+𝐲𝑘 = (𝐀𝐝𝐲 + 𝐁𝐝𝑭 + 𝐂𝐝𝑹)𝑘−1, (A.5)
+where 𝐀𝐝 = 𝑒𝑥𝑝(𝐀𝐜𝑑𝑡), 𝐁𝐝 = [𝐀𝐝 − 𝐈]𝐀−1
+𝐜 𝐁𝐜 and 𝐂𝐝 = [𝐀𝐝 − 𝐈]𝐀−1
+𝐜 𝐂𝐜. Similarly measurement model can be idealized as follows:
+𝐳𝑘 = (𝐀𝐦𝐲 + 𝐂𝐦𝑹)𝑘 (A.6)
+where
+𝐀𝐦 =
+[
+−𝐌−1 ̃𝐊 −𝐌−1 ̃𝐂
+]
+and 𝐂𝐦 = −𝐌−1 (A.7)
+Hence final model for DKF [49] with additive noise can be written as:
+𝑹𝑘 = 𝑹𝑘−1 + 𝒒(1)
+𝑘−1
+𝐲𝑘 = (𝐀𝐝𝐲 + 𝐁𝐝𝑭 + 𝐂𝐝𝑹)𝑘−1 + 𝒒(2)
+𝑘−1
+𝐳𝑘 = (𝐀𝐦𝐲 + 𝐂𝐦𝑹)𝑘 + 𝒓𝑘
+(A.8)
+where 𝒒(𝑖) and 𝒓 are process noise and measurement noise as mentioned in Eq. (8). Residual forces in Eq. (A.8) are modeled as
+random walk, giving the value of 𝐓 as [1]𝑛×1. The final model can be analyzed using Algorithm 2.
+Appendix B. Bayesian filter model for nonlinear dynamical systems
+When the known system is a nonlinear system, DUKF is used. As before, effect of stochastic forces acting on the dynamical
+system is considered analogous to process noise, as primary forces are still deterministic in nature. The governing equation for such
+a system will be same as that mentioned in Eq. (3). Effect of stochastic forces is again considered in the process noise. The governing
+equation as a time derivative of y(= [𝑿, ̇𝑿]𝑇 ) can then be written as follows:
+̇y =
+[ ̇𝑿
+𝑭 − ( ̃𝐂 ̇𝑿 + ̃𝐊𝑿 + ̃𝑵 + 𝑹)
+]
+(B.1)
+Eq. (B.1) can be simply discretized as follows:
+𝐲𝑘 = (𝐲 + 𝒂 𝑑𝑡)𝑘−1, (B.2)
+where
+𝒂 =
+[ ̇𝑿
+𝑭 − 𝐌−1(̃𝐂 ̇𝑿 + ̃𝐊𝑿 + ̃𝑵 + 𝑹)
+]
+(B.3)
+A more precise discretization can be used if mandated by the problem under consideration. Accelerations for this case can
+numerically described as:
+𝑨 = −𝐌−1( ̃𝐊𝑿 + ̃𝐂 ̇𝑿 + ̃𝑵 + 𝑹) (B.4)
+If the forces are modeled as random walk, the dynamic and measurement model functions from Eq. (9) can be written as:
+𝑓 (1)(⋅) = 𝑹𝑘−1
+𝑓 (2)(⋅) = ( 𝐲 + 𝒂 𝑑𝑡)𝑘−1
+ℎ(⋅) = − 𝐌−1( ̃𝐊𝑿 + ̃𝐂 ̇𝑿 + ̃𝑵 + 𝑹)𝑘
+(B.5)
+
+===== PAGE 20 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+20
+S. Garg et al.
+References
+[1] P.P. van den Bosch, A.C. van der Klauw, Modeling, identification and simulation of dynamical systems, crc Press, 2020.
+[2] L. Socha, Linearization Methods for Stochastic Dynamic Systems, vol. 730, Springer Science & Business Media, 2007.
+[3] K.P. Murphy, Machine Learning: A Probabilistic Perspective, MIT Press, 2012.
+[4] I. Goodfellow, Y. Bengio, A. Courville, Deep Learning, MIT Press, 2016.
+[5] M.G. Kapteyn, D.J. Knezevic, K. Willcox, Toward predictive digital twins via component-based reduced-order models and interpretable machine learning,
+in: AIAA Scitech 2020 Forum, 2020, p. 0418.
+[6] X. Hu, S.E. Li, Y. Yang, Advanced machine learning approach for lithium-ion battery state estimation in electric vehicles, IEEE Trans. Transp. Electr. 2
+(2) (2015) 140–149.
+[7] M. Chong, A. Abraham, M. Paprzycki, Traffic accident analysis using machine learning paradigms, Informatica 29 (1) (2005).
+[8] I. Kononenko, Machine learning for medical diagnosis: history, state of the art and perspective, Artif. Intell. Med. 23 (1) (2001) 89–109.
+[9] P. Kaur, M. Sharma, M. Mittal, Big data and machine learning based secure healthcare framework, Procedia Comput. Sci. 132 (2018) 1049–1059.
+[10] T. Wuest, D. Weimer, C. Irgens, K.-D. Thoben, Machine learning in manufacturing: advantages, challenges, and applications, Prod. Manuf. Res. 4 (1) (2016)
+23–45.
+[11] T. Qin, K. Wu, D. Xiu, Data driven governing equations approximation using deep neural networks, J. Comput. Phys. 395 (2019) 620–635.
+[12] Z. Long, Y. Lu, X. Ma, B. Dong, Pde-net: Learning pdes from data, in: International Conference on Machine Learning, PMLR, 2018, pp. 3208–3216.
+[13] Z. Long, Y. Lu, B. Dong, PDE-net 2.0: Learning PDEs from data with a numeric-symbolic hybrid deep network, J. Comput. Phys. 399 (2019) 108925.
+[14] G.E. Karniadakis, I.G. Kevrekidis, L. Lu, P. Perdikaris, S. Wang, L. Yang, Physics-informed machine learning, Nat. Rev. Phys. 3 (6) (2021) 422–440.
+[15] M. Raissi, P. Perdikaris, G.E. Karniadakis, Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving
+nonlinear partial differential equations, J. Comput. Phys. 378 (2019) 686–707.
+[16] E. Kharazmi, Z. Zhang, G.E. Karniadakis, hp-VPINNs: Variational physics-informed neural networks with domain decomposition, Comput. Methods Appl.
+Mech. Engrg. 374 (2021) 113547.
+[17] Y. Zhu, N. Zabaras, P.-S. Koutsourelakis, P. Perdikaris, Physics-constrained deep learning for high-dimensional surrogate modeling and uncertainty
+quantification without labeled data, J. Comput. Phys. 394 (2019) 56–81.
+[18] S. Goswami, C. Anitescu, S. Chakraborty, T. Rabczuk, Transfer learning enhanced physics informed neural network for phase-field modeling of fracture,
+Theor. Appl. Fract. Mech. 106 (2020) 102447.
+[19] L. Sun, H. Gao, S. Pan, J.-X. Wang, Surrogate modeling for fluid flows based on physics-constrained deep learning without simulation data, Comput.
+Methods Appl. Mech. Engrg. 361 (2020) 112732.
+[20] S. Cai, Z. Wang, S. Wang, P. Perdikaris, G.E. Karniadakis, Physics-informed neural networks for heat transfer problems, J. Heat Transfer 143 (6) (2021)
+060801.
+[21] S. Chakraborty, Simulation free reliability analysis: A physics-informed deep learning based approach, 2020, arXiv preprint arXiv:2005.01302.
+[22] Z. Lai, C. Mylonas, S. Nagarajaiah, E. Chatzi, Structural identification with physics-informed neural ordinary differential equations, J. Sound Vib. 508
+(2021) 116196.
+[23] W. Liu, Z. Lai, K. Bacsa, E. Chatzi, Physics-guided deep Markov models for learning nonlinear dynamical systems with uncertainty, 2021, arXiv preprint
+arXiv:2110.08607.
+[24] S. Chakraborty, Transfer learning based multi-fidelity physics informed deep neural network, J. Comput. Phys. 426 (2021) 109942.
+[25] X. Meng, G.E. Karniadakis, A composite neural network that learns from multi-fidelity data: Application to function approximation and inverse PDE
+problems, J. Comput. Phys. 401 (2020) 109020.
+[26] L. Le Gratiet, J. Garnier, Recursive co-kriging model for design of computer experiments with multiple levels of fidelity, Int. J. Uncertain. Quantif. 4 (5)
+(2014).
+[27] P. Perdikaris, D. Venturi, J.O. Royset, G.E. Karniadakis, Multi-fidelity modelling via recursive co-kriging and Gaussian–Markov random fields, Proc. R. Soc.
+A 471 (2179) (2015) 20150018.
+[28] S. Koziel, S. Ogurtsov, I. Couckuyt, T. Dhaene, Variable-fidelity electromagnetic simulations and co-kriging for accurate modeling of antennas, IEEE Trans.
+Antennas and Propagation 61 (3) (2012) 1301–1308.
+[29] L. Le Gratiet, Multi-fidelity Gaussian process regression for computer experiments (Ph.D. thesis), Université Paris-Diderot-Paris VII, 2013.
+[30] C. Bierig, A. Chernov, Approximation of probability density functions by the multilevel Monte Carlo maximum entropy method, J. Comput. Phys. 314
+(2016) 661–681.
+[31] M.B. Giles, Multilevel monte carlo path simulation, Oper. Res. 56 (3) (2008) 607–617.
+[32] M.B. Giles, T. Nagapetyan, K. Ritter, Adaptive multilevel monte carlo approximation of distribution functions, 2017, arXiv preprint arXiv:1706.06869.
+[33] S. Heinrich, Multilevel monte carlo methods, in: International Conference on Large-Scale Scientific Computing, Springer, 2001, pp. 58–67.
+[34] P. Perdikaris, M. Raissi, A. Damianou, N.D. Lawrence, G.E. Karniadakis, Nonlinear information fusion algorithms for data-efficient multi-fidelity modelling,
+Proc. R. Soc. A 473 (2198) (2017) 20160751.
+[35] X. Meng, H. Babaee, G.E. Karniadakis, Multi-fidelity Bayesian neural networks: Algorithms and applications, J. Comput. Phys. 438 (2021) 110361.
+[36] G. Blatman, B. Sudret, Adaptive sparse polynomial chaos expansion based on least angle regression, J. Comput. Phys. 230 (6) (2011) 2345–2367.
+[37] A. Roy, S. Chakraborty, Support vector regression based metamodel by sequential adaptive sampling for reliability analysis of structures, Reliab. Eng. Syst.
+Saf. 200 (2020) 106948.
+[38] S. Chakraborty, R. Chowdhury, Polynomial correlated function expansion, in: Modeling and Simulation Techniques in Structural Engineering, IGI global,
+2017, pp. 348–373.
+[39] R. Nayek, S. Chakraborty, S. Narasimhan, A Gaussian process latent force model for joint input-state estimation in linear structural systems, Mech. Syst.
+Signal Process. 128 (2019) 497–530.
+[40] I. Bilionis, N. Zabaras, B.A. Konomi, G. Lin, Multi-output separable Gaussian process: Towards an efficient, fully Bayesian paradigm for uncertainty
+quantification, J. Comput. Phys. 241 (2013) 212–239.
+[41] S. Garg, A. Gogoi, S. Chakraborty, B. Hazra, Machine learning based digital twin for stochastic nonlinear multi-degree of freedom dynamical system, 2021,
+arXiv preprint arXiv:2103.15636.
+[42] T. Wigren, J. Schoukens, Three free data sets for development and benchmarking in nonlinear system identification, in: 2013 European Control Conference,
+ECC, IEEE, 2013, pp. 2933–2938.
+[43] S. Chakraborty, S. Adhikari, R. Ganguli, The role of surrogate models in the development of digital twins of dynamic systems, Appl. Math. Model. 90
+(2021) 662–681.
+[44] S. Chakraborty, R. Chowdhury, Graph-theoretic-approach-assisted Gaussian process for nonlinear stochastic dynamic analysis under generalized loading, J.
+Eng. Mech. 145 (12) (2019) 04019105.
+[45] S. Särkkä, Bayesian Filtering and Smoothing, vol. 3, Cambridge University Press, 2013.
+[46] G. Welch, G. Bishop, et al., An introduction to the Kalman filter, Citeseer, 1995.
+[47] Z. Chen, et al., BayesIan filtering: From Kalman filters to particle filters, and beyond, Statistics 182 (1) (2003) 1–69.
+
+===== PAGE 21 =====
+Mechanical Systems and Signal Processing 173 (2022) 109039
+21
+S. Garg et al.
+[48] E.A. Wan, R. Van Der Merwe, The unscented Kalman filter for nonlinear estimation, in: Proceedings of the IEEE 2000 Adaptive Systems for Signal
+Processing, Communications, and Control Symposium (Cat. No. 00EX373), Ieee, 2000, pp. 153–158.
+[49] V.K. Dertimanis, E. Chatzi, S.E. Azam, C. Papadimitriou, Input-state-parameter estimation of structural systems from limited output information, Mech.
+Syst. Signal Process. 126 (2019) 711–746.
+[50] J. Gove, D. Hollinger, Application of a dual unscented Kalman filter for simultaneous state and parameter estimation in problems of surface-atmosphere
+exchange, J. Geophys. Res.: Atmos. 111 (D8) (2006).
+[51] S. Särkkä, A. Solin, Applied Stochastic Differential Equations, vol. 10, Cambridge University Press, 2019.
+[52] T. Tripura, A. Gogoi, B. Hazra, An Ito–Taylor weak 3.0 method for stochastic dynamics of nonlinear systems, Appl. Math. Model. 86 (2020) 115–141.
+[53] Y.-K. Wen, Method for random vibration of hysteretic systems, J. Eng. Mech. Div. 102 (2) (1976) 249–263.
+[54] S. Shirali, Principal Component and Independent Component Regression for Predicting the Responses of Nonlinear Base Isolated Structures, University of
+Waterloo, 2009.
+[55] Silverbox system, 2020, URL https://www.nonlinearbenchmark.org/benchmarks/silverbox. (Accessed November 26 2021).
+[56] R. Nayek, R. Fuentes, K. Worden, E.J. Cross, On spike-and-slab priors for Bayesian equation discovery of nonlinear dynamical systems via sparse linear
+regression, Mech. Syst. Signal Process. 161 (2021) 107986.

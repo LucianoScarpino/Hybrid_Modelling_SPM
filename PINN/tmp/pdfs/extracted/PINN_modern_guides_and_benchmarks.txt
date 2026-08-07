@@ -1,0 +1,3811 @@
+===== PAGE 1 =====
+ 
+Contents lists available at ScienceDirect
+Neurocomputing
+journal homepage: www.elsevier.com/locate/neucom 
+Survey paper
+Physics-informed neural networks for differential equation solutions: 
+A comprehensive review
+Subarna Khanra a iD, Vijay Kumar Kukreja a, Indu Bala b,∗ iD
+a Sant Longowal Institute of Engineering and Technology, Longowal, Punjab, 148106, India
+b School of Computer Science and Information Technology, Adelaide University, Adelaide, SA 5005, Australia
+A R T I C L E  I N F O
+Communicated by Q. Ni
+Keywords:
+Physics-informed neural networks
+Differential equations
+Deep learning
+Computational physics
+Automatic differentiation
+Inverse problems
+A B S T R A C T
+Physics-Informed Neural Networks (PINNs) embed governing differential equations into training, enabling so­
+lutions of ODEs and PDEs. This review consolidates theoretical foundations (expressive capacity, automatic 
+differentiation) and core methods (loss design, constraint enforcement, sampling, optimization), while surveying 
+applications from baseline PINNs to advanced variants such as multi-physics coupling, domain decomposition, 
+frequency-enhanced representations, and operator-learning hybrids.
+Comparative synthesis links architectural and training choices to equation type, data conditions, and com­
+putational budgets. A unified benchmarking framework is proposed with standard PDE tasks, accuracy metrics, 
+collocation budgets, and transparent reporting for fair comparison with classical solvers.
+Evidence positions PINNs as complementary to traditional methods-effective for inverse problems, data as­
+similation, irregular domains, and parametric inference-while challenges remain in scalability, spectral bias, 
+constraint enforcement, and reproducibility. The review offers a coherent synthesis with actionable guidance 
+for scientific and engineering applications.
+1 . Introduction
+1.1 . Background and motivation
+The intersection of artificial intelligence and computational physics 
+has witnessed rapid advances in recent decades, transforming ap­
+proaches to complex mathematical modelling. Classical numerical 
+solvers, despite their maturity, struggle with high dimensionality, in­
+verse problems, and data-scarce regimes, motivating learning-based 
+alternatives [18,54]. Physics-Informed Neural Networks (PINNs), intro­
+duced systematically by Raissi et al. [139,140], integrate physical laws 
+with deep learning architectures to overcome these limitations. By em­
+bedding governing differential equations into neural network training 
+via customized loss functions, PINNs leverage universal approximation 
+while enforcing physical constraints, yielding solutions that are both 
+data-driven and physics-consistent.
+PINNs represent a shift from conventional numerical approaches 
+by embedding governing differential equations directly into the neu­
+ral network training process through customized loss functions. This 
+innovative framework leverages the universal approximation capabili­
+ties of neural networks while enforcing physical constraints, enabling 
+solutions that are data-driven and physics-consistent [ 34]. Unlike tra­
+ditional machine learning approaches that require extensive labelled 
+datasets, PINNs can operate in an unsupervised manner, learning so­
+lutions by minimizing residuals of governing equations, boundary 
+conditions, and initial conditions [ 100]. By utilizing separable neu­
+ral networks to decompose high-dimensional input spaces into smaller, 
+manageable sub-problems, [ 107] introduced S-PI-DeepONet, thereby 
+significantly reducing the number of required trainable parameters. To 
+predict microstructural mechanical responses across varying periodic 
+domains, [56] introduced SPiFOL, which integrates Spectral methods 
+and Finite Operator Learning with physics-informed losses to lever­
+age frequency-domain representations. A linearized L1-type compact 
+difference scheme, providing rigorous proofs for discrete energy stabil­
+ity and the maximum principle within 2D systems, is utilized in [ 21], 
+while quantum search mechanisms have been integrated into evolu­
+tionary algorithms for optimizing continuum structure topology designs 
+[184]. PINNs have also been applied to enhance out-of-distribution 
+generalization for real-time weld expulsion inspection tasks [ 190], 
+a Brooks–Iyengar quantum Byzantine Agreement-centered blockchain 
+model has been proposed to secure smart healthcare IoT networks [210], 
+∗ Corresponding author.
+ Email address: indu.bala@adelaide.edu.au (I. Bala).
+https://doi.org/10.1016/j.neucom.2026.133317
+Received 17 September 2025; Received in revised form 22 January 2026; Accepted 10 March 2026
+Neurocomputing 680 (2026) 133317 
+Available online 11 March 2026 
+0925-2312/© 2026 The Author(s). Published by Elsevier B.V. This is an open access article under the CC BY license ( http://creativecommons.org/licenses/by/4.0/ ). 
+
+===== PAGE 2 =====
+S. Khanra, V.K. Kukreja and I. Bala
+and deep learning surrogate modelling techniques with optimization 
+frameworks have been developed for aerodynamic airfoil profiles [97].
+Early neural-network-based approaches demonstrated the feasibility 
+of solving differential equations using mesh-free function approxima­
+tions and laid the groundwork for modern PINNs; however, they were 
+constrained by limited optimization capabilities and the absence of 
+scalable automatic differentiation, challenges later addressed by deep 
+learning frameworks [
+41,57,82].
+Hybrid frameworks now combine neural operators with finite el­
+ement methods, leveraging FEM shape functions to handle complex 
+geometries while enforcing physics-informed constraints on unstruc­
+tured meshes [193]. A systematic survey categorizes physics-informed 
+machine learning into three strategies: physics-informed data augmen­
+tation, architecture design, and loss function regularization [
+115].
+The motivation for PINNs stems from limitations of classical nu­
+merical methods. Finite difference, finite element, and finite volume 
+schemes, though mature, suffer from the curse of dimensionality, re­
+quire extensive meshing for complex geometries, and struggle with 
+inverse problems where parameters must be inferred from limited data 
+[
+22,171]. Moreover, they face challenges in multi-physics coupling, un­
+certainty quantification, and real-time applications where efficiency is 
+critical [
+186].
+A multiscale framework combining computer vision for image seg­
+mentation with Physics-Informed Operator Learning (PIOL) to map mi­
+crostructural features to macroscopic mechanical properties is proposed 
+in [
+144]. A Deep Compositional Operator Network (DCON), employing 
+compositional layers to mimic nested function mappings and incor­
+porating physics-informed losses to ensure discretization-independent 
+solutions for complex PDEs, is introduced in [212].
+Several reviews in the literature focus on foundational aspects and 
+variants of PINNs. The PRISMA framework for categorization into ex­
+tended, hybrid, and minimized loss techniques is presented in [
+84]; 
+applications in power systems are surveyed in [63]; PIML/PINN applica­
+tions in fluid mechanics, with related challenges and opportunities, are 
+examined in [
+151]; evolution and research trends emphasizing network 
+structures are highlighted in [ 34]; advancements in network design, 
+optimization, and feature expansion for complex fluid dynamics are 
+reviewed in [
+209]; a foundational overview of PINNs, their methodolo­
+gies, limitations, and trends is given in [ 45]; applications in composite 
+modelling, fracture mechanics, and non-destructive evaluation are dis­
+cussed in [77]; practical implementation challenges such as loss design 
+and boundary enforcement are addressed in [ 145]; state-of-the-art en­
+hancements for PDE solving are illustrated in [102]; alternatives beyond 
+standard PINNs, such as PIKANs, are introduced in [165]; adaptive op­
+timization and hybrid learning methods toward PINN 2.0 are outlined 
+in [
+143]; bridging multi-scale gaps in polymer modelling is explored 
+in [106]; multiphysics heat transfer and materials durability are crit­
+ically reviewed in [ 117]; structural analysis and health monitoring of 
+railway bridges are systematically classified in [ 111]; a taxonomy of 
+PINN methods covering data-driven, physics-driven, and hybrid mod­
+els is provided in [ 125]; integration of PIML into smart factories is 
+demonstrated in [ 86]; and limitations of PINNs for PDEs, including 
+ill-conditioning, weak mathematical rigor, and inadequate physical in­
+tegration, are summarized in [
+205]. Our manuscript distinguishes itself 
+by offering a fundamentally different and timely contribution.
+Building on this systematic analysis of PINN surveys from 2018 to 
+2026, the present review identifies persistent conceptual and method­
+ological gaps. Prior surveys emphasize foundational formulations, se­
+lected domains, or isolated advances, often presenting problem classes 
+in a fragmented manner that obscures methodological distinctions. In 
+contrast, this work provides a structured synthesis by organizing PINN 
+methodologies according to problem characteristics—ordinary differen­
+tial equations, classical PDEs, high-dimensional systems, and emerging 
+fractional-order models. Beyond this structural gap, limited critical 
+discussion exists on scalability, efficiency, benchmarking, and the tran­
+sition from proof-of-concept to engineering-grade applications, all of 
+which are systematically addressed here. The novelty of this review lies 
+in its critical and quantitative synthesis of advances targeting practi­
+cal limitations, including scalability to high-dimensional spatiotemporal 
+systems, computational efficiency, and the role of physics-informed 
+operator learning. By integrating architectural analysis, variant cate­
+gorization, benchmarking practices, and underrepresented real-world 
+applications such as medical modelling, traffic flow, and climate fore­
+casting, this work provides a forward-looking roadmap for deploying 
+PINNs as engineering-grade computational tools—an integrative per­
+spective largely absent from prior surveys.
+1.2 . Evolution from traditional numerical methods
+The conceptual roots of using neural networks for solving differ­
+ential equations trace back to early studies by Lagaris et al. [ 82] and 
+Dissanayake and Thien [41], which demonstrated mesh-free neural ap­
+proximations for boundary value problems. While pioneering, these 
+efforts were limited by weak theoretical rigor and the absence of efficient 
+automatic differentiation, now recognized as essential for enforcing 
+differential equation constraints [
+17]. The advent of deep learning 
+frameworks and scalable automatic differentiation subsequently enabled 
+exact derivative computation, accelerating progress in this direction 
+[
+128].
+The modern formulation of Physics-Informed Neural Networks 
+(PINNs) was crystallized through the seminal contributions of Raissi and 
+co-workers [
+139,140], who introduced a unified framework capable of 
+addressing both forward and inverse problems. By embedding govern­
+ing equations directly into training, PINNs departed from traditional 
+discretization-based solvers and enabled data-integrated modelling, pa­
+rameter identification, and discovery-driven scientific computing [
+30]. 
+As illustrated in Fig. 1 , this paradigm emphasizes mesh-free com­
+putation, seamless incorporation of observational data, and explicit 
+enforcement of physical laws.
+Subsequent developments have expanded PINNs to nonlinear PDEs, 
+multiscale phenomena, and operator-learning paradigms, further con­
+solidating their role as a central methodology in scientific machine 
+learning. In many contexts, PINNs now complement and even extend 
+classical numerical approaches [
+92,99].
+1.3 . Scope and objectives
+Despite rapid growth and promising applications, the PINN field 
+still lacks a comprehensive systematic review that not only surveys 
+applications but also critically examines methodological advances, the­
+oretical foundations, and unresolved challenges. Existing reviews often 
+focus narrowly on specific domains or provide broad overviews with­
+out sufficient methodological depth [
+23,52]. This review addresses that 
+gap by systematically examining recent developments in PINNs for 
+solving ordinary and partial differential equations, with emphasis on 
+methodological innovations, limitations, and future directions. Studies 
+were identified through major databases (Scopus, Web of Science, Google 
+Scholar) covering 2018 to 2025, prioritizing peer-reviewed journals, 
+complemented by select IEEE conferences and relevant non-indexed 
+sources. Inclusion criteria required relevance to PINN methodology, 
+differential equation applications, and availability of quantitative or 
+comparative performance data.
+We explicitly highlight the novelty and significance of this review 
+compared with existing surveys. While earlier reviews [23,34,63,77,84,
+102,143,209] mainly offered descriptive summaries or domain-specific 
+discussions, the present work uniquely provides a systematic, cross-type 
+perspective encompassing all major differential equation classes (ODEs 
+and PDEs) solved using PINNs and their advanced variants. Key con­
+tributions include coverage of methodological advances, benchmarking 
+aspects, and quantitative comparisons. Furthermore, the review compre­
+hensively discusses existing PINN variants, explaining their theoretical 
+motivation, comparative advantages over classical numerical methods, 
+and current limitations.
+Neurocomputing 680 (2026) 133317 
+2 
+
+===== PAGE 3 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Fig. 1. PINNs vs. traditional methods workflow.
+The primary objectives of this study are threefold:
+• To systematically classify recent PINN variants, highlighting 
+methodological contributions to ODE and PDE solving.
+• To critically assess strengths and limitations of approaches, in­
+cluding architectural innovations, training strategies, and physics-
+integration techniques, clarifying applicability across equation 
+classes.
+• To identify research gaps and outline promising directions for 
+enhancing scalability, robustness, and practical adoption.
+This paper aims to provide both theoretical depth and practical in­
+sights for researchers and practitioners in computational science and ma­
+chine learning. Section 2 establishes theoretical foundations; Section 3 
+details core architecture and methodology; Sections 4 –5 review ap­
+plications to ODEs and PDEs; Section 6  explores advanced variants; 
+Section 7 offers a computational assessment; and Section 8 concludes 
+with emerging trends and open challenges.
+2 . Theoretical foundations of PINNs
+2.1 . Mathematical framework
+The foundation of Physics-Informed Neural Networks (PINNs) is the 
+principle of embedding governing differential equations directly into the 
+neural network training process. Consider a general partial differential 
+equation of the form: 
+F 𝑢 = 𝑓 (𝑥, 𝑡), (𝑥, 𝑡) ∈ Ω × [0 , 𝑇 ] (2.1)
+where F is a differential operator, 𝑢(𝑥, 𝑡) is the unknown solution, 𝑓 (𝑥, 𝑡)
+is a known source term, Ω ⊂ R𝑑 is the spatial domain, and 𝑇  is the final 
+time [44].
+This problem is supplemented with boundary and initial conditions 
+[140]:
+B𝑢 = 𝑔(𝑥, 𝑡), (𝑥, 𝑡) ∈ 𝜕Ω × [0, 𝑇 ], (2.2)
+𝑢(𝑥, 0) = 𝑢0(𝑥), 𝑥 ∈ Ω. (2.3)
+In the PINNs framework, the solution 𝑢(𝑥, 𝑡) is approximated by a neu­
+ral network 𝑢𝜃(𝑥, 𝑡) with parameters 𝜃. The modern framework leverages 
+automatic differentiation to construct a composite physics-informed loss 
+function that simultaneously enforces the governing PDE, boundary and 
+initial conditions, and (when available) observational data [140]: 
+L(𝜃) = L𝑃 𝐷𝐸(𝜃) + 𝜆𝐵𝐶 L𝐵𝐶 (𝜃) + 𝜆𝐼𝐶 L𝐼𝐶 (𝜃) + 𝜆𝐷𝑎𝑡𝑎L𝐷𝑎𝑡𝑎(𝜃), (2.4)
+where 𝜆𝐵𝐶 , 𝜆𝐼𝐶 , and 𝜆𝐷𝑎𝑡𝑎 are weighting factors that balance the relative 
+contributions of each loss term.
+Each loss component is defined as follows: 
+PDE loss
+L𝑃 𝐷𝐸 (𝜃) = 1
+𝑁𝑓
+𝑁𝑓∑
+𝑖=1
+|||F [𝑢𝜃](𝑥𝑖
+𝑓 , 𝑡𝑖
+𝑓 ) − 𝑓 (𝑥𝑖
+𝑓 , 𝑡𝑖
+𝑓 )|||
+2
+(2.5)
+Boundary condition loss 
+L𝐵𝐶 (𝜃) = 1
+𝑁𝑏
+𝑁𝑏∑
+𝑖=1
+|||B[𝑢𝜃](𝑥𝑖
+𝑏, 𝑡𝑖
+𝑏) − 𝑔(𝑥𝑖
+𝑏, 𝑡𝑖
+𝑏)|||
+2
+(2.6)
+Initial condition loss 
+L𝐼𝐶 (𝜃) = 1
+𝑁0
+𝑁0∑
+𝑖=1
+|||𝑢𝜃(𝑥𝑖
+0, 0) − 𝑢0(𝑥𝑖
+0)|||
+2
+(2.7)
+Data loss
+L𝐷𝑎𝑡𝑎(𝜃) = 1
+𝑁𝑑
+𝑁𝑑∑
+𝑖=1
+|||𝑢𝜃(𝑥𝑖
+𝑑 , 𝑡𝑖
+𝑑 ) − 𝑢𝑖
+𝑑
+|||
+2
+(2.8)
+Here, {(𝑥𝑖
+𝑓 , 𝑡𝑖
+𝑓 )}𝑁𝑓
+𝑖=1 are collocation points in the domain, {(𝑥𝑖
+𝑏, 𝑡𝑖
+𝑏)}𝑁𝑏
+𝑖=1
+are boundary points, {𝑥𝑖
+0}𝑁0
+𝑖=1 are initial condition points, and 
+{(𝑥𝑖
+𝑑 , 𝑡𝑖
+𝑑 , 𝑢𝑖
+𝑑 )}𝑁𝑑
+𝑖=1 are observational data points [34,75].
+Illustrative example. For instance, consider the one-dimensional heat 
+equation
+𝜕𝑢
+𝜕𝑡 − 𝛼 𝜕2𝑢
+𝜕𝑥2 = 0, (𝑥, 𝑡) ∈ [0 , 1] × [0, 1],
+with boundary conditions 𝑢(0, 𝑡) = 𝑢(1, 𝑡) = 0  and initial condition 
+𝑢(𝑥, 0) = sin( 𝜋𝑥). In the PINN framework, 𝑢(𝑥, 𝑡) is approximated by 
+Neurocomputing 680 (2026) 133317 
+3 
+
+===== PAGE 4 =====
+S. Khanra, V.K. Kukreja and I. Bala
+𝑢𝜃(𝑥, 𝑡), and the physics-informed loss consists of (i) the PDE residual 
+evaluated at collocation points (𝑥𝑖
+𝑓 , 𝑡𝑖
+𝑓 ), (ii) boundary condition losses at 
+𝑥 = 0, 1, and (iii) the initial condition loss at 𝑡 = 0. This compact example 
+illustrates how the general formulation of Eqs. (2.4)–(2.8) is instantiated 
+for a specific PDE.
+Together, these components ensure that the learned solution not 
+only approximates the governing PDE but also respects boundary and 
+initial conditions while incorporating experimental or noisy data. This 
+unified loss formulation is the mathematical foundation that enables 
+PINNs to bridge physics-based modelling and data-driven learning, set­
+ting the stage for the methodological variants discussed in later sections. 
+A rigorous mathematical analysis using approximation theory derives 
+error bounds. They evaluate PINNs through the lens of generalization, 
+optimization, and training stability in PDEs [39].
+It is worth noting that this formulation is written for partial differen­
+tial equations; however, ordinary differential equations can be treated as 
+a special case by considering only temporal dependence. In such cases, 
+the same PINN framework applies with collocation points sampled along 
+the time domain, making the approach equally valid for both ODEs and 
+PDEs.
+2.2 . Universal approximation and expressive power of neural networks
+Since PINNs approximate the solution 𝑢(𝑥, 𝑡) of a differential equation 
+with a neural network 𝑢𝜃(𝑥, 𝑡), it is important to establish the theoret­
+ical foundation that justifies this choice. The Universal Approximation 
+Theorem provides this justification by showing that neural networks are 
+capable of representing a wide class of functions.
+Classical results by Cybenko [ 35] and Hornik et al. [61] demon­
+strated that a feedforward neural network with a single hidden layer 
+and finitely many neurons can approximate any continuous function on 
+a compact subset of R𝑛 to arbitrary accuracy, provided the activation 
+function is non-constant, bounded, and monotonically increasing. More 
+precisely, for any continuous function 𝑓 ∶ [0, 1]𝑛 → R and any 𝜖 > 0, 
+there exists a neural network N (𝑥) such that 
+sup
+𝑥∈[0,1]𝑛
+||𝑓 (𝑥) − N (𝑥)|
+| < 𝜖. (2.9)
+For PINNs, this theorem is particularly relevant because solutions 
+to well-posed differential equations are typically smooth functions that 
+satisfy the continuity assumptions of the theorem [60]. In practice, how­
+ever, shallow networks often require an impractically large number of 
+neurons, motivating the use of deeper architectures.
+Recent advances in approximation theory provide a stronger justi­
+fication for the deep networks typically employed in PINNs. Lu et al. 
+[101] showed that deep ReLU networks can efficiently approximate 
+functions with compositional structures, while Yarotsky [ 196] estab­
+lished improved approximation rates for deep networks compared to 
+shallow ones. These results highlight the expressive power of deep ar­
+chitectures, explaining their success in capturing the complex solution 
+spaces of PDEs and ODEs.
+Importantly, the approximation capabilities of neural networks ex­
+tend beyond functions to their derivatives. Han et al. [54] demonstrated 
+that neural networks can approximate not only functions but also their 
+spatial and temporal derivatives, which is essential for PINNs since 
+the governing physics constraints directly involve differential opera­
+tors. Introduced the Zero Coordinate Shift (ZCS) technique, a modified 
+automatic differentiation strategy that eliminates coordinate shifts dur­
+ing derivative calculations within physics-informed operator learning 
+frameworks was introduced in [87].
+2.3 . Automatic differentiation and its role in PINNs
+A key enabler of the PINNs methodology is the efficient and exact 
+computation of derivatives required to evaluate differential operators. 
+Traditional numerical differentiation methods, such as finite differences, 
+introduce discretization and truncation errors that can accumulate and 
+degrade solution accuracy [ 89]. In contrast, automatic differentiation
+(AD) provides derivatives accurate up to machine precision, allow­
+ing physics constraints to be enforced precisely during training. This 
+capability is fundamental to the success of PINNs.
+Automatic differentiation operates by decomposing a complex func­
+tion into a sequence of elementary operations and applying the chain 
+rule systematically. For a composite function: 
+𝑓 (𝑥) = 𝑓𝑛(𝑓𝑛−1(… 𝑓1(𝑥) … )), (2.10)
+forward-mode AD computes the derivative as: 
+𝑑𝑓
+𝑑
+𝑥 = 𝑑𝑓𝑛
+𝑑
+𝑓𝑛−1
+⋅ 𝑑𝑓𝑛−1
+𝑑
+𝑓𝑛−2
+⋅ ⋯ ⋅ 𝑑𝑓1
+𝑑
+𝑥 . (2.11)
+While 
+both forward-mode and reverse-mode AD are mathematically 
+exact, in the context of PINNs, reverse-mode AD (commonly known as 
+backpropagation) is typically preferred because it is more efficient for 
+functions with many inputs and relatively few outputs [48].
+Modern deep learning frameworks such as PyTorch [121] and
+TensorFlow [1] provide built-in AD capabilities, enabling efficient 
+computation of high-order derivatives required for complex physical 
+systems. This is particularly critical for PINNs, as many governing 
+equations involve second- or higher-order derivatives. For instance, 
+the heat equation requires second-order spatial derivatives, while the 
+Navier–Stokes equations involve mixed partial derivatives and nonlinear 
+terms [179].
+2.4 
+. Loss function formulation
+The 
+construction of the physics-informed loss function is central to 
+the performance of PINNs. While the general formulation has been in­
+troduced in Section 2.1, the practical success of PINNs strongly depends 
+on how this loss is weighted, how collocation points are sampled, and 
+how the resulting optimization landscape is navigated [105,191]. In this 
+section, we review methodological advances in these three aspects.
+2.4.1 
+. Multi-term loss balancing
+The 
+relative weighting of different loss components significantly in­
+fluences both convergence and solution quality. The coefficients 𝜆𝐵𝐶 , 
+𝜆𝐼𝐶 , and 𝜆𝐷𝑎𝑡𝑎 in the total loss function determine the balance between 
+physics residuals, boundary/initial conditions, and data fidelity [ 180]. 
+Poorly chosen weights may cause the model to overfit one component 
+while neglecting others.
+Several strategies have been proposed:
+Fixed weighting.
+ 
+Weights are chosen a priori, often based on physical 
+intuition or empirical testing [149]. This approach is simple but may not 
+generalize well across problems.
+Adaptive weighting. 
+Weights are dynamically updated during training, 
+typically based on the relative magnitudes of the loss components [112]. 
+A common rule is 
+𝜆(
+𝑘+1)
+𝑖 = 𝜆(𝑘)
+𝑖 ⋅
+max𝑗 (L(𝑘)
+𝑗 )
+L(
+𝑘)
+𝑖
+, (2.12)
+where 𝜆(
+𝑘)
+𝑖  is the weight of the 𝑖-th component at iteration 𝑘 and L(𝑘)
+𝑗  is 
+the magnitude of the 𝑗-th loss term.
+Gradient-based balancing.
+ 
+These methods adjust weights according to 
+the gradient norms of each loss term, ensuring that no single component 
+dominates the training dynamics [94].
+2.4.2 
+. Sampling strategies
+The 
+placement of collocation points plays a critical role in de­
+termining both the accuracy and computational efficiency of PINN 
+training.
+Neurocomputing 680 (2026) 133317 
+4 
+
+===== PAGE 5 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Uniform sampling.  Distributes collocation points evenly across the 
+computational domain, ensuring consistent coverage; however, it often 
+under-resolves localized sharp gradients or multiscale features, leading 
+to inefficient use of training points in large or heterogeneous domains 
+[185].
+Adaptive sampling.
+ Concentrates collocation points in regions where 
+the current solution exhibits large residuals or steep variations, thereby 
+improving local accuracy at the expense of additional computational 
+overhead associated with residual evaluation and dynamic point reallo­
+cation [123]. While effective for low- to moderate-dimensional PDEs on 
+continuous Euclidean domains, its scalability to large-scale or graph-
+structured problems remains challenging, as residuals defined over 
+graph Laplacians may be nonlocal and expensive to evaluate globally. 
+When scaling PINNs to city-scale road networks, major computational 
+bottlenecks arise from the large graph size, nonlocal residual evalua­
+tion over graph Laplacians, increased automatic differentiation cost, and 
+slow convergence caused by highly heterogeneous network dynamics 
+(e.g., traffic flow on large networks) [64,167].
+Quasi-random sampling.
+ Such as low-discrepancy Sobol sequences, 
+which improve domain coverage compared to purely random sam­
+pling while maintaining computational efficiency [163]. Nevertheless, 
+these approaches still face limitations in capturing complex topolog­
+ical structures inherent in non-Euclidean domains, highlighting the 
+need for graph-aware or topology-adaptive sampling strategies in large 
+spatiotemporal systems.
+2.4.3 . Optimization landscape and training challenges
+The PINN loss function is inherently nonconvex, presenting signifi­
+cant optimization challenges. Recent theoretical advances have begun 
+to characterize its landscape and convergence properties.
+Wang et al. [178] demonstrated that neural networks exhibit a 
+spectral bias, favouring low-frequency components over high-frequency 
+ones. This bias can hinder accurate resolution of multiscale solutions, 
+motivating Fourier-feature embeddings and specialized architectures 
+[161]. Shin et al. [153] established convergence results for PINNs on 
+linear elliptic PDEs, deriving error bounds under specific regularity 
+assumptions.
+A further challenge is the curse of dimensionality. While PINNs 
+show promise for high-dimensional PDEs, rigorous convergence guar­
+antees remain limited, and ongoing work continues to refine theoretical 
+understanding [65,71].
+Together, these insights form the mathematical and computational 
+backbone of PINNs, bridging deep learning with scientific computing.
+3 . Core PINNs architecture and methodology
+This section details the baseline PINN pipeline Fig. 2, focusing on 
+(i) network components, (ii) activation choices, (iii) physics integration 
+(collocation and residual evaluation), and (iv) training and optimiza­
+tion. Unlike generic deep learning setups, PINNs pair a neural network 
+with a physics-informed loss and residual evaluation via automatic 
+differentiation (cf. Section 2). We adopt the fully connected (feedfor­
+ward) backbone as the reference design, noting variants only where they 
+materially affect PDE performance.
+As established in Section 2.2, neural networks are universal 
+function approximators [ 19,35,196]. In practice, however, identify­
+ing weights/biases that solve a particular PDE remains challenging 
+[176], and choosing an appropriate architecture is problem dependent. 
+Broadly, one distinguishes between shallow networks (a single hidden 
+layer) and deep networks (multiple layers) [4], with many architectural 
+families surveyed in the literature [ 4,122,150]. For PINNs, fully con­
+nected feedforward networks (FFNNs / FNNs / FCNNs) are the standard 
+baseline; other families like CNNs and RNNs [27,85], and modern vari­
+ants such as autoencoders (AE), deep belief networks (DBNs), generative 
+adversarial networks (GANs), and Bayesian deep learning (BDL) [8,19] 
+are used selectively when they offer concrete advantages (e.g., feature 
+extraction, latent encodings, uncertainty quantification). An overview 
+flowchart of the PINN model is provided in Fig. 2 and discussed below.
+3.1 . Neural network components
+3.1.1 . Input layer design
+The input layer of a neural network (e.g., MLP) serves as the entry 
+point for raw numerical data in Fig. 2, where each neuron represents 
+a specific feature of the input, i.e., here 𝐴 + 𝐵 corresponds to the in­
+dependent variables 𝑥, 𝑡 etc. This layer performs no computation but 
+passes structured inputs to subsequent layers, initiating forward propa­
+gation. In the context of ODEs/PDEs, the number of neurons equals the 
+dimensionality of the problem, e.g., 𝑥, 𝑦, 𝑧, 𝑡 for a 3D wave equation. As 
+the foundation of PINNs, the input layer ensures that all variables are 
+correctly represented before learning begins.
+3.1.2 . Hidden layer configuration
+The hidden layer lies between the input and output layers and is 
+termed ‘hidden’ because it is not directly observable. It plays a central 
+role in learning patterns from input data through weights, biases, and 
+activation functions. Each neuron computes a weighted sum of inputs 
+plus a bias: 𝑧 = ∑𝑛
+𝑖=1(𝑤𝑖𝑥𝑖) + 𝑏, and passes it through an activation func­
+tion like ReLU, sigmoid, or tanh to introduce non-linearity. The output 
+then feeds into the next layer. In Fig. 2, two hidden layers, hidden layer 
+1: 𝐶 + 𝐷 + 𝐸 + 𝐹, and hidden layer 2: 𝐺 + 𝐻 + 𝐼 + 𝐽 with four neurons 
+each are depicted but a typical PINNs architecture may use 3 to 6 hidden 
+layers with 20 to 100 neurons per layer.
+Hidden layers map inputs to abstract features via weights, biases, 
+and activations. They enable nonlinear modelling, with deeper networks 
+offering greater expressiveness but higher risk of overfitting.
+3.1.3 . Output layer structure
+The output layer is the final layer of an MLP. Here, in Fig. 2, the 
+network produces its predictions as 𝐾 = 𝑢(𝑥, 𝑡), …, which are passed 
+to the optimization stage. Auto-differentiation computes residual, BC, 
+and IC losses, summed into the total loss. If convergence is poor, further 
+optimization is applied until the PINN solution approaches the true PDE 
+solution. The process is repeated until the model output is closer to the 
+true solution.
+The structure and activation of the output layer depend on the spe­
+cific task. For PINNs no activation is applied since output layer must be 
+free to take any real value to match the PDE solution. For example, if 
+the last hidden layer has five neurons producing 𝑎1, 𝑎2, 𝑎3, 𝑎4, 𝑎5, these 
+can be combined into one output neuron as: 
+𝑢(𝑥, 𝑡) = 𝑤1𝑎1 + 𝑤2𝑎2 + 𝑤3𝑎3 + 𝑤4𝑎4 + 𝑤5𝑎5 + 𝑏 (3.1)
+Here ‘𝑎’ from Eq. (3.2), varies across neurons. In summary, the output 
+layer constitutes the final stage of the network, producing predictions 
+that, in PINNs, are directly coupled with physical laws through residual 
+evaluation and loss integration.
+3.2 . Activation functions for PINNs
+The activation function defines the nonlinear mapping applied to 
+the affine combination of weighted inputs and bias, thereby enabling 
+the neural network to represent complex, non-linear relationships in the 
+data. Each neuron computes: 
+𝑧 = 𝑤1𝑥1 + 𝑤2𝑥2 + 𝑤3𝑥3 + ⋅ ⋅ ⋅ + 𝑤𝑛𝑥𝑛 + 𝑏 (3.2)
+The value 𝑧 is transformed by an activation function 𝑓 (𝑧), producing 
+𝑎 = 𝑓 (𝑧) as input to the next layer, with the process repeating until 
+the final output. Activation functions introduce nonlinearity; without 
+them, networks collapse to linear regression. In PINNs, activation choice 
+governs expressivity and the stability of higher-order derivatives via 
+automatic differentiation. Since many PDEs demand second or mixed 
+Neurocomputing 680 (2026) 133317 
+5 
+
+===== PAGE 6 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Fig. 2. Fully connected PINN framework.
+derivatives, smooth activations with strong frequency expressivity are 
+essential (cf. Section 2).
+3.2.1 . Design criteria and common choices
+Key criteria for selecting activations in PINNs include: (i) differen­
+tiability class, ensuring stable first- and second-order derivatives; (ii) 
+mitigation of spectral bias, enabling representation of high-frequency 
+components; (iii) suitability for the underlying problem structure (os­
+cillatory, advective, diffusive); and (iv) optimization stability, avoiding 
+vanishing or exploding gradients. Representative activation functions 
+are summarized in Table 3.1 and discussed below.
+Tanh. Commonly used in baseline PINNs for their smoothness and sta­
+ble higher-order derivatives; a robust default for diffusion-dominated 
+PDEs [75]. Training may slow down due to saturation, mitigated by 
+careful initialization and learning-rate scheduling.
+ReLU / leaky-ReLU. Piecewise linear with discontinuous first deriva­
+tive and zero second derivative almost everywhere. This limits accuracy 
+when PDE residuals require higher-order derivatives, making ReLU 
+generally unsuitable as the sole activation in PINNs [2].
+SoftPlus, swish / SiLU, GELU. Smooth alternatives that address ReLU’s 
+derivative limitations while maintaining favourable optimization prop­
+erties. Effective when tanh saturates, though their higher-order deriva­
+tives can become stiff in certain PDEs [109].
+Periodic / oscillatory activations.  For wave- or Helmholtz-type PDEs, 
+periodic activations (e.g., sine) or frequency-enhanced inputs improve 
+representation of oscillatory solutions and mitigate spectral bias [178]. 
+Proper initialization and scaling are required to maintain gradient 
+stability.
+Fourier feature encodings. Fixed random Fourier mappings applied to 
+inputs before standard activations expand frequency bandwidth and 
+counteract low-frequency bias [161]. Effective for multiscale fields, with 
+frequencies tuned to the PDE’s characteristic scales.
+3.2.2 . Practical recommendations by PDE character
+• Diffusion-dominated PDEs (e.g., heat): prefer smooth activations 
+such as tanh or SoftPlus; tanh is a common default [161].
+• Advection/reaction or sharp layers: use Swish or GELU; combine 
+with adaptive sampling to resolve steep gradients.
+• Oscillatory/wave/Helmholtz problems: employ periodic activa­
+tions or Fourier features to capture high frequencies and mitigate 
+spectral bias [161,178].
+Smoother activations benefit from variance-preserving initialization; 
+periodic activations and Fourier encodings require frequency scaling 
+tuned to the domain size to avoid vanishing/exploding gradients. These 
+choices interact with collocation sampling and loss weighting.
+3.3 . Physics integration strategy
+This section explains how physical laws are incorporated into the 
+PINN training loop. Rather than rederiving loss terms (cf. Section 2.1), 
+the focus is on: (i) residual evaluation through automatic differentiation, 
+(ii) enforcement of boundary and initial conditions, and (iii) practical 
+scheduling of collocation points and residuals during training.
+3.3.1 . Residual evaluation
+Given the current network output ̂ 𝑢𝜃(𝑥, 𝑡), physics residuals are 
+computed at collocation points using automatic differentiation:
+𝑟𝑓 (𝑥, 𝑡) ∶= F [ ̂ 𝑢𝜃](𝑥, 𝑡) − 𝑓 (𝑥, 𝑡),
+𝑟𝑏𝑐(𝑥, 𝑡) ∶= B[ ̂ 𝑢𝜃](𝑥, 𝑡) − 𝑔(𝑥, 𝑡),
+𝑟𝑖𝑐(𝑥) ∶= ̂ 𝑢𝜃(𝑥, 0) − 𝑢0(𝑥). (3.3)
+Table 3.1 
+Heuristic comparison for PINNs.
+Activation Derivative smoothness High-frequency capacity Typical use
+tanh Smooth (C-infty); stable second derivatives Moderate; biased low Diffusion/elliptic
+ReLU Non-smooth; second derivative  0 a.e. Moderate Rarely ideal for 2nd-order PDEs
+SoftPlus Smooth Moderate General; softer ReLU
+Swish/GELU Smooth Moderate–High Advection/reaction; faster training
+Periodic (sine) Smooth, oscillatory High Wave/Helmholtz; oscillatory fields
+Fourier features* Input encoding before base activation High (with tuning) Multiscale/oscillatory
+*Fourier features are an input mapping combined with a base activation.
+Neurocomputing 680 (2026) 133317 
+6 
+
+===== PAGE 7 =====
+S. Khanra, V.K. Kukreja and I. Bala
+These residuals feed the composite loss introduced in Section 2.1 ; 
+weighting/normalization follows Section 2.4.
+3.3.2 . Constraint enforcement: soft vs. hard
+Two complementary approaches are common:
+• Soft constraints (penalty): enforce IC/BC via loss penalties, as in 
+Eq. (2.4) . This is simple and general but relies on appropriate 
+weights.
+• Hard constraints (architecture): reparameterize the network so 
+constraints are satisfied by construction. For example, with a 
+boundary distance function 𝑑(𝑥) and a known boundary profile 
+𝑢𝑏𝑐(𝑥, 𝑡), 
+̃ 𝑢𝜃(𝑥, 𝑡) =𝑢 𝑏𝑐(𝑥, 𝑡) +𝑑(𝑥)𝑛 𝜃(𝑥, 𝑡),(3.4)
+which guarantees Dirichlet BCs while leaving the interior solution 
+to 𝑛𝜃. Similar constructs can embed initial conditions and, when 
+available, integral conservation constraints [6].
+3.3.3 . Collocation scheduling and mini-batching
+Accuracy and stability depend on collocation point strategies during 
+training [1]:
+• Mini-batching across residual types: sample small batches from 
+interior ( Ω), boundary ( 𝜕Ω), and initial sets to balance gradient 
+contributions.
+• Adaptive resampling: periodically resample points with probability 
+proportional to residual magnitude, focusing capacity on difficult 
+regions (layers, shocks, oscillations).
+• Quasi-random coverage: employ low-discrepancy sequences (e.g., 
+Sobol) for baseline coverage, augmented with adaptive refinement 
+for efficiency.
+3.3.4 . Normalization and nondimensionalization
+Normalizing inputs/outputs and nondimensionalizing the governing 
+equations improve conditioning and balance residual scales. In practice, 
+coordinates are standardized to [0,1] 𝑑 (or zero-mean, unit-variance) and 
+target fields are scaled so that PDE, BC, and IC residual magnitudes are 
+comparable before weighting [127].
+The remainder of this section details the optimization and train­
+ing procedure, which operationalizes residual evaluation and constraint 
+enforcement.
+3.4 . Training optimization framework
+PINN training couples neural optimization with physics-driven objec­
+tives. A robust strategy is to begin with a stochastic first-order optimizer 
+(e.g., Adam) to explore the loss landscape, then switch to a quasi-Newton 
+method (e.g., L-BFGS) once convergence plateaus [79,166]. L-BFGS per­
+forms best in (near) full-batch mode; for very large collocation sets, 
+Adam with residual-focused mini-batches remains preferable. Learning-
+rate control is critical: start conservatively ( 10−3 − 10 −4), reduce on 
+plateaus via schedulers (step, plateau, cosine), and monitor per-term 
+trends to avoid stalling higher-order derivatives or destabilizing BC/IC 
+residuals.
+Batching and sampling must balance gradient contributions from 
+interior, boundary, initial, and optional data residuals. Mini-batching 
+across residual types prevents dominance by any single term, while 
+residual-based resampling concentrates points in high-error regions (lay­
+ers, shocks, oscillations) and preserves coverage via low-discrepancy 
+sequences. Normalization and nondimensionalization improve condi­
+tioning: standardize inputs (e.g., map coordinates to [0,1] 𝑑 or zero 
+mean/unit variance) and scale outputs so PDE, BC, IC, and data resid­
+uals remain comparable before weighting. Loss balancing should be 
+revisited after changes in sampling or scaling, using fixed, adaptive, or 
+gradient-based weights (cf. 
+Section 2.4).
+Regularization and stabilization must be physics-aware. Prefer early 
+stopping based on held-out physics metrics (interior residual norms, 
+BC/IC violations) rather than training loss alone; apply gradient clip­
+ping when higher-order derivatives spike; add light weight decay if 
+needed. For oscillatory or multiscale solutions, periodic activations or 
+Fourier-feature encodings (Section 3.2) mitigate spectral bias and ease 
+optimization. Mixed-precision can accelerate training but requires verifi­
+cation of accuracy for second and mixed derivatives. Diagnostics should 
+track per-term residuals, validation residuals on independent colloca­
+tion sets, constraint violations, and optimizer state (learning rate, step 
+acceptance for L-BFGS). True convergence is indicated by simultane­
+ous reduction of interior and constraint residuals; low training loss with 
+high held-out residuals typically signals sampling or weighting issues. 
+Practical default: Use Adam with a decaying learning rate and mini-
+batched residuals, augmented by adaptive resampling. Transition to 
+full-batch L-BFGS for refinement once Adam plateaus. Normalize in­
+puts/outputs and rebalance residual weights after any resampling or 
+scaling adjustments.
+3.5 . Comparison of PINNs vs numerical solution
+Table 3.2 compares PINN solutions with classical numerical solvers. 
+PINNs provide a mesh-free, data-integrated surrogate that amortizes 
+computational cost across parameter sweeps and inverse problems, 
+while classical solvers deliver mature accuracy, robustness, and estab­
+lished error control. The two approaches are best viewed as complemen­
+tary rather than strictly competing.
+4 . PINNs applications to ODEs
+Unlike the PDE setting, ODE problems use a one-dimensional (typi­
+cally temporal) domain, with initial conditions playing the primary role; 
+boundary terms appear only in boundary-value ODEs. Consequently, 
+PINN collocation is along time (and parameters, when present), and 
+convergence is often sensitive to stiffness and step-scale. The prior re­
+search work is grouped by ODE characteristics like solution technique, 
+computational budget, strengths & weaknesses, practical experience, & 
+architecture in Table (Table 4.1). A summary of existing work on ODEs 
+solved through PINNs is illustrated in Fig. 3. 
+From the quantitative results in Table 4.1, several performance pat­
+terns emerge. For diffusion-dominated and smooth temporal systems, 
+standard PINNs with tanh or SoftPlus activations provide stable and ac­
+curate convergence even with moderate collocation sets. Stiff ODEs, in 
+contrast, expose optimization instability and sensitivity to learning-rate 
+schedules; adaptive weighting and transfer-learning variants improve 
+training efficiency by 20–40%. In fast–slow and parametric systems, 
+deeper networks and residual-based resampling yield more balanced 
+gradients and lower 𝐿2 errors. These behaviours show that computa­
+tional cost and accuracy are highly dependent on the equation type, 
+data quality, and architectural design. Overall, the quantitative com­
+parisons highlight that PINN performance is not uniform but governed 
+by the interplay of PDE/ODE character, noise levels, and computational 
+budgets.
+5 . PINNs applications to PDEs
+Partial differential equations extend the ODE setting by introduc­
+ing spatial variables and, consequently, boundary conditions defined 
+on 𝜕Ω together with mixed and higher-order derivatives. In the PINN 
+formulation, collocation points are sampled over Ω × [0, 𝑇]  (or Ω
+for steady problems), residuals are evaluated via automatic differ­
+entiation, and boundary/initial constraints are enforced either softly 
+(penalties) or by hard architectural embeddings. This mesh-free, data-
+integrated approach is particularly attractive on irregular domains, in 
+inverse/parameter-identification tasks, and when only sparse or noisy 
+observations are available [34,75,140].
+In this section we synthesize applications across major PDE 
+families—elliptic (Poisson/Laplace), parabolic (heat/diffu­
+sion), hyperbolic (wave/transport), and prominent nonlinear
+Neurocomputing 680 (2026) 133317 
+7 
+
+===== PAGE 8 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 3.2 
+Comparison of PINNs and classical numerical solvers.
+Aspects PINNs solution Numerical solution
+Mesh / Grid requirement [187] Mesh-free; uses scattered collocation points Require mesh/grid; 
+FEM handles complex geometries well, 
+but mesh generation/quality control can be costly
+Computational cost [110] High one-time training cost; very fast inference/reuse 
+across parameter sweeps
+Per-instance assembly + solve; often fast per solve with 
+good preconditioning but repeated for new parameters
+Solution representation [78] Neural network acts as a universal function approximator Solution represented on discrete grids/meshes
+Forward vs inverse problems [140] Single framework handles forward and inverse problems 
+with minimal changes
+Inverse problems typically via PDE-constrained optimiza­
+tion/data assimilation; different formulations/solvers
+Robustness to noise [70] Naturally integrates noisy data and uncertain physics in a 
+joint objective
+Typically assumes clean PDE model; noisy data handled via 
+separate assimilation/regularization frameworks
+Solver/training mechanism [179] Gradient-based training (e.g., Adam → L-BFGS) minimizing 
+physics/data residuals
+Discretize then solve linear/ nonlinear systems (e.g., 
+Krylov, Newton); established sparse/HPC solvers
+Flexibility (domains/ dimensions) [68] Adapts easily to high-D and irregular domains via point 
+sampling
+Handles complex geometries via unstructured meshes; 
+main burden is mesh generation and adaptivity
+Error control/ guarantees [118] No general a priori/a posteriori error bounds; rely on 
+residual/hold-out checks
+Established convergence theory; a priori/a posteriori esti­
+mators enable adaptive refinement
+Discontinuities/shocks [69] Needs features/special sampling; may struggle with sharp 
+fronts
+Mature shock-capturing schemes (upwinding, WENO, lim­
+iters)
+Parametric sweeps/ high D [33] Amortizes cost; can learn reusable surrogates/operators Requires repeated solves or reduced-order models (ROMs)
+Determinism/hardware [206] GPU-friendly; some stochastic training variability Deterministic given mesh/scheme; HPC-oriented sparse 
+solvers
+Quantitative Error Metrics and 
+Accuracy [140]
+Achieves comparable or superior accuracy with signifi­
+cantly lower data dependency; the average relative error 
+(𝐿2 norm) remains below 10−3 to 10−4 for benchmark PDEs, 
+demonstrating strong generalization across domains.
+Delivers high accuracy for structured grids and fixed dis­
+cretizations. Error strongly depends on mesh density and 
+boundary resolution; accuracy degrades for irregular or 
+high-dimensional domains due to discretization limita­
+tions.
+Table 4.1 
+Applications to ODE Types.
+ODE Type 
+/Problem
+Method Computational budget & Loss Strengths / Weaknesses Practical experience Key contribution & used 
+architecture
+Initial and 
+boundary 
+value problems 
+[7,
+103,104,192,
+197]
+Standard 
+PINN
+PINN training for 𝑇𝑏 = 600 Epochs. 
+Each epoch consisted of 𝑁𝑒 = 2000
+training batches, with fixed learn­
+ing rate of 𝐿𝑟 = 0.005 throughout 
+optimization process. Overall 𝐿2
+error for the PINN’s prediction was 
+6.2 × 10−5 as compared against the 
+analytical solution.
+Key strength of PINNs ap­
+proach is that it is meshless 
+and does not require pre-
+existing data, contrasting 
+with traditional numerical 
+methods. The disadvantage 
+is that it is not yet superior 
+to conventional routines in 
+terms of efficiency for simpler 
+linear equations.
+PINN was successfully ap­
+plied to solve the problem. 
+The results demonstrated 
+a good agreement with the 
+analytical solution, confirm­
+ing the PINN’s capability for 
+boundary value problems in 
+tribology.
+Fully explicit mathematical for­
+mulation of PINNs, along with an 
+example in hydro-dynamic lubri­
+cation. The architecture used is a 
+fundamental PINN, implemented 
+as a simple multilayer perceptron 
+consisting of one hidden layer 
+containing 𝑁 = 10 neurons, with 
+the network’s weights and bi­
+ases being directly trained via a 
+governing differential equation.
+Second order 
+ODEs with sharp 
+gradients. [37]
+Standard 
+PINN
+Classic PINN approach is noted as 
+computationally expensive due to 
+the gradient-based optimization 
+required for deep neural networks. 
+Significantly improves computa­
+tional efficiency. Standard PINNs 
+exhibit high 𝐿2 error and fail to 
+capture sharp solution layers when 
+the diffusion coefficient is small, 
+which is attributed to spectral 
+bias.
+A key weakness of classic 
+PINNs is difficulty in cap­
+turing sharp gradients and 
+optimization complexity due 
+to competing loss terms. The 
+strength of the variant (X-
+TFC) is analytically satisfying 
+constraints using the TFC and 
+using a shallow network for 
+stable and fast training.
+The method was successfully 
+applied to solve 2nd-order 
+ODEs. The practical expe­
+rience validates that the 
+X-TFC method effectively 
+and accurately solves DEs 
+containing localized sharp 
+gradients.
+The solutions of the DEs exhibit 
+sharp gradients as the value 
+of the diffusion coefficient de­
+creases, increasing the challenge 
+of the problem. This framework 
+uses a single hidden layer and 
+incorporates the TFC methodol­
+ogy, allowing the boundary or 
+initial conditions to be satisfied 
+analytically before optimization.
+General ODEs 
+[124,129,154,
+169,170,181]
+Standard 
+PINN
+The approach utilizes modern 
+machine learning frameworks, 
+such as TensorFlow and Keras, 
+which provide powerful automatic 
+differentiation capabilities. The 
+hybrid network is structured to 
+reduce the model-form uncertainty 
+by integrating data-driven kernels, 
+which minimize the predictive gap 
+and resulting error is reduced.
+Primary strength is the imple­
+mentation of hybrid models 
+to estimate the missing 
+physics (discrepancy term) in 
+dynamic systems where the 
+ODEs are not fully known. 
+This feature allows the model 
+to be robust and improve pre­
+dictive accuracy even with 
+noisy input signals.
+The tutorial uses two main 
+case studies of ODEs: fatigue 
+crack growth integration 
+through Euler’s method, and 
+parameter identification for 
+a two degree of freedom 
+dynamic system. The results 
+show the model’s ability 
+to handle complex system 
+dynamics.
+ODEs can also be formulated as 
+deep neural networks through 
+directed graph structures, and 
+numerical integration can be 
+carried out effectively using 
+the RNN framework. This PINN 
+architecture enables the seamless 
+incorporation of custom kernels 
+combining physics based and 
+data driven components.
+Stiff ODEs [72,
+157]
+Standard 
+PINN
+Traditional adjoint algorithms are 
+noted as computationally costly 
+because they require solving the 
+adjoint PDE at each optimization 
+step. Objective function, 𝐽 (𝜃), 
+minimization is formulated using 
+𝐿2 norm of the difference between 
+PDE solution and target function 
+ℎ.
+The key strength of the on­
+line adjoint method is its 
+rigorous mathematical proof 
+of convergence to a criti­
+cal point without requiring 
+the objective function to be 
+convex. A major challenge 
+it addresses is the compu­
+tational cost of traditional 
+adjoint methods.
+The method is demonstrated 
+by solving an inverse prob­
+lem. The goal is to recover 
+the unknown parameters 
+of the differential equation 
+given an observed solution, 
+validating its effectiveness 
+for parameter identification.
+Reduces system’s stiffness by en­
+abling effective application of 
+PINNs to these complex systems. 
+The method is an online adjoint 
+algorithm, which is an optimiza­
+tion framework, not a neural 
+network architecture. It works by 
+coupling differential equations 
+for updating the optimization 
+variables.
+(
+continued on next page) 
+Neurocomputing 680 (2026) 133317 
+8 
+
+===== PAGE 9 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 4.1 (continued)
+ODE Type 
+/Problem
+Method Computational budget & Loss Strengths / Weaknesses Practical experience Key contribution & used 
+architecture
+Microgrid ODEs 
+[28]
+Standard 
+PINN
+Use of PINNs in this context leads 
+to high computational efficiency. 
+Studies show that PINN-based 
+approaches for complex energy 
+systems, such as microgrids, can 
+outperform traditional purely 
+data-driven models and conven­
+tional numerical methods in terms 
+of efficiency. The model’s objec­
+tive is to minimize a combined 
+loss function.
+The core benefit is the abil­
+ity to embed the microgrid’s 
+physical laws directly into 
+the neural network, requiring 
+less data and ensuring pre­
+dictions are consistent with 
+established domain knowl­
+edge. Training PINNs is a 
+challenging.
+It successfully solves both 
+the forward problem (pre­
+dicting system behaviour 
+and state estimation) and 
+the inverse problem (iden­
+tifying unknown system 
+parameters, such as in­
+verters or other microgrid 
+equipment).
+By solving ODEs constructed 
+for the electrical equipment 
+within microgrids, PINN is able 
+to provide dynamic time-domain 
+predictions. The system uses 
+DNN where the physical DEs are 
+integrated directly into the train­
+ing process via a modified loss 
+function, allowing the network 
+to approximate the solution of 
+the ODEs.
+Parametric ODEs 
+[194]
+Standard 
+PINN
+Use of parametric ODEs often 
+results in long training times, es­
+pecially when using long-duration 
+time series data. However, in­
+clusion of a physical prior can 
+significantly aid convergence 
+efficiency. The model’s objec­
+tive minimizes prediction losses 
+by leveraging a constrained 
+optimization problem.
+A major strength is that 
+parametric ODEs establish 
+a continuous-time ana­
+logue to recurrent neural 
+networks. They naturally 
+integrate physical priors, pro­
+viding superior robustness 
+and accuracy for parameter 
+estimation.
+The approach successfully 
+solves the inverse problem 
+of parameter estimation for 
+nonlinear dynamic systems. 
+It ensures parameter identi­
+fication is robust even when 
+facing high noise levels or 
+limited data samples.
+PINNs excel in solving paramet­
+ric ODEs where the equation 
+depends on additional param­
+eters. This setup uses an ODE 
+solver to govern the system’s la­
+tent state dynamics, providing 
+a continuous-time model for the 
+system.
+Fast-Slow sys­
+tems of ODEs 
+[130]
+Standard 
+PINN
+Slow invariant manifolds (SIMs) 
+reduces the expensive simulation 
+time required for stiff dynamics 
+and inherently addresses compu­
+tational challenges. PINNs provide 
+numerical approximations of the 
+SIMs with high accuracy and pre­
+serves the accuracy near manifold 
+boundaries.
+The key strength is simul­
+taneous discovery of the 
+manifold and decomposi­
+tion of the system’s vector 
+field. This approach avoids 
+the need for prior knowledge 
+of the system’s fast and slow 
+variables, unlike classical 
+methods.
+The framework success­
+fully approximates the Slow 
+Invariant Manifolds for the 
+general class of fast-slow 
+systems of ODEs.
+Presented a PINN approach using 
+symbolic differentiation for the 
+discovery of SIMs, for the gen­
+eral class of fast-slow dynamical 
+systems of ODEs. Specifically, a 
+single-layer feedforward neural 
+network employs symbolic differ­
+entiation to solve the invariance 
+ODE.
+Neural ODEs 
+[29
+,83]
+Standard 
+PINN
+The PINN framework show high 
+computational efficiency when 
+directly compared to existing sys­
+tem identification methods. The 
+forecasting model consistently 
+achieves superior generalization 
+by producing error values that are 
+normally distributed.
+Major strength is the frame­
+work’s flexibility to directly 
+approximate governing dy­
+namics and its versatility in 
+modelling physical discrep­
+ancy. It addresses the lack of 
+robustness that purely data-
+driven networks exhibit in 
+complex, low-data, or highly 
+nonlinear regimes.
+The framework is suc­
+cessfully applied to key 
+structural identification 
+problems, including model 
+updating, damage detection, 
+and the identification of 
+unknown driving forces.
+The approach combines physics-
+based models with data-driven 
+methods to improve prediction 
+accuracy and reduce uncertainty. 
+The architecture Pi-Neural ODE, 
+which uses a feed-forward net­
+work to capture the discrepancy 
+term.
+systems 
+(Burgers’, Navier–Stokes, Allen–Cahn, advection–
+diffusion–reaction)—as well as selected wave and quantum models 
+(Helmholtz, Schrödinger). For each class we summarize representative 
+studies, indicate the loss design and constraint handling used, and note 
+sampling/activation choices (e.g., tanh vs. periodic/Fourier features to 
+mitigate spectral bias [ 161,178]). We report both forward and inverse 
+results, highlight common challenges (multiscale behaviour, sharp 
+fronts, high Reynolds number flows, stiffness), and point to effective 
+remedies (adaptive/residual-based sampling, domain decomposition, 
+Fig. 
+3. Taxonomy of ODE types and associated applications of PINNs from the 
+literature.
+curriculum/hybrid schemes). Fig. 4 outlines the taxonomy adopted 
+here. Additionally, a structured summary of previous research em­
+ploying PINNs is presented in four categories: linear PDEs ( Table 5.1), 
+non-linear PDEs ( Table 5.2), high-dimensional or complex PDEs 
+(Table 5.3), and fractional order PDEs (Table 5.4).
+From the comparative results in Tables 5.1–5.4, clear trends emerge 
+across PDE families. For elliptic and parabolic equations, PINNs with 
+smooth activations (tanh/SoftPlus) achieve stable convergence and low 
+𝐿2 errors, especially when boundary conditions are softly enforced via 
+penalty terms. Hyperbolic and advection-dominated problems remain 
+challenged by spectral bias and gradient imbalance, which are alleviated 
+through adaptive sampling and Fourier-feature activations. Nonlinear 
+and multiscale PDEs such as Burgers’ and Navier–Stokes benefit from 
+curriculum or hybrid training to address stiffness, while fractional 
+and high-dimensional systems gain from domain decomposition and 
+auxiliary-variable formulations that preserve nonlocal operators.
+Fig. 5 presents a literature-based survey summarizing the extent to 
+which different classes of differential equations have been addressed 
+using PINNs and their variants, based on studies published in major sci­
+entific journals, and conference proceedings between 2019 and 2026, 
+including systematic reviews, benchmark works, and representative 
+application papers.
+Overall, these observations reveal that the performance of PINNs 
+is highly problem-dependent, governed by PDE character, activa­
+tion choice, and data sparsity. Quantitatively, accuracy gains of 
+Neurocomputing 680 (2026) 133317 
+9 
+
+===== PAGE 10 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Fig. 4. Taxonomy of PDE types and associated applications of PINNs from the literature.
+15–40% are typical when adaptive collocation and transfer-learning 
+strategies are applied, at the cost of higher computational budgets. 
+Such cross-category synthesis converts descriptive summaries into 
+a critical comparative evaluation, aligning with deeper analytical
+interpretation.
+6 . Advanced PINNs variants and extensions
+The baseline PINN pipeline ( Sections 2 –3) and its applications to 
+ODEs/PDEs ( Sections 4 –5) reveal recurring challenges: spectral/low-
+frequency bias, stiffness and multiscale behaviour, sharp fronts and 
+discontinuities, geometric complexity, high dimensionality, and training 
+Neurocomputing 680 (2026) 133317 
+10 
+
+===== PAGE 11 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 5.1 
+Applications to Classical and Linear PDEs.
+PDE Type/ 
+Problem
+Method/ 
+Variant
+Computational budget & loss Strengths / Weaknesses Practical experience Key Contribution and Use 
+Architecture
+Elastic Problems 
+[175]
+M-PINNs M-PINN method is proposed to 
+reduce the complexity and 
+associated computational 
+difficulty that conventional 
+PINNs faces while optimizing 
+complex loss functions.
+M-PINN exhibits superior 
+convergence and applicabil­
+ity, particularly in practical 
+scenarios. Conventional 
+PINNs often suffer from insta­
+bility and poor convergence 
+when tackling the complex 
+loss functions.
+The efficiency and appli­
+cability of M-PINNs are 
+demonstrated through a 
+standard 2D linear elastic 
+solid mechanics simulation 
+experiment.
+Integrates state/control/adjoint in 
+one network; online PDE param­
+eter inference. The architecture 
+is a novel M-PINN, which draws 
+inspiration from the ideas of the 
+FEM.
+Coupled 
+Boundary Value 
+Problems [162]
+Standard 
+PINN
+The X-TFC is explicitly de­
+scribed as a fast PINNs 
+method that achieves low 
+computational time. The max­
+imum absolute training error 
+reported for one of the vali­
+dation problems is extremely 
+low, at 6
+.66 × 10−16.
+X-TFC is a novel, highly accu­
+rate, fast, and robust method 
+that excels in solving DEs. 
+Traditional PINNs often 
+struggle with unbalanced 
+gradients during training.
+The X-TFC methodology 
+was validated across a 
+broad spectrum of prob­
+lems, included in physics 
+and engineering.
+Estimates thermal diffusivity in 
+metal compacts; robust against 
+experimental noise. The architec­
+ture is a synergy of the Theory of 
+Functional Connections and PINN.
+Hyperbolic 
+Equation [67]
+PINNs-
+CMBO
+PINN-CMBO recorded the low­
+est loss values consistently 
+across tests, achieving superior 
+performance and faster con­
+vergence with fewer iterations 
+than other methods.
+CMBO enhances optimiza­
+tion by balancing exploration 
+and exploitation capabilities, 
+overcoming the PINN’s sen­
+sitivity to local optima and 
+slow convergence.
+The hybrid method was ap­
+plied to elliptic, parabolic, 
+and hyperbolic PDEs, 
+demonstrating unparal­
+leled accuracy and stability 
+across diverse DE types.
+Accurate solutions for wave/tele­
+graph equations; visually 
+validated. The system uses PINN 
+whose training is guided by 
+the novel Cat-and-Mouse based 
+optimizer metaheuristic.
+Heat and KdV 
+Equations [52]
+PINNs, 
+H-PINNs
+This framework eliminates 
+expensive high-fidelity simu­
+lations, leveraging automatic 
+differentiation for loss compu­
+tation and achieving superior 
+accuracy and robustness 
+compared to FEM.
+The multi-network model 
+yields more accurate field 
+variable representations, 
+but the authors noted that 
+overly deep neural network 
+architectures can lead to less 
+accurate weights.
+The method was applied 
+to linear elasticity and 
+non-linear von Mises elasto­
+plasticity, unifying forward 
+and inverse problems for 
+solid mechanics applica­
+tions, demonstrating broad 
+utility.
+H-PINNs show stable convergence 
+where PINNs degrade under poor 
+initial conditions. A novel H-
+PINN model is employed, where 
+multiple DNNs are combined to 
+accurately represent displacement, 
+stress, and strain field variables.
+Open-loop 
+Optimal Control 
+[59]
+Dual-PINNs The PINN is a mesh-free, 
+discretization-free method 
+that achieves high accuracy. 
+The relative 𝐿2 errors were 
+found to be less than 1% for 
+forward problems and under 
+5% for backward problems.
+This PINN framework demon­
+strates robustness and high 
+accuracy for solving challeng­
+ing inverse problems with 
+sparse data. Incorporating 
+measurement data can sig­
+nificantly improve solution 
+accuracy, by more than 50%.
+The study successfully ap­
+plied the PINN method 
+to Open-loop Optimal 
+Control problem and cou­
+pled Darcy flow in one and 
+two dimensions.
+Integrates state/control/adjoint in 
+one network; online PDE parame­
+ter inference. The method employs 
+a DNN, where the loss function 
+combines the physical residuals of 
+the governing problem and Darcy 
+equations with the mismatch to 
+any observed data.
+Advection 
+Diffusion 
+[42
+,156]
+PIELM, 
+Variational 
+PINNs
+The standard Galerkin finite 
+element method fails to solve 
+this problem on a uniform 
+grid, requiring stabilization 
+methods like Petrov-Galerkin 
+for a good approximation.
+The study thoroughly ex­
+plores PINN and VPINN 
+models, focusing on defining 
+effective strong and weak loss 
+functions to ensure their con­
+vergence for such challenging 
+problems.
+The PIELM and VPINN 
+solvers were applied to 
+the highly challenging 1-D 
+advection-dominated diffu­
+sion problem and the 2-D 
+Eriksson-Johnson model 
+problem.
+The study shows VPINN outper­
+form FEM under steep gradients. 
+The research compares two NN 
+approaches, PINN and the weaker 
+VPINN, against stabilized higher-
+order finite element method 
+solvers.
+Klein–Gordon 
+and Helmholtz 
+Equations [207]
+Taylor 
+PINNs
+TPINN achieves higher predic­
+tion accuracy and slower error 
+growth over time compared 
+to standard PINNs. The in­
+creased training complexity is 
+balanced by efficient symbolic 
+tools.
+The strength is its ability 
+to ensure higher accuracy 
+and tighter convergence to 
+the correct solution map. 
+The primary weakness is its 
+increased complexity in the 
+training process.
+TPINN successfully solved 
+challenging evolution PDEs 
+like the Korteweg-de Vries 
+and Allen-Cahn. It also han­
+dled ODEs with parametric 
+uncertainties effectively.
+High-accuracy approximations in 
+quantum PDEs; better than stan­
+dard NN methods. The hybrid 
+model uses a neural network to 
+model the remainder term of a 
+high-order symbolic Taylor se­
+ries expansion obtained via Lie 
+derivatives.
+Mass Transfer 
+Equation [15]
+Standard 
+PINNs
+The PINN-MT approach 
+achieves high accuracy, with 
+percentage errors for moisture 
+distribution below 0
+.33% com­
+pared to state of the art finite 
+element analysis.
+A major strength is the com­
+putational efficiency gained 
+through transfer learning, en­
+hancing prediction speed by 
+over 80%. It tackles complex 
+non-linear physics.
+This PINN-MT approach is 
+the first to use automatic 
+differentiation to solve the 
+PDEs governing mass trans­
+fer in plant cells during 
+drying processes.
+This approach bypasses traditional 
+numerical methods, enabling fast, 
+accurate, and real-time predic­
+tions. The architecture is a PINN 
+that integrates adaptive activation 
+and transfer learning, with the loss 
+function incorporating convective 
+mass transfer and Fick’s law.
+Laplace Equation 
+[120]
+Standard 
+PINNs
+The PINNs performance is rig­
+orously validated against the 
+adjoint based optimization 
+approach, which is a key com­
+putational component in the 
+study.
+PINN’s flexibility is the 
+strength, as it simultaneously 
+learns the system state and 
+the optimal control signal in 
+a one-stage framework. The 
+main caveat is balancing the 
+loss weights.
+The PINN framework 
+successfully solves PDE-
+constrained optimal control 
+problems, demonstrated on 
+Laplace equations.
+The control variable minimizes 
+the desired cost objective. The 
+solution uses neural network as 
+a surrogate model for the PDE 
+solution, while a second network 
+represents the optimal control 
+variable.
+(
+continued on next page) 
+Neurocomputing 680 (2026) 133317 
+11 
+
+===== PAGE 12 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 5.1 (continued)
+PDE Type/ 
+Problem
+Method/ 
+Variant
+Computational budget & loss Strengths / Weaknesses Practical experience Key Contribution and Use 
+Architecture
+Elliptic and 
+Parabolic 
+Equation [153]
+Standard 
+PINNs
+This work establishes that 
+PINN minimizers strongly con­
+verge to the true PDE solution 
+in the 𝐶 0 norm, as training 
+data increases.
+The strength is providing 
+the first mathematical foun­
+dation for PINNs’ empirical 
+success, addressing a crucial 
+lack of previous theoretical 
+justification in the field.
+The convergence theory is 
+demonstrated specifically 
+for two fundamental classes 
+of PDEs: linear second-order 
+elliptic and parabolic types.
+High-accuracy approximations in 
+quantum PDEs; better than stan­
+dard NN methods. Convergence 
+to the higher regularity 𝐻 1 norm 
+is achieved when network ar­
+chitecture satisfy the initial and 
+boundary conditions.
+Advection 
+Dispersion 
+Equation [15]
+PINN-MT The PINN-MT approach 
+achieves high accuracy, with 
+percentage errors for moisture 
+distribution below 0.
+33% com­
+pared to state of the art finite 
+element analysis.
+A major strength is the com­
+putational efficiency gained 
+through transfer learning, en­
+hancing prediction speed by 
+over 80%. It tackles complex 
+non-linear physics.
+This PINN-MT approach is 
+the first to use automatic 
+differentiation to solve 
+the PDEs governing mass 
+transfer in plant cells.
+Effectively predict cellular-level 
+mass loss and moisture varia­
+tions during low-temperature 
+drying. The architecture integrates 
+adaptive activation and transfer 
+learning, with the loss function.
+Table 5.2 
+Applications to non-linear PDEs.
+PDE 
+Type/Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths/ Weakness Practical Experience Key Contribution & Used 
+Architecture
+Burgers’ Equation 
+[148,
+211]
+PINNs 
+with WF, 
+LAAF
+The explicit FDM generally 
+achieved lower 𝐿2 error values 
+than PINN, but both numerical 
+approaches demonstrated 
+strong accuracy.
+Handling complex ge­
+ometries and boundary 
+conditions is strength of 
+PINNs, while computa­
+tional cost and sensitivity 
+to hyper-parameters is a 
+weakness.
+PINN and EFDM meth­
+ods are directly compared 
+for non-linear Burgers’ 
+equation, used to model 
+fluid flow, shock waves, 
+and turbulence.
+Adaptive functions and optimizers 
+improve results for Burgers’–Fisher 
+equations. The PINN architecture 
+employs a feed-forward NN for the 
+approximator, with a non-trainable 
+residual network for derivative 
+computation.
+Integro-
+Differential 
+Equations [199]
+A-PINNs A-PINN effectively avoids in­
+tegral discretization, which 
+helps eliminate both trun­
+cation and discretization 
+errors common in other PINN 
+methods for IDEs.
+The strength is its mesh-
+free nature and its superior 
+performance in solving 
+inverse problems, even 
+when given highly noisy 
+observation data.
+The model successfully 
+handles forward and in­
+verse problems for various 
+nonlinear IDEs, including 
+Volterra and Fredholm 
+types.
+Replaces integral operators with 
+autodiff, avoiding discretization 
+errors. Utilizes multi-output neural 
+network that calculates the primary 
+solution variables.
+Navier Stokes 
+Equation [138]
+Standard 
+PINNs
+The framework shows strong 
+accuracy, achieving a rela­
+tive 𝐿2-error of 4.
+78 × 10 −3
+for identifying the underly­
+ing dynamics of the Burgers’ 
+equation from data.
+Key strength is data ef­
+ficiency, enabling the 
+discovery of complex, gov­
+erning nonlinear equations 
+even from small, scattered, 
+and noisy observations.
+The approach successfully 
+performs system identi­
+fication and data-driven 
+discovery for canonical 
+nonlinear PDEs across 
+scientific domains.
+Solves fluid dynamics in complex 
+domains; handles steady / transient 
+flows.
+Korteweg-de 
+Vries Equation 
+[137]
+Deep 
+Learning 
+PINNs
+The two-network structure im­
+proves computational stability 
+by using automatic differentia­
+tion for derivatives, thereby 
+avoiding ill-conditioned 
+and unstable numerical 
+differentiations.
+Strength is its capacity 
+for data-driven discovery, 
+accurately learning the 
+underlying nonlinear PDE 
+dynamics from scattered 
+and noisy spatiotemporal 
+observations.
+The framework accurately 
+identified and learned 
+the dynamics for several 
+canonical nonlinear PDEs, 
+including the Korteweg-de 
+Vries and Navier-Stokes 
+equations.
+Identifies KdV equation from data; 
+good extrapolation, low error. The 
+model architecture utilizes two 
+distinct deep neural networks: one 
+serves as a prior for the unknown 
+solution.
+Nagumo and 
+Huxley Equation 
+[11]
+IPINNs The algorithm exhibits faster 
+convergence and requires 
+fewer sample points for 
+training, leading to better 
+computational efficiency 
+compared to standard PINN 
+methods.
+A significant strength is its 
+ability to accurately recon­
+struct both the exact and 
+new soliton solutions of the 
+nonlinear Huxley equation 
+with better simulation 
+effects.
+The method focuses 
+on solving the Huxley 
+equation, a type of 
+reaction-diffusion PDE fea­
+turing a complex nonlinear 
+reaction term.
+Effective modelling of nonlinear 
+excitable systems. IPINN is able 
+to provide dynamic time-domain 
+predictions.
+Schrödinger 
+Equation [134]
+IPINNs The improved PINN achieves 
+faster convergence and better 
+accuracy by mitigating the 
+vanishing gradient issue, re­
+quiring only a small data set 
+for training.
+Key strength is its high 
+robustness and capabil­
+ity to accurately simulate 
+complex localized wave 
+solutions for the deriva­
+tive nonlinear Schrödinger 
+equation.
+The method provides data 
+driven solutions for the 
+nonlinear derivative nonlin­
+ear Schrödinger equation, 
+including complex rogue 
+wave and periodic wave 
+patterns.
+Models solitons and rogue waves 
+from sparse data. The IPINN 
+improves on classical PINN by in­
+corporating a neuron-wise locally 
+adaptive activation function.
+Allen-Cahn 
+Equation [108]
+PIARNN The Physics-Informed 
+Antisymmetric Recurrent 
+Neural Network (PIARNN) 
+is more efficient in param­
+eter count because it uses 
+a strictly upper triangular 
+connection matrix to enforce 
+antisymmetry.
+The strength is robustness 
+and stability of the learning 
+process achieved by the 
+antisymmetric recurrent 
+parameterization, leading 
+to superior performance in 
+predictions.
+The PIARNN method 
+shows its effectiveness 
+by achieving competitive 
+performance when solving 
+complex nonlinear time-
+dependent PDEs like the 
+Allen-Cahn.
+Stable, accurate results for phase 
+transition PDEs. Presented a PINN 
+approach using symbolic differen­
+tiation for the discovery of SIMs, 
+for the general class of Allen-Cahn 
+equation.
+Diffusion-
+Reaction System 
+Equation [113]
+PPINN PPINN significantly reduces 
+computational time for long-
+time PDEs by decomposing 
+the domain and leveraging 
+parallel in time computing for 
+efficient training.
+A strength is the significant 
+speed-up for long-time 
+integration, which is 
+achieved because the it­
+erative parareal process 
+typically converges only in 
+few refinement steps.
+The method solved the 2-D 
+nonlinear diffusion-reaction 
+equation, demonstrating its 
+effectiveness on challenging 
+time-dependent PDEs.
+Demonstrated capability to handle 
+multifidelity models with varied 
+PDE encodings. The PPINN ap­
+proach combines physics-based 
+models with data-driven methods 
+to improve prediction accuracy and 
+reduce uncertainty.
+(continued on next page
+) 
+Neurocomputing 680 (2026) 133317 
+12 
+
+===== PAGE 13 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 5.2 (continued)
+PDE 
+Type/Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths/ Weakness Practical Experience Key Contribution & Used 
+Architecture
+2D Navier-Stokes 
+Equation [137]
+DNN DeepHPMs are a deep learn­
+ing framework designed to 
+discover the hidden nonlinear 
+PDEs directly from scattered 
+and noisy observations of 
+a system’s spatio-temporal 
+behaviour.
+The model is highly data-
+efficient, requiring only 
+a small number of scat­
+tered and potentially noisy 
+data points for training. 
+It addressed a limitation 
+of purely data-driven 
+methods.
+The framework’s effective­
+ness was demonstrated by 
+successfully discovering 
+the governing equations for 
+several complex systems, 
+including the Navier-Stokes 
+equations.
+Learned the governing vorticity 
+dynamics. The architecture employs 
+two deep neural networks.
+Blasius-
+Pohlhausen and 
+Falkner-Skan 
+Equation [14]
+Standard 
+PINN
+The work applies PINNs to 
+solve Blasius-Pohlhausen 
+and Falkner-Skan Equation 
+characterized by challenging 
+boundary layers, an ad­
+vancement over traditional 
+numerical solvers.
+PINN is used to model the 
+viscous and thermal bound­
+ary layer systems. Solves 
+three benchmark problems 
+without relying on complex 
+grid generation.
+The study focuses on three 
+fundamental thermal-
+fluid problems: the 
+Blasius-Pohlhausen, the 
+Falkner-Skan, and the nat­
+ural convection boundary 
+layer over a vertical plate.
+Presented fundamental models 
+for boundary layer flows. The ap­
+proach combines physics-based 
+models with data-driven methods 
+to improve prediction accuracy and 
+reduce uncertainty.
+Modified 
+Korteweg-de 
+Vries Equation 
+[53]
+VCINN The VC-INN achieved signif­
+icantly lower 𝐿2 error and 
+training loss when recovering 
+complex variable coefficients 
+compared to standard PINNs.
+The VC-INN architecture 
+is highly robust for solving 
+inverse problems with high-
+dimensional and complex 
+variable coefficients in 
+PDEs.
+The method addresses com­
+plex nonlinear variable 
+coefficient problems, in­
+cluding the KdV equations, 
+crucial for fluid dynamics 
+phenomena.
+Validate the capability of model 
+to accurately reconstruct mul­
+tiple coefficients simultaneously 
+from limited data. The VC-INN is a 
+modified PINN that specifically inte­
+grates ResNet shortcut connections 
+to stabilize training.
+Buckley-Leverett 
+problem [6]
+Standard 
+PINN
+The PINN framework is 
+computationally efficient, 
+achieving good solutions with 
+a low MSE loss without requir­
+ing the creation of complex 
+meshes.
+PINNs effectively integrated 
+physics and data, improv­
+ing solution resolution 
+and accuracy compared to 
+a purely data-driven NN 
+model.
+PINN was validated by 
+solving Buckley-Leverett 
+equation, modelling gas 
+drainage into a porous, 
+water-filled medium, ad­
+dressing both forward and 
+inverse problems.
+Solved the problem of gas drainage 
+in porous media. The study 
+employed a standard PINN architec­
+ture, which uses a fully connected 
+NN to approximate the solution.
+Ericksen–Johnson 
+Problem [156]
+VPINN PINN and VPINN models 
+achieved comparable ac­
+curacy to FEM but incurred 
+significantly higher computa­
+tional cost during the complex 
+training optimization process.
+Standard Galerkin FEM 
+fails to solve advection-
+dominated diffusion 
+problems, showing 
+PINN/VPINN superiority, 
+which can approximate the 
+correct solutions.
+The study applied PINN 
+and VPINN to the chal­
+lenging 1-D advection 
+diffusion problem and 
+the 2-D Eriksson–Johnson 
+model.
+Stable, accurate results for phase 
+transition PDEs. The approach com­
+bines physics-based models with 
+data-driven methods to improve 
+prediction accuracy and reduce 
+uncertainty.
+Burgers’–Fisher 
+Equation [211]
+High-
+precision 
+PINN
+The high-precision PINN 
+method demonstrated faster 
+convergence and excellent 
+accuracy for nonlinear gen­
+eralized Burgers’–Fisher 
+equation.
+The network was improved 
+using an adaptive activa­
+tion function and effective 
+weighting strategies to en­
+hance solution accuracy 
+and reliability.
+The modified PINN was 
+used to solve the gen­
+eralized Burgers–Fisher 
+equation, which mod­
+els phenomena like gas 
+dynamics and fluid flow.
+Optimize the model to obtain highly 
+accurate prediction solutions. The 
+PINN uses an architecture that in­
+corporates a conformable derivative 
+via automatic differentiation to 
+avoid numerical discretization 
+errors.
+Table 5.3
+ 
+Applications to High-Dimensional and Complex PDEs.
+PDE Type/ 
+Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths/Weaknesses Practical Experience Key Contribution & Use 
+Architecture
+Forward/ 
+Inverse 
+Problems. 
+[46
+,159]
+Standard 
+PINN, 
+Discrete-
+PINNs
+VW-PINNs improved adaptive 
+sampling efficiency threefold 
+and reduced the relative 𝐿2
+error for an inverse problem by 
+over an order of magnitude.
+The method effectively over­
+comes the ill-conditioning of 
+the PDE loss in standard PINNs 
+when non-uniform collocation 
+points are utilized for training.
+The technique solved chal­
+lenging forward fluid flow 
+problems, like flow over a 
+NACA0012 airfoil, where 
+conventional PINNs failed 
+entirely.
+Effective in unstructured 
+meshes using PINNs. The 
+network implements a 
+volume-weighted residual by 
+calculating the local volume 
+occupied by each collocation 
+point using kernel density 
+estimation.
+Stiff PDEs 
+[152]
+Standard 
+PINN
+A related study by the au­
+thors sought a reliable solution 
+achieving a relative 𝐿2 error of 
+10 percent or less across their 
+challenging discontinuous heat 
+conduction test cases.
+A weakness for PINNs is diffi­
+culty in capturing discontinuous 
+solutions and handling the com­
+plexity of 3D geometries with 
+conflicting corner boundary 
+conditions.
+The investigation utilized 
+2D and 3D steady-state heat 
+conduction equations as test 
+cases, focusing on domains 
+exhibiting discontinuous 
+solutions.
+Challenges in 3D domains; 
+edge discontinuity handling. 
+The research evaluated the 
+performance of various PINN 
+frameworks.
+2D Diffusion-
+Reaction 
+[113]
+PPINNs The PPINN framework aims for 
+significant speed-ups compared 
+to standard PINN by using par­
+allelization, and it typically 
+converges successfully within 
+two to four iterations.
+The strength is its ability to 
+efficiently solve long-time 
+integration problems by decom­
+posing it into smaller, parallel, 
+short-time subproblems, which 
+standard PINN struggles with.
+The method was applied to 
+complex time-dependent 
+PDEs solving the 1-D Burgers 
+equation and a 2-D nonlinear 
+diffusion-reaction equation.
+For better convergence, the 
+Parareal PINN architecture 
+combines a parallel array of 
+fine PINNs with a fast, serial 
+Coarse-Grained solver.
+(
+continued on next page) 
+Neurocomputing 680 (2026) 133317 
+13 
+
+===== PAGE 14 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 5.3 (continued)
+PDE Type/ 
+Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths/Weaknesses Practical Experience Key Contribution & Use 
+Architecture
+Stochastic 
+PDEs [201]
+NN-DO, 
+NN-BO
+The method can quantify un­
+certainty effectively, future 
+research should concentrate 
+on improving the efficiency of 
+PINNs for forward problems 
+due to high computational cost.
+A key strength is that the NN-
+DO/BO framework removes 
+restrictive assumptions required 
+by original modal methods, like 
+the necessity for an invertible 
+covariance matrix in the DO 
+method.
+The method was successfully 
+applied to various SPDEs, 
+including the stochastic ad­
+vection equation and the 
+long-time integration of the 
+stochastic Burgers’ equation.
+The proposed NN meth­
+ods, NN-DO/BO, embed the 
+dynamically orthogonal/bi-
+orthogonal constraints directly 
+into the PINN’s loss func­
+tion for learning in the modal 
+space.
+Multiscale 
+PDEs [88]
+NH-PINNs The NH-PINN significantly 
+reduces the relative error 
+compared to standard PINN, 
+particularly when the mul­
+tiscale parameter 𝜖 is small, 
+ensuring highly accurate 
+solutions.
+The primary strength is its abil­
+ity to overcome the spectral 
+bias issue of PINNs on high-
+frequency multiscale solutions, 
+which traditionally leads to 
+poor accuracy and non-robust 
+training.
+The method was applied to 
+solve three homogenization 
+theory equations, including 
+the equation with multiscale 
+diffusion coefficient.
+Combines neural homogeniza­
+tion with oversampling for 
+better accuracy. The archi­
+tecture employs a three-step 
+strategy.
+2D/3D Time-
+Dependent 
+Problems 
+[149]
+Standard 
+PINN
+X-TFC is highlighted for its low 
+computational time and high 
+accuracy, often achieving solu­
+tions in milliseconds, making 
+it comparable to or faster than 
+many numerical methods.
+The primary strength is its ana­
+lytical satisfaction of boundary 
+and initial conditions via the 
+TFC framework, which over­
+comes the PINN weakness of 
+competing loss components.
+The method was validated on 
+a wide range of problems, in­
+cluding linear and nonlinear 
+differential equations.
+Handles 3D manifolds with 
+irregular domains. The ar­
+chitecture is a single-layer 
+neural network, specifically an 
+extreme learning machine.
+Stochastic 
+Burgers’ and 
+Diffusion-
+Reaction 
+Equation. 
+[201]
+Standard 
+PINN
+The method demonstrates high 
+accuracy by avoiding explicit 
+time derivative expressions 
+and effectively manages the 
+computational burden common 
+in time-dependent stochastic 
+problems.
+A major strength is the robust 
+handling of eigenvalue crossings 
+in the stochastic modes, which 
+caused traditional dynamically 
+BO methods to fail in long-time 
+integrations.
+The technique was applied 
+to stochastic PDEs, including 
+linear stochastic advection 
+equation and challenging 
+long-time integration of the 
+stochastic Burgers’ equation 
+and reaction-diffusion 
+models.
+Achieve high accuracy in es­
+timated solution statistics, 
+overcomes the limitations 
+of traditional methods, and 
+handle high-dimensional 
+stochastic inputs with noise.
+Backward 
+Stochastic 
+Equation [20]
+Standard 
+NN
+Neural network methods 
+are best suited for high-
+dimensional problems, as they 
+effectively circumvent the curse 
+of dimensionality that limits 
+traditional numerical solvers, 
+offering a scalable alternative.
+A core strength is the mesh-
+free implementation, which 
+simplifies complex geometry. 
+The primary challenge is that 
+network training involves a dif­
+ficult, non-convex optimization 
+problem.
+Three key techniques are ex­
+amined: PINNs, Feynman-Kac 
+formula-based approaches, 
+and solvers using BSDEs.
+Utilized sampling from 
+stochastic processes, including 
+the discretization of SDEs and 
+implementation of backwards 
+stochastic DE. The methods 
+rely on deep feedforward NN 
+as universal function approxi­
+mators, leveraging automatic 
+differentiation to compute the 
+necessary derivative.
+Differential-
+Algebraic 
+Equation 
+[121]
+DAE-PINN DAE-PINN integrates an 
+implicit Runge–Kutta time-
+stepping scheme with PINNs, 
+creating a more stable frame­
+work for simulating DAEs 
+over long-time horizons 
+than standard deep-learning 
+methods.
+This model is the first effec­
+tive PINN-based approach for 
+nonlinear DAEs, which com­
+monly model power networks. 
+A weakness is the computa­
+tional expense and complex 
+non-convex optimization during 
+the training phase.
+The framework’s primary 
+application is simulating 
+the transient dynamic re­
+sponse of power networks, 
+governed by stiff differential-
+algebraic equations, for 
+crucial dynamic security 
+assessment.
+Potential for modelling com­
+plex dynamical systems. The 
+architecture is a discrete-time 
+PINN model where the DAE 
+residuals are enforced.
+High-
+Order and 
+Parameterized 
+Equation [47]
+FO-PINN The Fo-PINN framework signif­
+icantly reduces computational 
+time per training iteration by 
+avoiding the resource-intensive 
+backpropagation steps required 
+for calculating higher-order 
+derivatives.
+A core strength is the increased 
+accuracy for parameterized sys­
+tems and an efficient method for 
+exact imposition of boundary 
+conditions using approximate 
+distance functions.
+The method reformulates sec­
+ond or higher-order PDEs, for 
+easier network enforcement.
+Handles 3D manifolds with 
+irregular domains. Fo-PINN 
+employs a standard deep feed­
+forward neural network but 
+uses a modified loss function.
+Complex 
+Spatio-
+Temporal 
+Equation 
+(Euclidean 
+grids 
+[91
+,183], non-
+Euclidean 
+grids 
+[131,146])
+FNO, 
+PINN, 
+Mesh-
+Graph 
+Network, 
+Graph 
+Network 
+Simulator
+Spectral and graph pre-training 
+minimize long-term costs by 
+balancing PDE residual loss 
+with multi-step, data-driven 
+Mean Squared Error.
+Methods offer superior speed 
+and geometric flexibility; 
+however, high memory for 
+dense graphs and slow PINN 
+convergence remain challenges.
+Accelerate stiff PDE solving 
+using preconditioning and 
+stabilize long-range graph 
+rollouts by injecting noise 
+into training data to prevent 
+drift.
+Neural operators and graph-
+based encoder-processor-
+decoders revolutionize PDE 
+solving by enabling resolution-
+invariant predictions across 
+structured and unstructured 
+spatial grids.
+Complex Fluid 
+Dynamics [32]
+CAN-PINN Can-PINN improves accuracy 
+by 1–2 orders of magnitude 
+over ND-based PINNs, achiev­
+ing robust, good accuracy with 
+fewer collocation points, which 
+drastically reduces the overall 
+training cost and time.
+The method’s strength is robust 
+training even in sparse-sample 
+regimes where traditional 
+AD-PINNs fail, effectively uni­
+fying the efficiency of ND 
+and the high accuracy of AD 
+differentiation.
+The paper demonstrates supe­
+rior performance by solving 
+challenging complex fluid dy­
+namics problems, specifically 
+incompressible lid-driven 
+cavity flows.
+Demonstration of the CAN 
+scheme for fluid dynamic 
+problems, including two 
+numerically inspired im­
+plementations of CAN-PINN 
+schemes for convection. Can-
+PINN utilizes a standard fully 
+connected NN architecture.
+(
+continued on next page) 
+Neurocomputing 680 (2026) 133317 
+14 
+
+===== PAGE 15 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 5.3 (continued)
+PDE Type/ 
+Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths/Weaknesses Practical Experience Key Contribution & Use 
+Architecture
+Kuramato 
+Sivashinsky 
+Equation 
+[120]
+Optimal 
+PINN
+PINNs offer an implementation 
+advantage due to their simplic­
+ity compared to the complex 
+adjoint-based method, but they 
+generally do not match its effi­
+ciency for distributed optimal 
+control problems.
+A major strength is the simulta­
+neous training of the state and 
+control variables within a single 
+framework, simplifying the pro­
+cess, though the optimal weight 
+for the cost functional remains 
+highly critical.
+The framework was success­
+fully applied to find optimal 
+control solutions for various 
+PDEs, including the complex 
+Kuramoto-Sivashinsky.
+Handles 3D manifolds with 
+irregular domains. The 
+method uses two sepa­
+rate fully-connected neural 
+networks.
+Thermal Wave 
+Coupled 
+Equation 
+[162]
+Standard 
+PINN
+The PINN approach yields ro­
+bust and accurate solutions for 
+the inverse problem, demon­
+strating stability and low error, 
+even when incorporating ex­
+perimental data with inherent 
+system errors.
+A significant strength is the 
+PINNs ability to integrate 
+physical laws and limited ex­
+perimental data into a single 
+framework, resulting in phys­
+ically consistent solutions for 
+ill-posed inverse problems.
+The method used high di­
+mensional coupled PDE for 
+thermal wave amplitude and 
+phase to determine the un­
+known thermal diffusivity of 
+a general material.
+PINN framework to simu­
+late the diffusion of thermal 
+waves. The architecture used 
+is a standard PINN framework.
+Table 5.4
+ 
+Applications to Fractional and Variable Coefficient PDEs.
+PDE 
+Type/ 
+Problem
+Method/ 
+Variant
+Computational Budget & Loss Strengths / Weaknesses Practical Experience Key 
+Contribution & Use 
+Architecture
+Fractional 
+Advection- 
+Diffusion [127]
+Standard 
+PINNs
+The 
+mean 𝐿2 error reaches 10−5
+for small training sets. The key 
+convergence finding, optimiza­
+tion error causes saturation at 
+higher training set sizes.
+Hybrid 
+loss function using 
+automatic differentiation for 
+integer operators and nu­
+merical discretization for the 
+challenging fractional opera­
+tors is a strength.
+Standard 
+PINN method was 
+demonstrated for forward 
+and inverse problems of 
+multi-dimensional space-
+time fractional ADEs with 
+high accuracy.
+Handles 
+noisy, high-dimensional 
+fractional PDEs. The architecture 
+is a standard feedforward neural 
+network.
+Space-Fractional 
+Poisson 
+and 
+Bloch–Torrey 
+equations [3]
+Monte 
+Carlo 
+fPINN
+The 
+PINN-CS method demon­
+strated superior numerical ac­
+curacy and computational effi­
+ciency compared to traditional 
+fPINN and Monte Carlo fPINN, 
+achieving a significant error re­
+duction.
+The 
+strength is Cuckoo search 
+optimization, which uses an 
+adaptive inertia weight to 
+mitigate premature conver­
+gence often seen in standard 
+gradient-based optimization 
+for PINNs.
+The 
+technique was effective 
+for various fPDEs, includ­
+ing 2D time-space fractional 
+diffusion and the complex 
+3D fractional Bloch–Torrey 
+equation.
+Performs 
+well in irregular do­
+mains. The core architecture is a 
+Monte Carlo-based PINN, which 
+utilizes a DNN surrogate to ap­
+proximate the solution.
+Time-Dependent 
+Fractional 
+PDEs 
+[204]
+Spectral-
+fPINNs
+The 
+proposed method is com­
+putationally efficient by using 
+Jacobi polynomials for global 
+discretization, reducing auxil­
+iary points and achieving 𝐿2
+error accuracy of 10−5 to 10−7.
+A 
+major strength is its high 
+representation capacity and 
+efficiency due to the spectral 
+collocation method, which 
+significantly reduces the re­
+quired number of discretiza­
+tion points.
+The 
+technique is demon­
+strated for steady-state and 
+time-dependent fractional 
+PDEs, and also applied to 
+parameter identification 
+inverse problems in financial 
+modelling.
+Combines 
+spectral methods with 
+PINNs; reduced training time. The 
+architecture is a spectral fPINN, 
+that uses a hybrid approach, 
+where integer-order derivatives 
+use automatic differentiation and 
+fractional derivatives use the spec­
+tral method.
+Fractional 
+Black–Scholes 
+Equation [126]
+Novel 
+PINN The 
+PINN approach is de­
+scribed as computationally in­
+expensive and efficient, par­
+ticularly when handling high-
+frequency and noisy financial 
+data compared to traditional 
+numerical schemes.
+A 
+major strength is the 
+method’s ability to directly 
+incorporate fractional deriva­
+tives into the loss function, 
+avoiding the complexity of 
+numerical discretization and 
+non-locality.
+PINN 
+provides an efficient al­
+ternative for solving the chal­
+lenging time fractional Black-
+Scholes PDE, which governs 
+complex financial derivative 
+pricing.
+Solves 
+tfBSPDE pricing models 
+with nonlocal fractional deriva­
+tives. The PINN structure uses a 
+relatively simple architecture, fea­
+turing a network with two hidden 
+layers and four neurons per hidden 
+layer.
+Volterra 
+Integro-
+Differential 
+Equation [199]
+A-PINN The 
+A-PINN method is vali­
+dated to achieve higher ac­
+curacy compared to the con­
+ventional PINN, specifically for 
+integro-differential equations, 
+by avoiding discretization er­
+rors.
+The 
+primary strength is 
+bypassing the integral dis­
+cretization step by defining 
+auxiliary output variables, 
+which effectively eliminates 
+the associated discretization 
+and truncation errors in the 
+solution.
+A-PINN 
+successfully solves 
+various challenging Volterra 
+and Fredholm integro-
+differential equations, 
+including forward prob­
+lems, systems, and inverse 
+problems with noisy data.
+A-PINN 
+demonstrate good per­
+formance in solving the forward 
+problems involving Volterra IDEs. 
+The core architecture is a multi-
+output NN designed to simulta­
+neously approximate the primary 
+variables and the auxiliary out­
+put variables representing the in­
+tegrals.
+cost. 
+This section surveys advanced variants and extensions that 
+directly target those issues. For orientation, we group methods concep­
+tually into: (i) formulation-level changes (weak/variational, conser­
+vative, constraint-augmented PINNs), (ii) architectural and domain 
+strategies (periodic/Fourier features, domain decomposition, multi-
+resolution), (iii) training and sampling schemes (adaptive weighting, 
+residual-based resampling, curricula), (iv) operator-learning hybrids
+(e.g., FNO/DeepONet + PINN), and (v) hybrid and multi-fidelity
+couplings with classical solvers and UQ. Table 6.1 lists representa­
+tive variants used in the literature; Fig. 6 summarizes their relative 
+frequency.
+The 
+analysis in Table 6.1  shows clear advances in overcoming 
+classical PINN bottlenecks-spectral bias, stiffness, high-dimensional cou­
+pling, and computational inefficiency. The weak/variational PINNs 
+and conservative PINNs embed physical constraints for stability, while 
+Fourier-feature and multi-resolution networks capture multiscale and os­
+cillatory dynamics. Adaptive sampling and curriculum learning reduce 
+training epochs by 20–50%, improving convergence. Operator-learning 
+hybrids (PINN-FNO, DeepONet-PINN) enable data-efficient surrogates, 
+and transfer-learning/multi-fidelity PINNs lower costs in parameter 
+sweeps.
+Overall, advanced PINN variants shift the framework toward scal­
+able, generalizable modelling, though trade-offs between fidelity and 
+Neurocomputing 680 (2026) 133317 
+15 
+
+===== PAGE 16 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Fig. 5. Fully connected PINN framework.
+cost persist. Future progress will hinge on hybrid strategies combin­
+ing symbolic priors, adaptive sampling, and operator learning, bridging 
+descriptive enumeration with analytical critique.
+7 . Computational assessment, benchmarking, and limitations
+Having surveyed baseline PINNs and advanced variants 
+(Sections 2 –6), we summarize practical evaluation guidance and 
+key limitations.
+Benchmarking and reporting. We establish a structured benchmarking 
+framework grounded in standard PDE test cases, including the Poisson, 
+heat, Burgers’, and Navier–Stokes equations (at fixed Reynolds num­
+bers). The framework requires explicit disclosure of collocation budgets 
+and sampling strategies, clear separation of training and validation 
+collocation sets, and consistent reporting of both PDE residuals and 
+physics-aware metrics such as boundary and initial condition (BC/IC) 
+violations and invariant preservation.
+For comparisons with traditional numerical solvers (e.g., FDM, FEM, 
+FVM), the framework mandates alignment of PDE formulations, BC/IC 
+specifications, and data conditions, alongside comprehensive reporting 
+of computational budgets for both paradigms (assembly/solve versus 
+training/inference) [75,89,100,140].
+To ensure reproducibility and comparability, the benchmarking pro­
+tocol defines fixed PDE tasks, standardized data partitions, explicit 
+accuracy metrics (e.g., 𝐿2, BC/IC errors), and systematic reporting of 
+computational costs and robustness across multiple runs. This structured 
+framework replaces informal methodological advice with a formalized, 
+measurable, and comparable benchmarking standard consistent with 
+emerging PINN evaluation practices.
+Computational cost and scaling.  Cost grows with collocation size, 
+depth/width, and derivative order; higher-order AD is often domi­
+nant [ 17,128]. Mixed precision can help but must be validated for 
+second/mixed derivatives. Scalability improves with domain decompo­
+sition (cPINN/XPINN) and residual-type mini-batches [69,155].
+Stability, failure modes, mitigations.  Common issues include spec­
+tral (low-frequency) bias and multiscale behaviour [ 136,178], stiff­
+ness/sharp fronts, and loss imbalance causing BC/IC leakage [ 81]. 
+Remedies: periodic/Fourier features [161], residual-based adaptive sam­
+pling/curricula [100,123], normalization/nondimensionalization [75], 
+and domain decomposition [ 69,155]. Report not only final errors but 
+also failure rates and sensitivity to seeds/hyperparameters [81].
+Limitations.
+• Complex Domain: despite their flexibility, PINNs often strug­
+gle when applied to complex or irregular domains. Challenges 
+arise from inaccurate boundary-condition enforcement, geometry-
+induced anisotropy, and imbalance among loss terms, which can 
+lead to unstable training and slow convergence. These difficul­
+ties become more pronounced in highly non-uniform geometries 
+and multiphysics settings, limiting the reliability of standard PINN 
+formulations without geometry-aware transformations or domain-
+adaptive strategies [62,132].
+• Optimization complexity: nonconvex objectives; failures often 
+optimization-driven rather than expressivity-limited [81].
+• Compute/memory: higher-order AD and large collocation sets are 
+costly [17,128].
+• Spectral bias/multiscale: difficulty capturing high frequencies and 
+sharp features [136,178].
+• Constraint enforcement: soft penalties may under-enforce BC/IC 
+without careful weighting or hard constraints.
+• Theory: convergence/error guarantees exist only for selected 
+classes; still less mature than for classical discretizations [38,153].
+• Problem classes: classical PINNs struggle on integro-differential 
+forms; auxiliary outputs (A-PINNs) can help [199].
+Hereunder, open challenges and future directions are summarized:
+7.1 . Future directions
+Building upon the limitations identified in Sections 5 –6 (spectral 
+bias, stiffness, scalability, and uncertainty), the following research di­
+rections outline concrete pathways toward addressing these challenges.
+Significant progress has been made in leveraging PINNs across in­
+terdisciplinary domains. While this study has focused on PINNs for 
+differential equations, several challenges and open questions remain. 
+Advancing the field will require both methodological innovations and 
+broader applications that push beyond current limitations [75,140].
+Translational applications. Representative studies have applied PINNs 
+to cerebrovascular diffusion MRI [ 172], brain hemodynamics [ 147], 
+3D blood flow modelling [ 119], and coronary artery trees [ 9], clini­
+cal medicine [ 16], injection-molded parts [ 49], aortic blood flow [ 2], 
+while surveys highlight broader imaging tasks [13]. Extensions include 
+myocardial perfusion quantification ([168], MR electrical properties to­
+mography [66], defect detection with physics-guided constraints [ 49], 
+and breast ultrasound segmentation [ 40]. However, existing methods 
+still face limitations in scalability, generalization across patient-specific 
+anatomies, and clinical reliability.
+Future work could prioritize scalable PINN variants with adaptive 
+physics weighting, uncertainty quantification, and hybrid integration 
+of low-latency surrogates and task-specific feature extractors, enabling 
+faster inference and uncertainty-aware personalization across patient 
+geometries. Standardized clinical benchmarks would further ensure 
+physically consistent and statistically reliable predictions, supporting 
+robust surgical and diagnostic deployment.
+Urban infrastructure and traffic flow. Recent research has demonstrated 
+the effectiveness of physics-informed neural networks for traffic state es­
+timation and flow modelling by embedding traffic conservation laws and 
+physically derived flow equations into learning frameworks [167,195]. 
+These approaches enable accurate reconstruction of traffic states from 
+sparse sensor data and connected-vehicle information, while adaptive 
+and residual PINN formulations further improve robustness and gener­
+alization across different traffic networks [160,173]. However, existing 
+methods still face challenges in scaling to large, heterogeneous trans­
+portation systems and in capturing rapidly changing traffic dynamics.
+Subsequent research could focus on developing scalable and trans­
+ferable PINN architectures that integrate adaptive physics constraints, 
+multi-modal traffic data fusion, dynamic topology handling, and non-
+oscillatory shock-capturing mechanisms to ensure numerical stability 
+near traffic discontinuities, alongside federated learning frameworks 
+for cross-city knowledge transfer with privacy preservation, enabling 
+reliable real-time traffic prediction and control.
+Engineering and aerospace applications.  Current research has estab­
+lished PINNs as effective tools for engineering applications, including 
+Neurocomputing 680 (2026) 133317 
+16 
+
+===== PAGE 17 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Table 6.1 
+Advanced PINNs Variants and Extensions.
+PINN-Variant Full Name with Reference Quantitative Advantages
+DAE-PINN Differential algebraic equations with 
+PINN [121]
+Achieves stable and accurate solutions for DAEs by enforcing algebraic constraints, where standard PINN 
+struggles with index and constraint violations.
+BL-PINN Boundary layer problems with PINN 
+[
+10]
+Effectively resolves boundary-layer problems with sharp gradients, improving accuracy in stiff regions 
+beyond the reach of standard PINN.
+PINN-FORM First-order reliability method with PINN 
+[
+114]
+Integrates first-order reliability methods, allowing simultaneous PDE and reliability metric estimation, 
+extending PINN capability toward probabilistic analysis.
+PIARNN Physics-informed antisymmetric recur­
+rent neural network [
+108]
+Utilizes antisymmetric recurrent architecture to capture temporal dynamics and antisymmetric patterns 
+more accurately than standard PINN.
+PINN-FNO Fourier neural operator with PINN [93] Combines Fourier Neural Operators with PINN to handle multi-scale, high-dimensional PDEs with reduced 
+training time and improved accuracy.
+PINN-MT PINN with Mass transfer problem [15] Enhances modelling of coupled mass transfer and diffusion-reaction systems through problem-specific 
+physics integration.
+TL-PINN Transfer learning with PINN [133] Uses transfer learning to accelerate convergence on related PDEs, requiring less data and computational 
+cost.
+MFLP-PINN PINN for multiaxial fatigue life predic­
+tion [58]
+Embeds fatigue-life physics for accurate multiaxial fatigue prediction, outperforming standard PINN in 
+engineering reliability applications.
+S-PINN Sparse-PINN [141] Employs sparse collocation and adaptive sampling to significantly reduce computational overhead in large-
+scale PDEs.
+P-PINN Parareal-PINN [113] Implements Parareal time parallelism for rapid convergence in time-dependent PDEs, achieving substantial 
+computational speedup.
+M-PINN Mesh-based PINN [175] Integrates mesh-based discretization to stabilize gradients and increase spatial accuracy compared to mesh-
+free standard PINNs.
+PINN-CNBO PINN with cat-and-mouse based opti­
+mization [67]
+Uses cat-and-mouse adversarial optimization to avoid local minima, improving convergence stability and 
+global accuracy.
+PIELM Physics informed extreme learning ma­
+chine [177]
+Replaces iterative gradient training with Extreme Learning Machine, offering ultra-fast training with 
+comparable precision.
+AT-PINN Advanced time-marching with PINN 
+[
+30]
+Adopts advanced time-marching schemes for higher stability and accuracy in stiff or multiscale temporal 
+PDEs.
+CT-PINN Conventional time-marching PINN [30] Applies conventional time-stepping within PINN for improved numerical stability and accuracy over 
+extended simulations.
+MRF-PINN Multi-receptive-field PINN [203] Employs multi-receptive field layers to capture spatial-temporal features across multiple scales effectively.
+OCP-PINN PINN for the online identification and 
+control of unknown PDEs [
+5]
+Enables real-time identification and control of unknown PDE systems through online adaptive learning.
+NAS-PINN Neural architecture search-guided PINN 
+[
+182]
+Utilizes neural architecture search to automatically design optimal networks, enhancing both accuracy and 
+efficiency.
+HP-PINN High-precision PINN [136] Improves precision via high-order derivative constraints and adaptive collocation refinement, reducing 
+overall error.
+A-PINN Auxiliary PINN [199] Introduces auxiliary tasks or outputs to stabilize training and accelerate convergence across complex PDE 
+systems.
+I-PINN Improved PINN [11,207] Incorporates activation and loss function refinements, mitigating convergence issues and improving learning 
+robustness.
+VCINN Variable coefficient-informed neural 
+network [
+53]
+Efficiently solves PDEs with variable coefficients by embedding spatially dependent terms into the learning 
+framework.
+VW-PINN Volume weighting with PINN [159] Applies volume-weighted residual penalties to improve accuracy in problems with non-uniform spatial 
+domains.
+NH-PINN Neural homogenization-based PINN 
+[88]
+Uses neural homogenization to approximate multi-scale material behaviour efficiently, reducing computa­
+tional cost.
+FO-PINN First-order formulation for PINN [47] Reformulates PDEs into first-order systems to enhance conditioning and improve convergence speed.
+PP-PINN Preconditioning-pretraining PINN [183] Combines preconditioning and pretraining strategies to accelerate optimization and overcome stiffness in 
+training.
+CAN-PINN PINN on coupled-automatic–numerical 
+differentiation method [
+32]
+Integrates automatic and numerical differentiation to reduce gradient error and enhance solution precision.
+VC-PINN Variable coefficient PINN [116] Specially designed for PDEs with variable coefficients, improving accuracy in heterogeneous and spatially 
+varying media.
+PHYCRNET Physics-informed convolutional-
+recurrent network[142]
+Merges convolutional and recurrent networks for efficient spatiotemporal PDE learning with long-term 
+memory capture.
+TSA-PINN PINN with trainable sinusoidal activa­
+tion function [
+76]
+Employs trainable sinusoidal activation functions to effectively learn oscillatory or periodic PDE solutions.
+STD-PINN Standard PINN [30] Baseline framework enforcing PDE residuals and boundary conditions via loss minimization; used as 
+reference model.
+F-PINN Fractional PINN [127] Extends standard PINN to fractional-order PDEs, improving stability and capturing nonlocal behaviour 
+accurately.
+SE-PINN Symmetry Enhanced PINN [208] Embeds physical symmetry constraints within learning, reducing redundant computation and error propa­
+gation.
+H-PINN Hadamard PINN [25] Incorporates Hadamard transformations for efficient multi-parameter representation and faster conver­
+gence.
+Hybrid-PINN Hybrid-PINN [162] Couples neural and numerical solvers (e.g., FEM/FDM) to balance accuracy, interpretability, and efficiency.
+Spectral-PINN Spectral-PINN [204] Integrates spectral basis functions for rapid convergence and superior accuracy on smooth PDEs.
+Taylor-PINN Taylor-PINN [207] Uses Taylor-series expansion to stabilize gradient estimation and yield smoother, more precise solutions.
+Monte-Carlo 
+PINN
+Monte-Carlo PINN [3] Combines Monte Carlo sampling with PINN to enable stochastic PDE solving and uncertainty quantification.
+Neurocomputing 680 (2026) 133317 
+17 
+
+===== PAGE 18 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Fig. 6. 
+Hierarchy of PINN categories and their variants.
+aerospace system modelling, structural vibration analysis, high-speed 
+vehicle dynamics, multiphysics system identification, and thermoelas­
+tic wave propagation. Structured taxonomies and systematic reviews 
+have clarified the role of PINNs in solving complex engineering PDEs 
+[50,164], while application-driven studies have demonstrated their ca­
+pability in aerospace vibration analysis [ 158], autonomous vehicle 
+dynamics [80], multiphysics damping identification [ 95], and porous 
+thermoelastic systems [43]. These advances move PINNs beyond sim­
+ple boundary-value problems toward realistic, coupled engineering 
+scenarios. However, current approaches remain problem-specific and 
+computationally intensive.
+Future research could prioritize hybrid PINN frameworks integrating 
+reduced-order models, neural operators, physics-informed reinforce­
+ment learning for control, and PINN-based digital twins, enabling faster 
+inference, control-aware learning, and real-time system synchronisation 
+for complex engineering systems, alongside lightweight Edge-PINN 
+architectures for low-latency, on-board deployment.
+Urban mobility and earth system sciences. Recent studies have ad­
+vanced physics-informed learning for urban mobility and spatiotempo­
+ral systems by integrating physical constraints into origin–destination 
+flow prediction, deep generative modelling of mobility patterns, and 
+operator-learning frameworks for partial differential equations [93,
+188,200]. Complementary reviews and applications further highlight 
+the role of physics-guided deep learning in smart-city transporta­
+tion, geosciences, watershed diffusion modelling, and earth-system 
+forecasting [26,51,73,198]. Despite these advances, challenges persist 
+in unifying operator-based learning with data-driven mobility mod­
+els and ensuring generalization across heterogeneous spatiotemporal
+scales.
+Neurocomputing 680 (2026) 133317 
+18 
+
+===== PAGE 19 =====
+S. Khanra, V.K. Kukreja and I. Bala
+Upcoming efforts could prioritize hybrid PINN–operator architec­
+tures with physics-consistent generative modelling, incorporating non-
+equilibrium thermodynamics and stochastic differential equations to 
+bridge causality gaps in human mobility and climate volatility. This 
+enables scalable spatiotemporal benchmarks for planetary-scale simu­
+lations and reliable decision-making in complex urban-environmental 
+systems.
+Operator learning and neural operators.
+ Recent advances in operator 
+learning and physics-informed modelling have enabled data-driven ap­
+proximation of nonlinear solution operators for differential equations, 
+including DeepONet-based operator representations, Fourier neural op­
+erators for parametric PDEs, and PINO that embed governing laws 
+directly into operator learning [91,93,98]. Complementary physics-
+informed frameworks, such as extreme theory of functional connections 
+and modal-space learning, further improve computational efficiency and 
+stability for time-dependent and stochastic systems [ 149,201]. These 
+methodologies successfully bypass retraining on new initial/boundary 
+conditions by learning solution mappings across diverse parameters, 
+yet challenges persist in integrating operator-learning with physics-
+informed training for multi-scale, long-time, highly nonlinear regimes.
+Ongoing efforts could prioritize hybrid operator–PINN architec­
+tures with structure preserving constraints, transformer-based back­
+bones, entropy-stable formulations, and scalable training strategies. 
+These ensure discretization-invariance in irregular geometries, long-
+time Hamiltonian stability, and mitigation of spectral bias for accurate 
+physical consistency in complex simulations like N-body systems [135].
+Optimization and training stability.
+ Contemporary studies have pro­
+posed improved training strategies for PINNs by enforcing temporal 
+causality, conservative constraints, and domain decomposition to en­
+hance stability and convergence, particularly for nonlinear and time-
+dependent differential equations [69,155,178]. Complementary ad­
+vances, including improved PINN formulations for nonlinear reaction–
+diffusion equations, Fourier feature embeddings for capturing high-
+frequency solutions, and user-friendly software frameworks such as 
+DeepXDE, have further broadened the practical applicability of PINNs 
+[11,100,161]. These studies successfully stabilize training for multi-
+scale problems via physical constraints and parallelized domain par­
+titioning, yet challenges persist in robust handling of stiff systems, 
+multi-scale dynamics, and complex geometries.
+Emerging directions should develop unified training frameworks 
+merging causality-aware learning, adaptive spectral/Fourier feature 
+mapping, structure-preserving constraints, and automated weight sched­
+ulers. These bridge local decomposition with global consistency, en­
+abling asynchronous parallel PINNs for scalable, stable performance 
+across diverse PDE classes on large-scale GPU clusters without interface 
+bottlenecks.
+Physics-data PINNs for reliable and interpretable prediction.
+ Current re­
+search has demonstrated the effectiveness of hybrid frameworks that 
+harmonize physical modelling with deep learning to improve inter­
+pretability, data efficiency, and predictive reliability across materials’ 
+science, vehicle dynamics, structural identification, and fatigue-life es­
+timation [24,36,55,213 ]. By embedding physical estimators, damage 
+mechanics, and interval uncertainty representations, these approaches 
+outperform purely data-driven models, particularly under limited or 
+noisy data conditions. Recent studies have advanced beyond black-box 
+models by embedding damage mechanics and interval analysis into 
+training, enabling accurate life prediction with sparse, uncertain data—
+yet current methods remain problem-specific, lacking unified principles 
+and scalability.
+Future work should develop generalizable physics–data fusion archi­
+tectures integrating Phase-Field modelling for multiscale crack nucle­
+ation and evidence-theory-based uncertainty quantification for real-time 
+RUL (remaining useful life) estimation. Modular frameworks will en­
+sure computational efficiency, interpretability, and systematic domain 
+physics integration across diverse engineering systems like aerospace 
+and automotive.
+Neural architectures for spatiotemporal and PDE-driven learning.
+ Recent 
+advances have expanded physics-informed learning through structured 
+neural architectures, including convolutional–recurrent networks for 
+spatiotemporal PDEs, graph neural Galerkin formulations for forward 
+and inverse problems, and first-order PINN formulations that improve 
+numerical stability and training efficiency [46,47,142]. These develop­
+ments align with broader physics-informed machine-learning principles 
+that emphasize structure preservation, interpretability, and data effi­
+ciency [75], while related applications demonstrate the potential of 
+hybrid learning in complex event modelling [12]. Recent works have 
+successfully extended PINNs to non-Euclidean geometries and long-term 
+dependencies via recurrence and graph theory in loss minimization—yet 
+challenges persist in unifying architectures under a common framework 
+for large-scale, multi-physics systems.
+Future research could develop modular, structure-aware PINN vari­
+ants combining graph, recurrent, first-order formulations, and Physics-
+Informed Graph Transformers with symbolic regression. These enable 
+scalable spatiotemporal modelling, computational scaling of graph 
+solvers, automated law discovery, and real-time correction of incomplete 
+physics for long-range multi-scale interactions.
+Multi-scale forecasting and image processing.
+ Emerging investigations 
+highlight the growing impact of PINNs in forecasting and image pro­
+cessing, including spatiotemporal production forecasting via graph-
+based PINNs, fractional and time-varying volatility modelling, hybrid 
+ML–PINN frameworks for wind and photovoltaic power prediction, 
+and physics-constrained wave forecasting using dispersion relations 
+[31,74,96,174,202]. In parallel, PINNs have been successfully applied 
+to image processing tasks such as digital image correlation and phase 
+imaging by embedding governing physical laws directly into reconstruc­
+tion pipelines [ 90,189]. These works successfully embedded domain 
+equations into neural architectures for physically consistent forecasts 
+and image reconstructions under noisy data—yet current approaches 
+remain task-specific, limited in long-horizon uncertainty, multi-scale 
+dynamics, and cross-domain generalization.
+Future work could integrate PINNs with LSTM/Transformers, 
+Physics-Informed Diffusion Models, ViT-PINN hybrids, frac­
+tional/stochastic calculus for memory effects, and end-to-end 
+differentiable optics. This enables long-term multi-physics fore­
+casting, high-fidelity image super-resolution, enhancement, inverse 
+imaging, and self-correcting microscopy across financial, geological, 
+and vision applications.
+8 . Conclusions
+This review synthesizes advances in Physics-Informed Neural 
+Networks (PINNs), integrating theory, methodology, comparative anal­
+yses, and emerging directions. By classifying recent work across ODEs 
+and PDEs, it highlights how architectural and optimization choices shape 
+accuracy, stability, and efficiency, with consistent performance patterns 
+across elliptic, parabolic, hyperbolic, nonlinear, and fractional systems.
+A key contribution is a reproducible benchmarking framework spec­
+ifying standardized tests, metrics, and disclosure protocols to ensure 
+transparency and comparability. Persistent challenges remain-spectral 
+bias, stiffness, scalability, constraint enforcement, and reproducibility 
+gaps.
+Future progress will rely on adaptive sampling, hybrid operator 
+learning, and physics-guided embeddings to enhance generalization 
+and efficiency. Benchmark-driven reproducibility, uncertainty quantifi­
+cation, and open data sharing are essential for PINNs to mature into 
+scalable, reliable tools for complex differential equations and interdisci­
+plinary innovation.
+Neurocomputing 680 (2026) 133317 
+19 
+
+===== PAGE 20 =====
+S. Khanra, V.K. Kukreja and I. Bala
+CRediT authorship contribution statement
+Subarna Khanra: Writing – review & editing, Writing – original 
+draft, Methodology, Investigation, Formal analysis, Data curation. Vijay 
+Kumar Kukreja: Writing – review & editing, Visualization, Supervision, 
+Investigation, Conceptualization. Indu Bala: Writing – review & editing, 
+Visualization, Supervision, Formal analysis, Conceptualization.
+Acknowledgement
+The authors gratefully acknowledge the use of the lab facility cre­
+ated under DST FIST project sanctioned by the Department of Science 
+and Technology, Government of India. We also acknowledge Adelaide 
+University for covering the article processing charge through the CAUL 
+Read and Publish Agreement.
+Declaration of competing interest
+The authors declare that they have no known competing financial 
+interests or personal relationships that could have appeared to influence 
+the work reported in this paper.
+Data availability
+No data was used for the research described in the article.
+References
+[1] M. Abadi, A. Agarwal, P. Barham, E. Brevdo, Z. Chen, C. Citro, G.S. Corrado, 
+A. Davis, J. Dean, M. Devin, et al., Tensorflow: large-scale machine learning on 
+heterogeneous distributed systems, arXiv preprint arXiv:1603.04467, 2016. 
+[2] A. Aghaee, M.O. Khan, Pinning down the accuracy of physics-informed neural net­
+works under laminar and turbulent-like aortic blood flow conditions, Comput. Biol. 
+Med. 185 (2025) 109528.
+[3] T. Ahmad, M. Sulaiman, D. Bassir, F.S. Alshammari, G. Laouini, Enhanced numer­
+ical solutions for fractional PDES using monte carlo pinns coupled with cuckoo 
+search optimization, Fractal Fract. 9 (2025) 225.
+[4] A. Aldweesh, A. Derhab, A.Z. Emam, Deep learning approaches for anomaly-based 
+intrusion detection systems: a survey, taxonomy, and open issues, Knowl.-Based 
+Syst. 189 (2020) 105124.
+[5] A. Alla, G. Bertaglia, E. Calzola, A PINN approach for the online identification and 
+control of unknown PDES, J. Optim. Theory Appl. 206 (2025) 1–30.
+[6] M.M. Almajid, M.O. Abu-Al-Saud, Prediction of porous media fluid flow using 
+Physics informed neural networks, J. Pet. Sci. Eng. 208 (2022) 109205.
+[7] A. Almqvist, Fundamentals of physics-informed neural networks applied to solve 
+the reynolds boundary value problem, Lubricants 9 (2021) 82.
+[8] M.Z. Alom, T.M. Taha, C. Yakopcic, S. Westberg, P. Sidike, M.S. Nasrin, M. Hasan, 
+B.C. Van Essen, A.A.S. Awwal, V.K. Asari, A state-of-the-art survey on deep learning 
+theory and architectures, electronics 8 (2019) 292.
+[9] N. Alzhanov, E.Y.K. Ng, Y. Zhao, Three-dimensional physics-informed neural 
+network simulation in coronary artery trees, Fluids 9 (2024) 153.
+[10] A. Arzani, K.W. Cassel, R.M. D’Souza, Theory-guided physics-informed neural net­
+works for boundary layer problems with singular perturbation, J. Comput. Phys. 
+473 (2023) 111768.
+[11] Y. Bai, T. Chaolu, S. Bilige, Solving Huxley equation using an improved PINN 
+method, Nonlinear Dyn. 105 (2021) 3439–3450.
+[12] I. Bala, T.-L. Kelly, R. Lim, M.H. Gillam, L. Mitchell, An effective approach for mul­
+ticlass classification of adverse events using machine learning, J. Comput. Cogn. 
+Eng. 3 (2024) 226–239.
+[13] C. Banerjee, K. Nguyen, O. Salvado, T. Tran, C. Fookes, Pinns for medical image 
+analysis: A survey, arXiv preprint arXiv:2408.01026, 2024. 
+[14] H. Bararnia, M. Esmaeilpour, On the application of Physics informed neural net­
+works (PINN) to solve boundary layer thermal-fluid problems, Int. Commun. Heat 
+Mass Transfer 132 (2022) 105890.
+[15] C.P. Batuwatta-Gamage, C. Rathnayaka, H.C.P. Karunasena, H. Jeong, A. Karim, 
+Y.T. Gu, A novel physics-informed neural networks approach (pinn-mt) to solve 
+mass transfer in plant cells during drying, Biosyst. Eng. 230 (2023) 219–241.
+[16] W.G. Baxt, Application of artificial neural networks to clinical medicine, The Lancet 
+346 (1995) 1135–1138.
+[17] A.G. Baydin, B.A. Pearlmutter, A.A. Radul, J.M. Siskind, Automatic differentiation 
+in machine learning: a survey, J. Mach. Learn. Res. 18 (2018) 1–43.
+[18] C. Beck, M. Hutzenthaler, A. Jentzen, B. Kuckuck, An overview on deep learning-
+based approximation methods for partial differential equations, arXiv preprint 
+arXiv:2012.12348, 2020. 
+[19] D.S. Berman, A.L. Buczak, J.S. Chavis, C.L. Corbett, A survey of deep learning 
+methods for cyber security, Information 10 (2019) 122.
+[20] J. Blechschmidt, O.G. Ernst, Three ways to solve partial differential equations with 
+neural networks—a review, GAMM-Mitteilungen 44 (2021) e202100006.
+[21] Y. Bo, D. Tian, X. Liu, Y. Jin, Discrete maximum principle and energy stability 
+of the compact difference scheme for Two-Dimensional Allen-Cahn equation, J. 
+Funct. Spaces 2022 (2022) 8522231.
+[22] S.L. Brunton, B.R. Noack, P. Koumoutsakos, Machine learning for fluid mechanics, 
+Annu. Rev. Fluid Mech. 52 (2020) 477–508.
+[23] S. Cai, Z. Mao, Z. Wang, M. Yin, G.E. Karniadakis, Physics-informed neural net­
+works (pinns) for fluid mechanics: a review, Acta Mech. Sin. 37 (2021) 1727–1738.
+[24] G. Cao, X. Wang, Interval deep neural networks with damage function for credible 
+structural identification, Comput. Methods Appl. Mech. Eng. 445 (2025) 118214.
+[25] Y. Chandrasukmana, H. Margaretha, K.V.I. Saputra, The Hadamard-Pinn for PDE 
+inverse problems: convergence with distant initial guesses, Ex. Counterexamples 
+(2025) 100175.
+[26] G. Chen, J. wan Zhang, Intelligent transportation systems: machine learning 
+approaches for urban mobility in smart cities, Sustain. Cities Soc. 107 (2024) 
+105369.
+[27] H. Chen, O. Engkvist, Y. Wang, M. Olivecrona, T. Blaschke, The rise of deep 
+learning in drug discovery, Drug Discov. Today 23 (2018) 1241–1250.
+[28] L. Chen, X. Dong, Y. Wang, W. Sun, B. Wang, G. Harrison, Physics-informed neural 
+network for microgrid forward/inverse ordinary differential equations, in: 2024 
+IEEE Power & Energy Society General Meeting (PESGM), IEEE, 2024, pp. 1–5.
+[29] R.T.Q. Chen, Y. Rubanova, J. Bettencourt, D.K. Duvenaud, Neural ordinary differ­
+ential equations, Adv. Neural Inf. Process. Syst. 31 (2018).
+[30] Y. Chen, L. Lu, G.E. Karniadakis, L. Dal Negro, Physics-informed neural networks 
+for inverse problems in nano-optics and metamaterials, Opt. Express. 28 (2020) 
+11618–11633.
+[31] C.C. Chinnappan, et al., Integrating data-driven and physics-based approaches for 
+robust wind power prediction: a comprehensive ml-pinn-simulink framework, Sci. 
+Rep. 15 (2025) 1–29.
+[32] P.-H. Chiu, J.C. Wong, C. Ooi, M.H. Dao, Y.-S. Ong, Can-pinn: a fast physics-
+informed neural network based on coupled-automatic–numerical differentiation 
+method, Comput. Methods Appl. Mech. Eng. 395 (2022) 114909.
+[33] W. Cho, M. Jo, H. Lim, K. Lee, D. Lee, S. Hong, N. Park, Parameterized 
+physics-informed neural networks for parameterized pdes, arXiv preprint 
+arXiv:2408.09446, 2024. 
+[34] S. Cuomo, V.S. Di Cola, F. Giampaolo, G. Rozza, M. Raissi, F. Piccialli, Scientific 
+machine learning through physics–informed neural networks: where we are and 
+what’s next, J. Sci. Comput. 92 (2022) 88.
+[35] G. Cybenko, Approximation by superpositions of a sigmoidal function, Math. 
+Control Signals Syst. 2 (1989) 303–314.
+[36] D. Ren, C. Wang, X. Wei, Y. Zhang, S. Han, W. Xu, Harmonizing physical and 
+deep learning modeling: a computationally efficient and interpretable approach 
+for property prediction, Scr. Mater. 255 (2025) 116350.
+[37] M. De Florio, E. Schiassi, F. Calabrò, R. Furfaro, Physics-informed neural networks 
+for 2nd order ODES with sharp gradients, J. Comput. Appl. Math. 436 (2024) 
+115396.
+[38] T. De Ryck, S. Lanthaler, S. Mishra, On the approximation of functions by Tanh 
+Neural networks, Neural Netw. 143 (2021) 732–750.
+[39] T. De Ryck, S. Mishra, Numerical analysis of physics-informed neural networks 
+and related models in physics-informed machine learning, Acta Numer. 33 (2024) 
+633–713.
+[40] J. Ding, B. Zhu, W. Wang, S. Zhang, D. Zhua, Z. Liua, Pinn-emfnet: pinn-based 
+and enhanced multi-scale feature fusion network for breast ultrasound images 
+segmentation, arXiv preprint 
+arXiv:2412.16937, 2024. 
+[41] M.W.M.G. Dissanayake, N. Phan-Thien, Neural-network-based approximations for 
+solving partial differential equations, Commun. Numer. Methods Eng. 10 (1994) 
+195–201.
+[42] V. Dwivedi, B. Srinivasan, Physics informed Extreme Learning Machine (pielm)–a 
+rapid method for the numerical solution of partial differential equations, 
+Neurocomputing 391 (2020) 96–118.
+[43] K. Eshkofti, S.M. Hosseini, The modified physics-informed Neural network (PINN) 
+method for the thermoelastic wave propagation analysis based on the Moore-
+Gibson-Thompson theory in porous materials, Compos. Struct. 348 (2024) 118485.
+[44] L.C. Evans, Partial Differential Equations, vol. 19, American Mathematical Society, 
+2022.
+[45] A. Farea, O. Yli-Harja, F. Emmert-Streib, Understanding physics-informed neu­
+ral networks: techniques, applications, trends, and challenges, AI 5 (2024) 
+1534–1557.
+[46] H. Gao, M.J. Zahr, J.-X. Wang, Physics-informed graph neural galerkin networks: 
+a unified framework for solving pde-governed forward and inverse problems, 
+Comput. Methods Appl. Mech. Eng. 390 (2022) 114502.
+[47] R.J. Gladstone, M.A. Nabian, N. Sukumar, A. Srivastava, H. Meidani, Fo-Pinn: a 
+first-order formulation for physics-informed neural networks, Eng. Anal. Bound. 
+Elem. 174 (2025) 106161.
+[48] A. Griewank, A. Walther, Evaluating Derivatives: Principles and Techniques of 
+Algorithmic Differentiation, SIAM, 2008.
+[49] Z. Guan, R. Zhang, M. Lin, Research on injection molded defects detection algo­
+rithm based on physics-guided regularization constraints, Expert Syst. Appl. 296 
+(2026) 129212.
+[50] J. Guo, H. Zhu, Y. Yang, C. Guo, Advances in physics-informed neural networks for 
+solving complex partial Differential equations and their engineering applications: 
+a systematic review, Eng. Appl. Artif. Intell. 161 (2025) 112044.
+[51] M. Habib, A. Habib, B. Alibrahim, Applications of physics-informed neural net­
+works in geosciences: from basic seismology to comprehensive environmental 
+studies, Open Geosci. 17 (2025) 20250853.
+[52] E. Haghighat, M. Raissi, A. Moure, H. Gomez, R. Juanes, A physics-informed 
+deep learning framework for inversion and surrogate modeling in solid mechanics, 
+Comput. Methods Appl. Mech. Eng. 379 (2021) 113741.
+[53] C. Han, X. Lü, Variable coefficient-informed neural network for PDE inverse 
+problem in fluid dynamics, Phys. D 472 (2025) 134362.
+Neurocomputing 680 (2026) 133317 
+20 
+
+===== PAGE 21 =====
+S. Khanra, V.K. Kukreja and I. Bala
+[54] J. Han, A. Jentzen, et al., Deep learning-based numerical methods for high-
+dimensional parabolic partial differential equations and backward stochastic 
+differential equations, Commun. Math. Stat. 5 (2017) 349–380.
+[55] W.Q. Hao, D.Q. Shi, X.G. Yang, N.N. Li, S. Su, Y.S. Fan, Multi-mode fatigue life 
+prediction using machine learning inspired by damage Physics, Int. J. Mech. Sci. 
+(2025) 110723.
+[56] A. Harandi, H. Danesh, K. Linka, S. Reese, S. Rezaei, SPiFOL: a spectral-based 
+physics-informed finite operator learning for prediction of mechanical behavior 
+of microstructures, J. Mech. Phys. Solids (2025) 106219.
+[57] C.R. Harris, K.J. Millman, S.J. Van Der Walt, R. Gommers, P. Virtanen, D. 
+Cournapeau, E. Wieser, J. Taylor, S. Berg, N.J. Smith, et al., Array programming 
+with numpy, nature 585 (2020) 357–362.
+[58] G. He, Y. Zhao, C. Yan, Mflp-Pinn: a physics-informed neural network for multiaxial 
+fatigue life prediction, Eur. J. Mech.-A/Solids 98 (2023) 104889.
+[59] Q. He, A.M. Tartakovsky, Physics-informed neural network method for forward 
+and backward advection-dispersion equations, Water Resour. Res. 57 (2021) 
+e2020WR029479.
+[60] K. Hornik, Approximation capabilities of multilayer feedforward networks, Neural 
+netw. 4 (1991) 251–257.
+[61] K. Hornik, M. Stinchcombe, H. White, Multilayer feedforward networks are uni­
+versal approximators, Neural netw. 2 (1989) 359–366.
+[62] Z. Hu, Z. Shi, G.E. Karniadakis, K. Kawaguchi, Hutchinson trace estimation for high-
+dimensional and high-order physics-informed neural networks, Comput. Methods 
+Appl. Mech. Eng. 424 (2024) 116883.
+[63] B. Huang, J. Wang, Applications of physics-informed neural networks in power 
+systems-a review, IEEE Trans. Power Syst. 38 (2022) 572–588.
+[64] A.J. Huang, S. Agarwal, Physics informed deep learning for traffic state estimation, 
+in: 2020 IEEE 23rd International Conference on Intelligent Transportation Systems 
+(ITSC), IEEE, 2020, pp. 1–6.
+[65] M. Hutzenthaler, A. Jentzen, T. Kruse, T.A. Nguyen, A proof that rectified deep neu­
+ral networks overcome the curse of dimensionality in the numerical approximation 
+of semilinear heat equations, SN partial differential equations and applications 1 
+(2020) 10.
+[66] A.J.G. Inda, S.Y. Huang, N. İmamoğlu, R. Qin, T. Yang, T. Chen, Z. Yuan, W. Yu, 
+Physics informed neural networks (PINN) for low snr Magnetic resonance electrical 
+properties tomography (mrept), Diagnostics 12 (2022) 2627.
+[67] N. Irsalinda, M.A. Bakar, F.N. Harun, S. Surono, D.A. Pratama, A new hybrid 
+approach for solving partial differential equations: combining physics-informed 
+neural networks with cat-and-mouse based optimization, Results in Appl. Math. 
+25 (2025) 100539.
+[68] A.D. Jagtap, G.E. Karniadakis, Extended physics-informed neural networks 
+(xpinns): a generalized space-time domain decomposition based deep learning 
+framework for nonlinear partial differential equations, Commun. Comput. Phys. 
+28 (2020).
+[69] A.D. Jagtap, E. Kharazmi, G.E. Karniadakis, Conservative physics-informed neural 
+networks on discrete domains for conservation laws: applications to forward and 
+inverse problems, Comput. Methods Appl. Mech. Eng. 365 (2020) 113028.
+[70] A. Jekic, A. Natsaridou, S. Riemer-Sørensen, H. Langseth, O.E. Gundersen, 
+Examining the robustness of physics-informed neural networks to noise for inverse 
+problems, arXiv preprint 
+arXiv:2509.20191, 2025. 
+[71] A. Jentzen, D. Salimova, T. Welti, A proof that deep artificial neural networks 
+overcome the curse of dimensionality in the numerical approximation of kol­
+mogorov partial differential equations with constant diffusion and nonlinear drift 
+coefficients, arXiv preprint arXiv:1809.07321, 2018. 
+[72] W. Ji, W. Qiu, Z. Shi, S. Pan, S. Deng, Stiff-pinn: physics-informed neural network 
+for Stiff chemical kinetics, J. Phys. Chem. A 125 (2021) 8098–8106.
+[73] L. Jia, N. Yen, Y. Pei, A physics-coupled deep learning framework for hydrodynamic 
+diffusion modeling in watershed systems: integrating spatiotemporal networks and 
+environmental constraints, IEEE Access 13 (2025) 34985–35003.
+[74] Z. Jia, N. Rao, Fractional time-varying autoregressive modeling: parallel gam and 
+PINN approaches to dynamic volatility forecasting, Fractal Fract. 9 (2025) 772.
+[75] G.E. Karniadakis, I.G. Kevrekidis, L. Lu, P. Perdikaris, S. Wang, L. Yang, Physics-
+informed machine learning, Nat. Rev. Phys. 3 (2021) 422–440.
+[76] A. Khademi, S. Dufour, Physics-informed neural networks with trainable sinu­
+soidal activation functions for approximating the solutions of the Navier-Stokes 
+equations, Comput. Phys. Commun. (2025) 109672.
+[77] S. Khalid, M.H. Yazdani, M.M. Azad, M.U. Elahi, I. Raouf, H.S. Kim, Advancements 
+in physics-informed neural networks for laminated composites: a comprehensive 
+review, Mathematics 13 (2024) 17.
+[78] E. Kharazmi, Z. Zhang, G.E. Karniadakis, Hp-vpinns: variational physics-informed 
+neural networks with domain decomposition, Comput. Methods Appl. Mech. Eng. 
+374 (2021) 113547.
+[79] E. Kiyani, K. Shukla, J.F. Urbán, J. Darbon, G.E. Karniadakis, Optimizing the op­
+timizer for physics-informed neural networks and Kolmogorov-Arnold networks, 
+Comput. Methods Appl. Mech. Eng. 446 (2025) 118308.
+[80] M.P. Kolluri, S.V. Shelar, S.A. Sarwar, Z. Hasnain, A physics-informed approach 
+for learning vehicle dynamics in high-speed autonomy, in: AIAA SCITECH 2025 
+Forum, 2025, pp. 1726.
+[81] A. Krishnapriyan, A. Gholami, S. Zhe, R. Kirby, M.W. Mahoney, Characterizing pos­
+sible failure modes in physics-informed neural networks, Adv. Neural Inf. Process. 
+Syst. 34 (2021) 26548–26560.
+[82] I.E. Lagaris, A. Likas, D.I. Fotiadis, Artificial neural networks for solving ordinary 
+and partial differential equations, IEEE Trans. Neural Netw. 9 (1998) 987–1000.
+[83] Z. Lai, C. Mylonas, S. Nagarajaiah, E. Chatzi, Structural identification with physics-
+informed neural ordinary differential equations, J. Sound Vib. 508 (2021) 116196.
+[84] Z.K. Lawal, H. Yassin, D.T.C. Lai, A. Che Idris, Physics-informed neural network 
+(PINN) evolution and beyond: a systematic literature review and bibliometric 
+analysis, Big Data Cogn. Comput. 6 (2022) 140.
+[85] Y. LeCun, Y. Bengio, G. Hinton, Deep learning, nature 521 (2015) 436–444.
+[86] J. Leng, K. Zuo, C. Xu, X. Zhou, S. Zheng, J. Kang, Q. Liu, X. Chen, W. Shen, L. 
+Wang, et al., Physics-informed machine learning in intelligent Manufacturing: a 
+review, J. Intell. Manuf. (2025) 1–43.
+[87] K. Leng, M. Shankar, J. Thiyagalingam, Zero coordinate shift: whetted auto­
+matic differentiation for physics-informed operator learning, J. Comput. Phys. 505 
+(2024) 112904.
+[88] W.T. Leung, G. Lin, Z. Zhang, Nh-pinn: neural homogenization-based physics-
+informed neural network for multiscale problems, J. Comput. Phys. 470 (2022) 
+111539.
+[89] R.J. LeVeque, Finite Difference Methods for Ordinary and Partial Differential 
+Equations: Steady-State and Time-Dependent Problems, SIAM, 2007.
+[90] B. Li, S. Zhou, Q. Ma, S. Ma, Physics-informed neural network based digital image 
+correlation method, Exp. Mech. 65 (2025) 221–240.
+[91] Z. Li, N. Kovachki, K. Azizzadenesheli, B. Liu, K. Bhattacharya, A. Stuart, A. 
+Anandkumar, Fourier neural operator for parametric partial differential equations, 
+arXiv preprint arXiv:2010.08895, 2020. 
+[92] Z. Li, N. Kovachki, K. Azizzadenesheli, B. Liu, K. Bhattacharya, A. Stuart, A. 
+Anandkumar, Neural operator: graph kernel network for partial differential 
+equations, arXiv preprint arXiv:2003.03485, 2020. 
+[93] Z. Li, H. Zheng, N. Kovachki, D. Jin, H. Chen, B. Liu, K. Azizzadenesheli, A. 
+Anandkumar, Physics-informed neural operator for learning partial differential 
+equations, ACM/JMS J. Data Sci. 1 (2024) 1–27.
+[94] D.C. Liu, J. Nocedal, On the limited memory BFGS method for large scale 
+optimization, Math. Program. 45 (1989) 503–528.
+[95] T. Liu, H. Meidani, Physics-informed neural networks for system identification of 
+structural systems with a multiphysics damping model, J. Eng. Mech. 149 (2023) 
+04023079.
+[96] W. Liu, M.J. Pyrcz, Physics-informed graph neural network for spatial-temporal 
+production forecasting, Geoenerg. Sci. Eng. 223 (2023) 211486.
+[97] X. Liu, S. Yang, H. Sun, Z. Wang, X. Guan, Y. Gu, Y. Wang, Review of deep learning-
+based aerodynamic shape surrogate models and optimization for airfoils and blade 
+profiles, Phys. Fluids 37 (2025).
+[98] L. Lu, P. Jin, G.E. Karniadakis, Deeponet: learning nonlinear operators for iden­
+tifying differential equations based on the universal approximation theorem of 
+operators, arXiv preprint 
+arXiv:1910.03193, 2019. 
+[99] L. Lu, P. Jin, G. Pang, Z. Zhang, G.E. Karniadakis, Learning nonlinear operators via 
+Deeponet based on the universal approximation theorem of operators, Nat. Mach. 
+Intell. 3 (2021) 218–229.
+[100] L. Lu, X. Meng, Z. Mao, G.E. Karniadakis, Deepxde: a Deep learning library for 
+solving differential equations, SIAM Rev. 63 (2021) 208–228.
+[101] Z. Lu, H. Pu, F. Wang, Z. Hu, L. Wang, The expressive power of neural networks: a 
+view from the width, Adv. Neural Inf. Process. Syst. 30 (2017).
+[102] K. Luo, J. Zhao, Y. Wang, J. Li, J. Wen, J. Liang, H. Soekmadji, S. Liao, Physics-
+informed neural networks for PDE problems: a comprehensive review, Artif. Intell. 
+Rev. 58 (2025) 1–43.
+[103] K.A. Luong, M.A. Wahab, J.H. Lee, Simultaneous imposition of initial and boundary 
+conditions via decoupled physics-informed neural networks for solving initial-
+boundary value problems, Appl. Math. Mech. 46 (2025) 763–780.
+[104] K.A. Luong, T. Le-Duc, J. Lee, Automatically imposing boundary conditions for 
+boundary value problems by unified physics-informed neural network, Eng. with 
+Comput. 40 (2024) 1717–1739.
+[105] S. Maddu, D. Sturm, C.L. Müller, I.F. Sbalzarini, Inverse dirichlet weighting enables 
+reliable training of Physics informed neural networks, Mach. Learn.: Sci. Technol. 
+3 (2022) 015026.
+[106] I. Malashin, V. Tynchenko, A. Gantimurov, V. Nelyub, A. Borodulin, Physics-
+informed neural networks in polymers: a review, Polymers 17 (2025) 1108.
+[107] L. Mandl, S. Goswami, L. Lambers, T. Ricken, Separable physics-informed 
+DeepONet: breaking the curse of dimensionality in physics-informed machine 
+learning, Comput. Methods Appl. Mech. Eng. 434 (2025) 117586.
+[108] P. Maniamfu, U.A.M.E. Ali, K. Kameyama, PINN with antisymmetric RNN for solv­
+ing nonlinear partial differential equations, Int. Conf. Sci. Comput. Mach. Learn. 
+15286 (2024) 350–365.
+[109] Z. Mao, A.D. Jagtap, G.E. Karniadakis, Physics-informed neural networks for high-
+speed flows, Comput. Methods Appl. Mech. Eng. 360 (2020) 112789.
+[110] S. Markidis, The old and the new: can physics-informed deep-learning replace 
+traditional linear solvers? Front. Big Data 4 (2021) 669097.
+[111] Y. Martinez, L. Rojas, A. Peña, M. Valenzuela, J. Garcia, Physics-informed neural 
+networks for the structural analysis and monitoring of railway bridges: a systematic 
+review, Mathematics 13 (2025) 1571.
+[112] L.D. McClenny, U.M. Braga-Neto, Self-adaptive physics-informed neural networks, 
+J. Comput. Phys. 474 (2023) 111722.
+[113] X. Meng, Z. Li, D. Zhang, G.E. Karniadakis, Ppinn: parareal physics-informed neural 
+network for time-dependent PDES, Comput. Methods Appl. Mech. Eng. 370 (2020) 
+113250.
+[114] Z. Meng, Q. Qian, M. Xu, B. Yu, A.R. Yıldız, S. Mirjalili, Pinn-form: a new physics-
+informed neural network for reliability analysis with partial differential equation, 
+Comput. Methods Appl. Mech. Eng. 414 (2023) 116172.
+[115] C. Meng, S. Griesemer, D. Cao, S. Seo, Y. Liu, When Physics meets machine learning: 
+a survey of physics-informed machine learning, Mach. Learn. Comput. Sci. Eng. 1 
+(2025) 20.
+Neurocomputing 680 (2026) 133317 
+21 
+
+===== PAGE 22 =====
+S. Khanra, V.K. Kukreja and I. Bala
+[116] Z. Miao, Y. Chen, Vc-pinn: variable coefficient physics-informed neural network for 
+forward and inverse problems of PDES with variable coefficient, Phys. D: Nonlinear 
+Phenom. 456 (2023) 133945.
+[117] A. Michaloglou, I. Papadimitriou, I. Gialampoukidis, S. Vrochidis, I. Kompatsiaris, 
+Physics-informed neural networks in materials modeling and design: a review, 
+Arch. Comput. Methods Eng. (2025) 1–38.
+[118] S. Mishra, R. Molinaro, Estimates on the generalization error of physics-informed 
+neural networks for approximating a class of inverse problems for PDES, IMA J. 
+Numer. Anal. 42 (2022) 981–1022.
+[119] P. Moser, W. Fenz, S. Thumfart, I. Ganitzer, M. Giretzlehner, Modeling of 3d blood 
+flows with physics-informed neural networks: comparison of network architec­
+tures, Fluids 8 (2023) 46.
+[120] S. Mowlavi, S. Nabi, Optimal control of PDES using physics-informed neural 
+networks, J. Comput. Phys. 473 (2023) 111731.
+[121] C. Moya, G. Lin, Dae-Pinn: a physics-informed neural network model for simulat­
+ing differential algebraic equations with application to power networks, Neural 
+Comput. Appl. 35 (2023) 3789–3804.
+[122] A.N. Muhammad, A.M. Aseere, H. Chiroma, H. Shah, A. Gital y, I.A.T. Hashem, 
+Deep learning application in smart cities: recent development, taxonomy, chal­
+lenges and research prospects, Neural Comput. Appl. 33 (2021) 2973–3009.
+[123] M.A. Nabian, R.J. Gladstone, H. Meidani, Efficient training of physics-informed 
+neural networks via importance sampling, Comput.-Aided Civ. Infrastruct. Eng. 36 
+(2021) 962–977.
+[124] R.G. Nascimento, K. Fricke, F.A.C. Viana, A tutorial on solving ordinary differential 
+equations using Python and hybrid physics-informed neural network, Eng. Appl. 
+Artif. Intell. 96 (2020) 103996.
+[125] K. Nasir, A. Reva, J. Sekhar, Embedding physics into deep learning: a structured 
+review of physics-informed neural networks, Preprints, 2025, https://doi.org/10.
+20944/preprints202504.2577.v1
+[126] S.M. Nuugulu, K.C. Patidar, D.T. Tarla, A Physics informed neural network ap­
+proach for solving time fractional black-scholes partial differential equations, 
+Optim. Eng. (2024) 1–30.
+[127] G. Pang, L. Lu, G.E. Karniadakis, Fpinns: fractional physics-informed neural 
+networks, SIAM J. Sci. Comput. 41 (2019) A2603–A2626.
+[128] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan, T. Killeen, Z. Lin, N. 
+Gimelshein, L. Antiga, et al., Pytorch: an imperative style, high-performance deep 
+learning library, Adv. Neural Inf. Process. Syst. 32 (2019).
+[129] D.G. Patsatzis, L. Russo, C. Siettos, A physics-informed neural network method for 
+the approximation of slow invariant manifolds for the general class of stiff systems 
+of odes, arXiv preprint 
+arXiv:2403.11591, 2024. 
+[130] D.G. Patsatzis, L. Russo, C. Siettos, Slow invariant manifolds of fast-slow systems of 
+ODES with physics-informed neural networks, SIAM J. Appl. Dyn. Syst. 23 (2024) 
+3077–3122.
+[131] T. Pfaff, M. Fortunato, A. Sanchez-Gonzalez, P. Battaglia, Learning mesh-
+based simulation with graph networks, in: International Conference on Learning 
+Representations, 2020.
+[132] S. Plankovskyy, Y. Tsegelnyk, N. Shyshko, I. Litvinchev, T. Romanova, J.M. Velarde 
+Cantú, Review of physics-informed neural networks: challenges in loss function 
+design and geometric integration, Mathematics 13 (2025) 3289.
+[133] K. Prantikos, S. Chatzidakis, L.H. Tsoukalas, A. Heifetz, Physics-informed neural 
+network with transfer learning (tl-pinn) based on domain similarity measure for 
+prediction of nuclear reactor transients, Sci. Rep. 13 (2023) 16840.
+[134] J. Pu, W. Peng, Y. Chen, The data-driven localized wave solutions of the derivative 
+nonlinear schrödinger equation by using improved PINN approach, Wave Motion 
+107 (2021) 102823.
+[135] C. Qiao, X. Long, L. Yang, Y. Zhu, W. Cai, Calculation of a dynamical substitute 
+for the real earth–moon system based on Hamiltonian analysis, Astrophys. J. 991 
+(2025) 46.
+[136] N. Rahaman, A. Baratin, D. Arpit, F. Draxler, M. Lin, F. Hamprecht, Y. Bengio, A. 
+Courville, On the spectral bias of neural networks, in: International Conference on 
+Machine Learning, PMLR, 2019, pp. 5301–5310.
+[137] M. Raissi, Deep hidden Physics models: deep learning of nonlinear partial differ­
+ential equations, J. Mach. Learn. Res. 19 (2018) 1–24.
+[138] M. Raissi, G.E. Karniadakis, Hidden Physics models: machine learning of nonlinear 
+partial differential equations, J. Comput. Phys. 357 (2018) 125–141.
+[139] M. Raissi, P. Perdikaris, G.E. Karniadakis, Physics informed deep learning (part 
+i): data-driven solutions of nonlinear partial differential equations, arXiv preprint 
+arXiv:1711.10561, 2017. 
+[140] M. Raissi, P. Perdikaris, G.E. Karniadakis, Physics-informed neural networks: a 
+deep learning framework for solving forward and inverse problems involving 
+nonlinear partial differential equations, J. Comput. Phys. 378 (2019) 686–707.
+[141] A.A. Ramabathiran, P. Ramachandran, Spinn: sparse, physics-based, and partially 
+interpretable neural networks for PDES, J. Comput. Phys. 445 (2021) 110600.
+[142] P. Ren, C. Rao, Y. Liu, J.-X. Wang, H. Sun, Phycrnet: physics-informed 
+convolutional-recurrent network for solving spatiotemporal PDES, Comput. 
+Methods Appl. Mech. Eng. 389 (2022) 114399.
+[143] Z. Ren, S. Zhou, D. Liu, Q. Liu, Physics-informed neural networks: a review of 
+methodological evolution, theoretical foundations, and interdisciplinary frontiers 
+toward next-generation scientific computing, Appl. Sci. 15 (2025) 8092.
+[144] S. Rezaei, K. Taghikhani, A. Viardin, R.N. Asl, A. Harandi, N.V. Jagtap, D. Bailly, 
+H. Naber, A. Gramlich, T. Brepols, and et.al, Digitalizing metallic materials from 
+image segmentation to multiscale solutions via Physics informed operator learning, 
+npj Comput. Mater. 11 (2025) 262.
+[145] I. Ryu, G.-B. Park, Y. Lee, D.-H. Choi, Physics-informed neural network for engi­
+neers: a review from an implementation aspect, J. Mech. Sci. Technol. 38 (2024) 
+3499–3519.
+[146] A. Sanchez-Gonzalez, J. Godwin, T. Pfaff, R. Ying, J. Leskovec, P. Battaglia, 
+Learning to simulate complex Physics with graph networks, in: International 
+Conference on Machine Learning, PMLR, 2020, pp. 8459–8468.
+[147] M. Sarabian, H. Babaee, K. Laksari, Physics-informed neural networks for brain 
+hemodynamic predictions using medical imaging, IEEE Trans. Med. Imaging 41 
+(2022) 2285–2303.
+[148] S. Savović, M. Ivanović, R. Min, A comparative study of the explicit finite difference 
+method and physics-informed neural networks for solving the burgers’ equation, 
+Axioms 12 (2023) 982.
+[149] E. Schiassi, R. Furfaro, C. Leake, M. De Florio, H. Johnston, D. Mortari, Extreme 
+theory of functional connections: a fast physics-informed neural network method 
+for solving ordinary and partial differential equations, Neurocomputing 457 (2021) 
+334–356.
+[150] S. Sengupta, S. Basak, P. Saikia, S. Paul, V. Tsalavoutis, F. Atiah, V. Ravi, A. Peters, 
+A review of deep learning with special emphasis on architectures, applications and 
+recent trends, Knowl.-Based Syst. 194 (2020) 105596.
+[151] P. Sharma, W.T. Chung, B. Akoush, M. Ihme, A review of physics-informed machine 
+learning in fluid mechanics, Energies 16 (2023) 2343.
+[152] P. Sharma, L. Evans, M. Tindall, P. Nithiarasu, Stiff-pdes and physics-informed 
+neural networks, Arch. Comput. Methods Eng. 30 (2023) 2929–2958.
+[153] Y. Shin, J. Darbon, G.E. Karniadakis, On the convergence of physics informed neu­
+ral networks for linear second-order elliptic and parabolic type pdes, arXiv preprint 
+arXiv:2004.01806, 2020. 
+[154] A. Sholokhov, Y. Liu, H. Mansour, S. Nabi, Physics-informed neural ODE (pin­
+ode): embedding Physics into models using collocation points, Sci. Rep. 13 (2023) 
+10166.
+[155] K. Shukla, A.D. Jagtap, G.E. Karniadakis, Parallel physics-informed neural net­
+works via domain decomposition, J. Comput. Phys. 447 (2021) 110683.
+[156] M. Sikora, P. Krukowski, A. Paszyńska, M. Paszyński, Comparison of Physics 
+informed neural networks and finite element method solvers for advection-
+dominated diffusion problems, J. Comput. Sci. 81 (2024) 102340.
+[157] J. Sirignano, K. Spiliopoulos, Online adjoint methods for optimization of PDES, 
+Appl. Math. Optim. 85 (2022) 18.
+[158] J. Solanki, S. Patil, Advancing structural vibration analysis: implementation of 
+pinns for aerospace applications, J. Sci. Comput. Mach. Learn. 1 (2025) 32–36.
+[159] J. Song, W. Cao, F. Liao, W. Zhang, Vw-Pinns: a volume weighting method for PDE 
+residuals in physics-informed neural networks, Acta Mech. Sin. 41 (2025) 324140.
+[160] Y.-B. Su, X. Lü, S.-K. Li, L.-X. Yang, Z. Gao, Self-adaptive equation embedded neu­
+ral networks for traffic flow state estimation with sparse data, Phys. Fluids 36
+(2024).
+[161] M. Tancik, P. Srinivasan, B. Mildenhall, S. Fridovich-Keil, N. Raghavan, U. Singhal, 
+R. Ramamoorthi, J. Barron, R. Ng, Fourier features let networks learn high fre­
+quency functions in low dimensional domains, Adv. Neural Inf. Process. Syst. 33 
+(2020) 7537–7547.
+[162] H. Tang, A. Melnikov, M. Liu, S. Sfarra, H. Zhang, A. Mandelis, Physics in­
+formed neural networks for solving inverse thermal wave coupled boundary-value 
+problems, Int. J. Heat Mass Transf. 245 (2025) 126985.
+[163] K. Tang, X. Wan, C. Yang, Das-Pinns: a deep adaptive sampling method for solv­
+ing high-dimensional partial differential equations, J. Comput. Phys. 476 (2023) 
+111868.
+[164] Y. Tkachov, O. Murashko, Physics-informed neural networks in aerospace: a struc­
+tured taxonomy with literature review, Challenges and Issues of Modern Science 4 
+(2025) 4–28.
+[165] J.D. Toscano, V. Oommen, A.J. Varghese, Z. Zou, N. Ahmadi Daryakenari, C. 
+Wu, G.E. Karniadakis, From pinns to pikans: recent advances in physics-informed 
+machine learning, Mach. Learn. Comput. Sci. Eng. 1 (2025) 1–43.
+[166] J.F. Urbán, P. Stefanou, J.A. Pons, Unveiling the optimization process of Physics 
+informed neural networks: how accurate and competitive can pinns be? J. Comput. 
+Phys. 523 (2025) 113656.
+[167] M. Usama, R. Ma, J. Hart, M. Wojcik, Physics-informed neural networks (pinns)-
+based traffic state estimation: an application to traffic network, Algorithms 15 
+(2022) 447.
+[168] R.L.M. van Herten, A. Chiribiri, M. Breeuwer, M. Veta, C.M. Scannell, Physics-
+informed neural networks for myocardial perfusion MRI quantification, Med. 
+Image Anal. 78 (2022) 102399.
+[169] F.A.C. Viana, R.G. Nascimento, A. Dourado, Y.A. Yucesan, Estimating model inad­
+equacy in ordinary differential equations with physics-informed neural networks, 
+Comput. Struct. 245 (2021) 106458.
+[170] D. Viet Cuong, B. Lalić, M. Petrić, N. Thanh Binh, M. Roantree, Adapting physics-
+informed neural networks to improve ODE optimization in mosquito population 
+dynamics, PLOS One 19 (2024) e0315762.
+[171] R. Vinuesa, S.L. Brunton, Enhancing computational fluid dynamics with machine 
+learning, Nat. Comput. Sci. 2 (2022) 358–366.
+[172] P.H.M. Voorter, W.H. Backes, O.J. Gurney-Champion, S.-M. Wong, J. Staals, R.J. 
+van Oostenbrugge, M.M. van Der Thiel, J.F.A. Jansen, G.S. Drenthen, Improving 
+microstructural integrity, interstitial fluid, and blood microcirculation images from 
+multi-b-value diffusion MRI using physics-informed neural networks in cerebrovas­
+cular disease, Magn. Reson. Med. 90 (2023) 1657–1671.
+[173] B. Wang, N. Nassir, N. Yousefpour, M. Sarvi, Investigating knowledge transfer in 
+residual physics-informed neural networks using connected vehicles traffic data, 
+IEEE Trans. Intell. Transp. Syst. 26 (2025) 1–14.
+[174] J. Wang, L. Han, C. Dong, G. Yang, A pinn-based wave model for prediction of wave 
+period and wavelength using dispersion relation, Ocean Eng. 341 (2025) 122504.
+[175] L. Wang, G. Liu, G. Wang, K. Zhang, M-Pinn: a mesh-based physics-informed neural 
+network for linear elastic problems in solid mechanics, Int. J. Numer. Methods Eng. 
+125 (2024) e7444.
+Neurocomputing 680 (2026) 133317 
+22 
+
+===== PAGE 23 =====
+S. Khanra, V.K. Kukreja and I. Bala
+[176] N. Wang, H. Chang, D. Zhang, Theory-guided auto-encoder for surrogate con­
+struction and inverse modeling, Comput. Methods Appl. Mech. Eng. 385 (2021) 
+114037.
+[177] Q. Wang, C. Li, S. Zhang, C. Zhou, Y. Zhou, Physics-informed extreme learning 
+machine framework for solving linear elasticity mechanics problems, Int. J. Solids 
+Struct. 309 (2025) 113157.
+[178] S. Wang, S. Sankaran, P. Perdikaris, Respecting causality is all you need for training 
+physics-informed neural networks, arXiv preprint arXiv:2203.07404, 2022. 
+[179] S. Wang, Y. Teng, P. Perdikaris, Understanding and mitigating gradient flow 
+pathologies in physics-informed neural networks, SIAM J. Sci. Comput. 43 (2021) 
+A3055–A3081.
+[180] S. Wang, X. Yu, P. Perdikaris, When and why pinns fail to train: a neural tangent 
+kernel perspective, J. Comput. Phys. 449 (2022) 110768.
+[181] S. Wang, P. Zhao, Q. Ma, T. Song, General-kindred physics-informed neural net­
+work to the solutions of singularly perturbed differential equations, Phys. Fluids 
+36 (2024).
+[182] Y. Wang, L. Zhong, Nas-Pinn: neural architecture search-guided physics-informed 
+neural network for solving PDES, J. Comput. Phys. 496 (2024) 112603.
+[183] Z. Wang, Z. Hu, M. Yang, Y. Dong, W. Huang, H. Ren, Solving partial differential 
+equations based on preconditioning-pretraining physics-informed neural network, 
+Comput. Phys. Commun. 312 (2025) 109601.
+[184] Z. Wang, X. Wang, Quantum-Classical hybrid genetic evolutionary algorithm for 
+topology optimization of continuum structures, Int. J. Numer. Methods Eng. 126 
+(2025) e70073.
+[185] C.L. Wight, J. Zhao, Solving allen-cahn and cahn-hilliard equations using the 
+adaptive physics informed neural networks, arXiv preprint arXiv:2007.04542, 
+2020. 
+[186] J. Willard, X. Jia, S. Xu, M. Steinbach, V. Kumar, Integrating scientific knowledge 
+with machine learning for engineering and environmental systems, ACM Comput. 
+Surv. 55 (2022) 1–37.
+[187] C. Wu, M. Zhu, Q. Tan, Y. Kartha, L. Lu, A comprehensive study of non-adaptive and 
+residual-based adaptive sampling for physics-informed neural networks, Comput. 
+Methods Appl. Mech. Eng. 403 (2023) 115671.
+[188] X. Wu, T. Pan, Z. He, Physics-informed mobility perception networks for 
+origin-destination flow prediction, IEEE Trans. Intell. Transp. Syst. 26 (2025)
+1–16.
+[189] X. Wu, Z. Wu, S.C. Shanmugavel, H.Z. Yu, Y. Zhu, Physics-informed neural network 
+for phase imaging based on transport of intensity equation, Opt. Express 30 (2022) 
+43398–43416.
+[190] Y.-J. Xia, Q. Song, B. Yi, T. Lyu, Z. Sun, Y. Li, Improving out-of-distribution gen­
+eralization for online weld expulsion inspection using physics-informed neural 
+networks, Weld. World. 69 (2025) 1309–1322.
+[191] Z. Xiang, W. Peng, X. Liu, W. Yao, Self-adaptive loss balanced physics-informed 
+neural networks, Neurocomputing 496 (2022) 11–34.
+[192] K. Xu, N. Zhang, Z.-Y. Yin, K. Li, Finite element-integrated neural network for 
+inverse analysis of elastic and elastoplastic boundary value problems, Comput. 
+Methods Appl. Mech. Eng. 436 (2025) 117695.
+[193] Y. Yamazaki, A. Harandi, M. Muramatsu, A. Viardin, M. Apel, T. Brepols, S. Reese, 
+S. Rezaei, A finite element-based physics-informed operator learning framework 
+for spatiotemporal partial differential equations on arbitrary domains, Eng. with 
+Comput. 41 (2025) 1–29.
+[194] Y. Yang, H. Li, Neural ordinary differential equations for robust parameter esti­
+mation in dynamic systems with physical priors, Appl. Soft Comput. 169 (2025) 
+112649.
+[195] Z. Yang, D. Li, W. Nai, L. Liu, J. Sun, X. Lv, Compressible non-newtonian fluid based 
+road traffic flow equation solved by physical-informed rational neural network, 
+IEEE Access 12 (2024) 12992–13009.
+[196] D. Yarotsky, Error bounds for approximations with deep RELU networks, Neural 
+netw. 94 (2017) 103–114.
+[197] J. Yoo, H. Lee, Robust error estimates of pinn in one-dimensional boundary value 
+problems for linear elliptic equations, arXiv preprint arXiv:2407.14051, 2024. 
+[198] M. Yu, Q. Huang, Z. Li, Deep learning for spatiotemporal forecasting in earth system 
+science: a review, Int. J. Digit. Earth 17 (2024) 2391952.
+[199] L. Yuan, Y.-Q. Ni, X.-Y. Deng, S. Hao, A-pinn: auxiliary Physics informed neural net­
+works for forward and inverse problems of nonlinear integro-differential equations, 
+J. Comput. Phys. 462 (2022) 111260.
+[200] Y. Yuan, J. Ding, D. Jin, Y. Li, Learning the complexity of urban mobility with deep 
+generative network, PNAS Nexus 4 (2025) pgaf081.
+[201] D. Zhang, L. Guo, G.E. Karniadakis, Learning in modal space: solving time-
+dependent stochastic PDES using physics-informed neural networks, SIAM J. Sci. 
+Comput. 42 (2020) A639–A665.
+[202] F. Zhang, X. Li, Z. Wang, Y. Wen, X. Zhou, Z. Wu, Z. Wang, H. Chen, Z. Wang, 
+X. Chen, Mipv-nwp-pinn v1. 0: development of a multi-scale photovoltaic power 
+forecasting framework integrating numerical weather prediction with physics-
+informed neural networks, EGUsphere 2025 (2025) 1–23.
+[203] S. Zhang, C. Zhang, X. Han, B. Wang, Mrf-Pinn: a multi-receptive-field convolu­
+tional physics-informed neural network for solving partial differential equations, 
+Comput. Mech. 75 (2025) 1137–1163.
+[204] T. Zhang, D. Zhang, S. Shi, Z. Guo, Spectral-fpinns: spectral method based frac­
+tional physics-informed neural networks for solving fractional partial differential 
+equations, Nonlinear Dyn. 113 (2025) 12565–12588.
+[205] W. Zhang, W. Suo, J. Song, W. Cao, Physics-informed neural networks (pinns) as in­
+telligent computing technique for solving partial differential equations: limitation 
+and future prospects, Sci. China Phys. Mech. Astron. 69 (2026) 214602.
+[206] X. Zhang, I.-C. Wey, M. Xiang, T.H. Teo, Implementation of Physics informed 
+neural networks on edge device, in: 2023 IEEE 16th International Symposium 
+on Embedded Multicore/Many-Core Systems-on-Chip (MCSoC), IEEE, 2023, pp. 
+441–445.
+[207] Y. Zhang, M. Wang, F. Zhang, Z. Chen, A solution method for differential equations 
+based on Taylor PINN, IEEE Access 11 (2023) 145020–145030.
+[208] Z.-Y. Zhang, H. Zhang, L.-S. Zhang, L.-L. Guo, Enforcing continuous symmetries 
+in physics-informed neural network for solving forward and inverse problems of 
+partial differential equations, J. Comput. Phys. 492 (2023) 112415.
+[209] C. Zhao, F. Zhang, W. Lou, X. Wang, J. Yang, A comprehensive review of ad­
+vances in physics-informed neural networks and their applications in complex fluid 
+dynamics, Phys. Fluids 36 (2024).
+[210] Z. Zhao, X. Li, B. Luan, W. Jiang, W. Gao, S. Neelakandan, Secure internet of 
+things (IoT) using a novel Brooks Iyengar quantum byzantine agreement-centered 
+blockchain networking (BIQBA-BCN) model in smart healthcare, Inf. Sci. 629 
+(2023) 440–455.
+[211] K. Zheng, H. Wang, H. Cao, L. Yan, X. Zhang, A high-precision PINN method 
+for solving a generalized Burgers-Fisher equation, Eur. J. Mech.-B Fluids (2025) 
+204306.
+[212] W. Zhong, H. Meidani, Physics-informed discretization-independent deep com­
+positional operator network, Comput. Methods Appl. Mech. Eng. 431 (2024) 
+117274.
+[213] Z. Zhou, Y. Wang, X. Liu, Z. Li, M. Wu, G. Zhou, Hybrid of neural network and 
+physics-based estimator for vehicle longitudinal dynamics modeling using limited 
+driving data, IEEE Trans. Intell. Transp. Syst. 26 (2025) 1–12.
+Author biography
+Mr. Subarna Khanra is a Research Scholar in the Department 
+of Mathematics at SLIET Longowal, India. His research fo­
+cuses on the development and analysis of numerical methods 
+for solving PDEs. In particular, he is interested in leveraging 
+PINNs and other ML based computational frameworks to ob­
+tain efficient solutions of complex differential models arising 
+in applied mathematics, physics, and engineering systems.
+Dr. Vijay Kumar Kukreja is a Professor in the Department 
+of Mathematics at SLIET, Longowal, India. He specializes 
+in advanced numerical methods for differential equations, 
+with broad research interests encompassing applied mathe­
+matics, numerical solutions of PDEs, BVPs, fluid flow through 
+porous media, mathematical modelling, and data-driven com­
+putational techniques. Dr. Kukreja has published numerous 
+research papers in internationally reputed journals and has 
+presented his work at several prestigious conferences. He has 
+also served as a Guest Editor for two books and two special 
+issues published by Springer and MDPI, respectively. His on­
+going work focuses on integrating modern numerical analysis with emerging areas of data 
+science and scientific machine learning.
+Dr. Indu Bala is an Assistant Professor in the School of 
+Computer Science and Information Technology at Adelaide 
+University, Australia. Her research integrates applied math­
+ematics, data science, and artificial intelligence to develop 
+innovative solutions for complex real-world challenges. She 
+works at the intersection of optimisation, stochastic mod­
+elling, and nature-inspired computational algorithms, with 
+particular emphasis on applications in NLP and LLMs for 
+healthcare and sustainability. Dr. Bala actively collaborates 
+with international research groups and industry partners, fos­
+tering multidisciplinary approaches to problem-solving. Her 
+work focuses on designing transparent, interpretable, and responsible AI systems in power 
+systems, water resource management, and healthcare innovation.
+Neurocomputing 680 (2026) 133317 
+23 

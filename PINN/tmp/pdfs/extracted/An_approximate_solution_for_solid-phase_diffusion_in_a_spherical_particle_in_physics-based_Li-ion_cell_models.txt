@@ -1,0 +1,1140 @@
+===== PAGE 1 =====
+Journal of Power Sources 198 (2012) 322– 328
+Contents lists available at SciVerse ScienceDirect
+Journal of Power Sources
+jou  rnal  h omepa  g e: www.elsevier.com/locate/jpowsour
+An approximate solution for solid-phase diffusion in a spherical particle in
+physics-based
+ Li-ion cell models
+Meng Guo, Ralph E. White∗
+Department of Chemical Engineering, University of South Carolina, Columbia, SC 29208, USA
+a r t i c l e i n f o
+Article history:
+Received
+ 17 June 2011
+Received
+ in revised form 22 August 2011
+Accepted
+ 23 August 2011
+Available online 30 August 2011
+Keywords:
+Li
+ ion battery
+Modeling
+Solid
+ phase diffusion
+Eigenfunction
+a b s t r a c t
+An approximate solution is presented for the spherical diffusion equation for the spherical particles in a
+physics-based
+ lithium-ion battery model. This approximate solution is compared to different numerical
+and
+ analytic solutions for various boundary conditions. These comparisons reveal that our approximate
+solution
+ can provide accuracy and time-efﬁciency  in simulation. This approximate solution is much faster
+than
+ the numerical and truncated analytical solutions at high current rate, and shows better long-time
+accuracy
+ than the short-time analytical solution. This approximate solution can also be used as the porous
+electrode
+ model.
+© 2011 Elsevier B.V. All rights reserved.
+1. Introduction
+Physics-based models are widely used to predict the behav-
+ior of lithium ion cells and batteries [1]. In a typical cell model,
+each porous electrode is described by a pseudo two-dimensional
+domain with solid-phase diffusion occurring in spherical particles,
+for example, at each local position in a porous electrode (see Fig. 1 of
+Ref. [1]). This solid state diffusion occurs because lithium ions are
+intercalated or deintercalated through electrochemical reactions
+at the surface of the solid phase particles [2,3]. For this reason, the
+concentration of lithium ions at the particle surface is an impor-
+tant variable which is needed in the simulation to determine the
+reaction rate, for example.
+Several numerical methods have been used to solve the solid-
+phase diffusion equation in the r dimension of spherical particles
+(the pseudo second dimension) and obtain the surface concen-
+tration of lithium ions. For example, the ﬁnite  difference (FD) [4]
+and orthogonal collocation on ﬁnite  elements (OCFE) [5,6] meth-
+ods have been used. These methods require discretization of the
+particle radius into node points or elements with interior points;
+and, consequently, one or more ordinary differential equations
+(ODEs) are obtained at each point or element (this method is often
+called the method of lines). However, the computational error
+caused by the discretization of a continuous domain increases dra-
+matically if there are large concentration gradients at the surface
+∗ Corresponding author. Tel.: +1 11 803 777 3270; fax: +1 11 803 777 0973.
+E-mail
+ address: white@cec.sc.edu (R.E. White).
+of the particles. If too many node points or elements are applied to
+reduce the error in discretization, the simulation is severely slowed
+due to the large number of equations.
+The analytic solution to the spherical diffusion equation includes
+an inﬁnite  series. To evaluate this inﬁnite  series, the series is
+approximated by truncating. The truncated series includes a ﬁnite
+number of terms. Evaluation of these terms requires signiﬁcant
+computation time for cases with large concentration gradients at
+the surfaces of the particles, which can occur during pulsing for
+example.
+An approximate analytic solution is presented in this paper
+to minimize the truncation error associated with implementation
+of the series with a ﬁnite  number of terms included in the ana-
+lytic solution. It is shown that only a few terms are needed in the
+approximate solution together with an additional term compen-
+sating for the truncation error. The resulting approximate solution
+yields accurate results with less computation time than required
+for numerical methods or a large number of terms in the analytic
+solution.
+2.
+ Model development
+The diffusion of lithium ions in a spherical solid phase particle
+follows Fick’s law and is described by the following partial differ-
+ential equation (PDE) in the spherical coordinates:
+∂c
+∂t = D 1
+r2
+∂
+∂r
+(
+r2 ∂c
+∂r
+)
+(1)
+at t = 0 for 0 ≤ r ≤ R c(t = 0) = c0 (2)
+0378-7753/$ –  see front matter ©  2011 Elsevier B.V. All rights reserved.
+doi:10.1016/j.jpowsour.2011.08.096
+
+===== PAGE 2 =====
+M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328 323
+Nomenclature
+List of symbols
+c concentration of lithium ions in the solid particles
+(mol m− 3)
+cmax maximum concentration in particle (mol m− 3)
+C dimensionless concentration of lithium ions
+Cs dimensionless concentration of lithium ions at par-
+ticle surface
+C dimensionless average concentration of lithium
+ions
+D solid phase diffusion coefﬁcient  for lithium ions in
+the particles (m2 s− 1)
+eN truncation error
+j(t) molar ﬂux  of lithium at the particle surface
+(mol m− 2 s− 1)
+n index of eigenvalues and eigenfunctions
+N number of eigenfunctions kept in the series
+Qn eigenfunction
+Q apx
+n approximated eigenfunction
+r radial coordinate (m)
+R particle radius (m)
+¯r dimensionless radial coordinate
+t time (s)
+ı(/FS) dimensionless molar ﬂux  of lithium ions at the par-
+ticle surface in the ¯r direction
+/NAKn eigenvalue
+/FS dimensionless time
+∂c
+∂r
+⏐⏐
+⏐
+⏐
+r=0
+= 0 (3)
+−D ∂c
+∂r
+⏐⏐
+⏐
+⏐
+r=R
+= j(t) (4)
+where c is concentration of lithium in the solid particles, D is the
+solid phase diffusion coefﬁcient  for lithium in the particles, j(t) is
+the time dependent boundary ﬂux,  and R is the radius of particle.
+Assuming that the diffusivity D and the particle radius R are con-
+stants, these model equations can be rewritten in the dimensionless
+form by choosing the following dimensionless variables:
+C
+ = c
+cmax
+(5)
+/FS = Dt
+R2 (6)
+ı(/FS)
+ = j(t)R
+D(t)cmax
+(7)
+¯r = r
+R (8)
+where cmax is the maximum lithium concentration in the particle.
+The dimensional equations (1) through (4) can be converted into
+the following dimensionless equations by using Eqs. (5)– (8)
+∂C
+∂/FS= 1
+¯r2
+∂
+∂¯r
+(
+¯r2 ∂C
+∂¯r
+)
+(9)
+C(/FS = 0) = C0 (10)
+∂C
+∂¯r
+⏐⏐
+⏐
+⏐
+¯r=0
+= 0 (11)
+∂C
+∂¯r
+⏐⏐
+⏐
+⏐
+¯r=1
+= −ı(/FS) (12)
+The
+ analytic solution to these equations is [7]
+C(¯r,
+ /FS) = C0 + 3
+10 ı(/FS) − ı(/FS)
+2 ¯r2
+− 3
+∫ /FS
+0
+ı(/FS′) d/FS′ + 2
+∞∑
+n=1
+sin(/NAKn ¯r)
+¯r/NAK2
+n sin(/NAKn)
+ı(/FS)
+−
+ 2
+∞∑
+n=1
+sin(/NAKn ¯r)
+¯r sin(/NAKn) e−/NAK2
+n/FS
+∫ /FS
+0
+ı(/FS′) e/NAK2
+n/FS′
+d/FS′ (13)
+The
+ last two terms in Eq. (13) can be combined by letting
+Qn(/FS) = − 2 e−/NAK2
+n/FS
+∫ /FS
+0
+ı(/FS′)e/NAK2
+n/FS′
+d/FS′ (14)
+Eq.
+ (13) then becomes
+C (¯r, /FS) = C0 + 3
+10 ı (/FS) − ı(/FS)
+2 ¯r2 − 3
+∫ /FS
+0
+ı(/FS′) d/FS′
++
+∞∑
+n=1
+sin(/NAKn ¯r)
+¯r sin(/NAKn)
+[
+Qn(/FS) + 2ı(/FS)
+/NAK2
+n
+]
+(15)
+Eq.
+ (14) can be written as a differential equation by taking the
+derivative of each side of Eq. (14) with respect to /H9270:
+dQn
+d/FS = −/NAK2
+nQn(/FS) − 2ı(/FS) for n = 1 to ∞  (16)
+with
+Qn(/FS = 0) = 0 for n = 1 to ∞  (17)
+where
+ /NAKn is the nth eigenvalue calculated from the following equa-
+tion
+/NAKn − tan /NAKn = 0 n = 1, 2, · · · (18)
+Note
+ that when ı(/FS) is a constant, Eq. (16) yields
+Qn(/FS) = − 2ı
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] (19)
+at the surface of the particle
+Cs(/FS) = C(¯r = 1, /FS) (20)
+Eq.
+ (15) can be used to write the dimensionless surface con-
+centration, Cs(/FS), in terms of the average concentration and the
+eigenfunction, Qn:
+Cs(/FS) = C(/FS) +
+∞∑
+n=1
+Qn(/FS) (21)
+where C(/FS) = 3
+∫ 1
+0 ¯r2C(¯r, /FS) d¯r is the average concentration and is
+determined by
+dC
+d/FS= − 3ı(/FS) ¯C(/FS = 0) = C0 (22)
+Eq.
+ (21) presents the theoretical form for the complete solution
+for Cs(/FS) if an inﬁnite  number of terms are included in the series.
+However, to calculate a value for the surface concentration, one
+normally retains N terms in the series by using a truncated solution:
+Ctrun
+s (/FS) = C(/FS) +
+N∑
+n=1
+Qn(/FS) + eN (/FS) (23)
+
+===== PAGE 3 =====
+324 M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328
+where the truncation error, eN(/FS), between the truncated solution
+given in Eq. (23) and the complete solution given in Eq. (21) is given
+by
+eN (/FS) =
+∞∑
+n=N+1
+Qn(/FS) (24)
+Now,
+ let’s develop an approximation for this truncation error. To
+do so, let’s ﬁnd  an approximate eigenfunction Q apx
+n . That is, let
+Q apx
+n = − 2ı(/FS)
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] (25)
+(note that this is the eigenfunction for a constant ı given in Eq. (19)).
+Next, take the derivative of both sides of Eq. (25) with respect to /FS
+to obtain the following equation
+dQ apx
+n
+d/FS = −/NAK2
+nQ apx
+n − 2ı(/FS) − 2
+/NAK2
+n
+dı(/FS)
+d/FS [1
+−
+ exp(−/NAK2
+n/FS)] with Q apx
+n
+⏐⏐
+/FS=0 = 0 (26)
+For
+ large values of n, the nth eigenvalue /NAKn will be large enough to
+satisfy the relationship
+2ı(/FS)
+ ≫ 2
+/NAK2
+n
+dı(/FS)
+d/FS [1 − exp(−/NAK2
+n/FS)] (27)
+and Eq. (26) can be simpliﬁed  to
+dQ apx
+n
+d/FS ≈ −/NAK2
+nQ apx
+n − 2ı(/FS) (28)
+Next,
+ let the approximate truncation error be
+eapx
+N (/FS) =
+∞∑
+n=N+1
+Q apx
+n (/FS) (29)
+where N is large enough to insure that Eq. (27) is valid. Since Q apx
+n
+is a function of n, the summation
+∑∞
+n=N+1Q apx
+n can be converted
+approximately to the integration of Q apx
+n with n:
+∞∑
+n=N+1
+Q apx
+n =
+∫ ∞
+N+1
+Q apx
+n dn (30)
+For
+ large n, it is known that
+/NAKn ≈
+(1
+2 + n
+)
+/EM (31)
+Consequently,
+d/NAKn ∼= /EM dn (32)
+Substitution
+ of Eqs. (25) and (32) into Eq. (30) yields
+∞∑
+n=N+1
+Q apx
+n = − 1
+/EM
+∫ ∞
+/NAKN+1
+2ı(/FS)
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] d/NAKn (33)
+The
+ right hand side of Eq. (33) can be integrated analytically to
+obtain:
+− 1
+/EM
+∫ ∞
+/NAKN+1
+2ı(/FS)
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] d/NAKn
+= − 2ı(/FS)
+[
+1 − exp(−/NAK2
+N+1/FS)
+/EM/NAKN+1
++
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+]
+(34)
+Since
+1
+/EM/NAKN+1
+= 1
+/EM
+∫ ∞
+/NAKN+1
+1
+/NAK2
+n
+d/NAKn ≈
+∞∑
+n=N+1
+1
+/NAK2
+n
+(35)
+substitute
+ Eq. (35) into (34) and to obtain
+− 1
+/EM
+∫ ∞
+/NAKN+1
+2ı(/FS)
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] d/NAKn = − 2ı(/FS)
+{( ∞∑
+n=N+1
+1
+/NAK2
+n
+)
+[1
+− exp(−/NAK2
+N+1/FS)] +
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+(36)
+The derivation from Eqs. (34) to (36) effectively removes the
+error generated from converting addition to integration (Eq. (30))
+because Eq. (36) satisﬁes  the long-time accuracy. That is, as /FS→  ∞ ,
+exp(−/NAK2
+n/FS) →  0, and according to Eq. (25),
+Q apx
+n = − 2ı(/FS)
+/NAK2
+n
+as /FS →  ∞ (37)
+therefore
+∞∑
+n=N+1
+Q apx
+n = − 2ı(/FS)
+∞∑
+n=N+1
+1
+/NAK2
+n
+as /FS →  ∞ (38)
+Also as /FS→  ∞ ,
+√
+(/FS//EM) erfc(/NAKN+1
+√ /FS) →  0, and the right-hand-side
+of Eq. (36) becomes
+− 2ı(/FS)
+{( ∞∑
+n=N+1
+1
+/NAK2
+n
+)
+[1 − exp(−/NAK2
+N+1/FS)] +
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+= − 2ı(/FS)
+∞∑
+n=N+1
+1
+/NAK2
+n
+(39)
+Comparing
+ Eq. (38) and (39), we obtain that the following approx-
+imation
+∞∑
+n=N+1
+Q apx
+n ≈ − 2ı(/FS)
+{( ∞∑
+n=N+1
+1
+/NAK2
+n
+)
+[1 − exp(−/NAK2
+N+1/FS)]
++
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+as /FS →  ∞  (40)
+which has good accuracy for /FS→  ∞ .
+Since
+∞∑
+n=1
+1
+/NAK2
+n
+= 1
+10 (41)
+we
+ can write
+∞∑
+n=N+1
+1
+/NAK2
+n
+=
+∞∑
+n=1
+1
+/NAK2
+n
+−
+N∑
+n=1
+1
+/NAK2
+n
+= 1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+(42)
+Substitution
+ of Eq. (42) into (40) yields
+∞∑
+n=N+1
+Q apx
+n ≈ − 2ı(/FS)
+{(
+1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+)
+[1
+− exp(−/NAK2
+N+1/FS)] +
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+(43)
+Thus, the approximate truncation error becomes
+eapx
+N (/FS) = − 2ı(/FS)
+{(
+1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+)
+[1 − exp(−/NAK2
+N+1/FS)]
++
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+(44)
+
+===== PAGE 4 =====
+M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328 325
+Using Eq. (44) to approximate the truncation error in Eq. (23), we
+obtain our approximate solution for the surface concentration:
+Capx
+s (/FS) = C(/FS) +
+N∑
+n=1
+Qn(/FS) − 2ı(/FS)
+{(
+1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+)
+[1
+− exp(−/NAK2
+N+1/FS)] +
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+(45)
+when
+ ı(/FS) is a constant, Eq. (45) becomes
+Capx
+s (/FS) = C0 − 3ı/FS − 2ı
+{(
+1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+)
+[1 − exp(−/NAK2
+N+1/FS)]
++
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
+−
+N∑
+n=1
+2ı
+/NAK2
+n
+[1 − exp(−/NAK2
+n/FS)] (46)
+when ı(/FS) = − sin(/FS) Eq. (45) becomes
+Capx
+s (/FS) = C0 − 3[cos(/FS) − 1] + 2 sin(/FS)
+{(
+1
+10 −
+N∑
+n=1
+1
+/NAK2
+n
+)
+[1
+− exp(−/NAK2
+N+1/FS)] +
+√ /FS
+/EMerfc(/NAKN+1
+√
+/FS)
+}
++
+N∑
+n=1
+[
+2e−/NAK2
+n/FS− 2 cos(/FS) + 2/NAK2
+n sin(/FS)
+/NAK4
+n + 1
+]
+(47)
+Eq.
+ (45) is our approximate solution for the dimensionless surface
+concentration as a function of time. It will be shown below that our
+approximate solution provides an accurate value for the surface
+concentration with only a few terms (N = 5, e.g.) in the series in Eq.
+(45) in comparison to the truncated solution (Eq. (23)) with a large
+number of terms. It is also shown that our approximate solution
+with only a few terms agrees well with numerical solutions for
+both constant boundary ﬂux  and time-dependent boundary ﬂux
+expressions.
+3. Results and discussion
+Our approximate solution for the surface concentration, Capx
+s (/FS),
+can be obtained in analytic form when ı is a constant or a simple
+function of dimensionless time or by numerically solving N + 1 ODEs
+(one for C and N for Q1 through QN). The simulations presented
+below were based on the discharge of the positive electrode in a
+lithium ion pouch cell (the design parameters for this type of cell are
+available in Ref. [8] and listed in Table 1). Where the dimensionless
+ﬂux  equivalent to 1 C rate is calculates as
+ı1C = I1 CRp
+DFSpcmax
+= 0.200452 (48)
+The initial condition is C0 = 0.5 and the simulation stops when Cs
+reaches 0.95.
+3.1.
+ Comparisons with truncated solutions
+Comparisons between our approximate solution and the trun-
+cated solutions are presented in Fig. 1. In this case, the boundary
+ﬂux  ı = − 20 is equivalent to 100 C rate. As shown in Fig. 1, with only
+5 terms, our approximate solution provides the same accuracy as
+the truncated solution with 5000 terms. Note that the 300 term
+truncated solution is not accurate.
+δ (τ )=−20
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+0 0.00040.00030.00020.0001
+τ
+C s
+Approximate  Solution  (N=5)
+Truncated  Solution  1 (N=5000)
+Truncated  Solution  2 (N=300)
+Fig. 1. The comparison between the reformulated eigenfunction solution and trun-
+cated
+ solutions.
+3.2. Comparisons with numerical solutions
+To compare our approximate solution to numerical solutions,
+two commonly used numerical approaches were used: the ﬁnite
+difference (FD) method and the orthogonal collocation on ﬁnite
+element (OCFE) method. As shown in Fig. 2(a), the ﬁve-term
+approximate solution agrees well with FD solution 1 with 2000
+node points. If the number of node points is reduced to 100, the FD
+solution 2 shows poor accuracy. The FD solution 1 deviates slightly
+from the reformulated eigenfunction solution around the initial
+δ(τ)=−20
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95a
+b
+0 0.0002 0.0001 0.0003 0.0004
+τ
+C s
+Approximate Solut ion  (N=5)
+FD Solution  1 (2000  Node  Points)
+FD Solution 2 (100 Node  Point s)
+δ (τ )=−20
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+0.00010 0.0004 0.00030.0002
+τ
+C s
+Approximate  Solution  (N=5)
+OCFE Solution 1 (50 Elements, 2 Interior Points)
+OCFE Solution 2 (10 Elements, 2 Interior Points)
+OCFE Solution  3 (100  Elements,  1 Interior  Point)
+OCFE Solution 4 (20 Elements, 1 Interior Point)
+Fig. 2. The comparison between the reformulated eigenfunction solution and (a) FD
+solutions,
+ (b) OCFE solutions.
+
+===== PAGE 5 =====
+326 M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328
+Table 1
+The
+ design parameters for positive electrode of MSA pouch cell.
+Symbol Description Value Unit
+I1C 1 C rate current 1.656 A
+Da Diffusion coefﬁcient  in the particle 1.213  × 10− 14 m2 s− 1
+Sp Total electroactive surface area of positive electrode 1.167 m2
+cmax Maximum concentration in particle 51,410 mol m− 3
+F Faraday’s constant 96,487 C mol− 1
+Rp radius of particle 8.5 × 10− 6 m
+a Evaluated at 30 ◦C using Arrhenius’s correlation with activation energy of 29 kJ mol− 1 .
+δ (τ =−0.2
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+00 . 4 0.30.20.1 0.6 0.5 0.7
+τ
+Cs
+Approximate  Solution  (N=5)
+OCFE Solution  (50  Elements, 2 I nterior Points)
+Short  Time Analytic  Solution
+δ (τ )=−20
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95a
+b
+0 0.0003 0.00020.0001 0.0004
+τ
+Cs
+Approximate Solution  (N=5)
+OCFE Solution (50 Elements, 2 I nterior Points)
+Short Time Analytic  Solution
+)
+Fig. 3. The surface concentration with periodic boundary ﬂux  (a) low frequency, (b)
+high
+ frequency.
+time /FS = 0, even though these two solutions agree perfectly with
+each other over the most of the time range. In FD solution 1, the
+calculated initial value is Cs = 0.5067 at /FS = 0, which is not consis-
+tent with the set value 0.5. The reason is that, in the FD method, the
+dependent variables at the two boundary points are determined
+by algebraic equations, and the error is caused in the initialization
+of DAE system. For our approximate solution, all dependent vari-
+ables are determined by ODEs and no initialization is needed, so
+the solution can start exactly at the set value.
+Fig. 2(b) presents a comparison between our approximate
+solution and the OCFE solutions with different settings. As
+Table 2
+The
+ simulation time for different approaches.
+Approach Solution time (s)
+Approximate solution (N = 5) (Eq. (45)) 0.015
+FD
+ solution 1 (2000 points) 4.98
+OCFE
+ solution 1 (50 elements and interior points) 0.391
+OCFE
+ solution 3 (100 elements and interior point) 0.406
+shown in the ﬁgure,  the ﬁve-term  approximate solution agrees
+with the OCFE solutions 1 and 3 in which ﬁner  element
+mesh size is applied and more equations are included to
+ensure sufﬁcient  accuracy. The OCFE solutions 2 and 4 with
+larger element mesh size and less equations have signiﬁcant
+error. In OCFE method, all equations are ODEs and no ini-
+tialization is involved, so consistent initial conditions can be
+obtained.
+The
+ solution times for different approaches are listed in Table 2.
+The reformulated eigenfunction solution is much faster than the
+other numerical solutions with the same level of accuracy. Being
+time-efﬁcient  is a great advantage for the reformulated solution
+over the numerical solutions. It’s also found in Table 2, the OCFE
+method is faster than the FD method, and furthermore, there
+is no initial error for OCFE method; therefore in the following
+case studies, the OCFE solution with 50 elements and 2 inte-
+rior points is used to validate the accuracy of our approximate
+solution.
+δ(τ)=−[1+sin+ (100τ)]
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1a
+b
+0.080.070.060.050.040.030.020.010
+τ
+C s
+App roximate Solu tion  (N=5)
+OCFE Solution  (50  Elements,  2 Inte rior  Poi nts)
+δ (τ )=−[1+sin+ (1000τ )]
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+0.050.040.030.020.0100 . 1 0.090.080.070.06
+τ
+C s
+Approximate  Solution  (N =9)
+Approxiamte  Solution  (N =5)
+OCFE  Solu tion  (50  Elements,  2 Interio r Points )
+Fig. 4. The comparison between the reformulated eigenfunction solution and short-
+time
+ analytic solution (a) large boundary ﬂux,  (b) small boundary ﬂux.
+
+===== PAGE 6 =====
+M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328 327
+Fig. 5. The simulated (a) 2 C and (b) 20 C discharge proﬁles  using pseudo-2D model.
+3.3. Comparisons with the short-time analytic solutions
+Using the method described by Atlung, et al. [9] if the bound-
+ary ﬂux  ı is constant, a short-time analytic solution for Cs can be
+obtained (see Appendix A) as follows:
+Cs(/FS) = C0 − ı[1 − e/FSerfc(−
+√
+/FS)] (49)
+Fig.
+ 3(a) shows a comparison between our approximate solu-
+tion and the short-time solution with a large boundary ﬂux  ı = − 20.
+According to this ﬁgure,  the predictions from our approximate solu-
+tion, the short-time analytic solution, and the OCFE solution are
+consistent. Fig. 3(b) presents the comparison with small bound-
+ary ﬂux  ı = − 0.2, which corresponds to a 1 C discharge rate. In this
+case, since it takes longer time for Cs to charge from 0.5 to 0.95, the
+short-time analytic solution loses its accuracy and deviates from
+the other two curves at the ﬁnal  stage, but our approximate solu-
+tion still agrees well with the OCFE solution (which can be safely
+considered as accurate) over the entire time range.
+The above comparisons show that the use short-time analytic
+solution is only valid over a small time range. Another limitation for
+the short-time analytic solution is that it only works for a constant
+boundary ﬂux.  Therefore, our approximate solution is more useful.
+3.4.
+ With time-dependent boundary ﬂux
+In this paper, two time-dependent boundary ﬂux  con-
+ditions are considered: ı(/FS) = − [1 + sin(100/FS)] and ı(/FS) =
+− [1 + sin(1000/FS)]. The results are presented in Fig. 4(a) and (b).
+In Fig. 4(a), at a lower frequency, the ﬁve-term  eigenfunction
+solution shows good accuracy as validated by the OCFE solution. In
+Fig. 3(b), however, the ﬁve-term  eigenfunction solution becomes
+less accurate when the frequency is increased to 1000, and nine
+eigenfunction terms are needed for this case (N = 9). The reason
+for the additional terms can be explained by considering Eq. (27).
+Since the time-derivative of the boundary ﬂux  (dı/d/FS) increases
+with frequency, a larger /NAKn is required to keep the right hand side
+of Eq. (27) small enough; and, therefore, more eigenfunctions are
+needed in the series.
+3.5.
+ Application in porous electrode model
+Our approximate solution can also be used to simply the porous
+electrode model (the Pseudo-2D model) [1,2]. The 2 C and 20 C
+discharge proﬁles  simulated by pseudo-2D model with different
+solution approaches for the solid-phase diffusion equations are pre-
+sented in Fig. 5(a) and (b), and in each plot, the OCFE solution with
+50 elements and 1 interior point is used as the complete solution.
+As shown in Fig. 5(a), at the 2 C rate, both the 1-term approximate
+solution and the 5-element OCFE solution agree with the complete
+solution but the 50-term truncate solution loses accuracy at the
+end of discharge. As shown in Fig. 5(b), when the discharge rate
+increases to 20 C, the 1-term approximate solution still shows good
+accuracy but the 5-element OCFE solution and the 50-term truncate
+solution deviate signiﬁcantly  from the complete solution.
+4.
+ Conclusion
+An approximate solution is presented for the surface concen-
+tration in a spherical particle with a constant or a time-dependent
+ﬂux  boundary condition at the surface. Our approximate solution
+for the surface concentration (Eq. (45)) applies for various bound-
+ary conditions: large constant ﬂux  for short time, small constant
+ﬂux  for long time, low frequency periodic boundary ﬂux,  and high
+frequency periodic boundary ﬂux.  This approximate solution has
+proven to be advantageous over the commonly used solutions:
+1)
+ It contains much fewer terms than the truncate solution as the
+truncation error is effectively approximated.
+2) It shows the same level of accuracy with numerical solutions
+including large numbers of node points or mesh elements, but
+is much faster.
+3) It shows much better long-time accuracy than the short-time
+analytical solution.
+4) This approximate solution also works for the porous-electrode
+model in which the particle surface ﬂux  is dynamic.
+Therefore, this approximate solution method greatly improves
+the simulation efﬁciency  and accuracy of physics-based Li-ion cell
+models.
+Appendix
+ A. The short-time solution for particle diffusion
+Dimensionless governing equation for solid-phase diffusion:
+∂C
+∂/FS= 1
+r2
+∂
+∂r
+(
+r2 ∂C
+∂r
+)
+(A-1)
+Initial
+ condition:
+C(/FS
+ = 0) = C0 (A-2)
+
+===== PAGE 7 =====
+328 M. Guo, R.E. White / Journal of Power Sources 198 (2012) 322– 328
+Boundary conditions:
+∂C
+∂r
+⏐⏐
+⏐
+⏐
+r=0
+= 0 (A-3)
+− ∂C
+∂r
+⏐⏐
+⏐
+⏐
+r=1
+= ı (A-4)
+Taking Laplace-transformation C(/FS, r) →  u(s, r) for governing
+equation
+su
+ − C0 = 1
+r2
+∂
+∂r
+(
+r2 ∂u
+∂r
+)
+(A-5)
+Solving
+ Eq. (A-5) to obtain
+u
+ = C2
+sinh(√ sr)
+r + C1
+cosh(√ sr)
+r + C0
+s (A-6)
+where C1 and C2 are integral constants to be determined by bound-
+ary conditions.
+As u cannot be inﬁnitely  large at r = 0, according to Eq. (A-6)
+C1 = 0 (A-7)
+and
+u
+ = C2
+sinh(√ sr)
+r + C0
+s (A-8)
+Applying boundary condition at x = 1
+∂C
+∂r
+⏐⏐
+⏐
+⏐
+r=1
+= −C2 sinh(
+√
+s) + C2
+√
+s cosh(
+√
+s)
+=
+ − ı
+s ⇒
+ C2 = ı
+s
+[
+sinh(√ s) − √ s cosh(√ s)
+] (A-9)
+and
+u
+ = sinh(√ sr)ı
+rs
+[
+sinh(√ s) − √ s cosh(√ s)
+] + C0
+s (A-10)
+According to Eq. (A-10), the surface concentration at r = 1 can
+be rewritten as
+us = ı
+s√ s coth(√ s) − s + C0
+s (A-11)
+As s→  ∞ , coth(√ s) →  1, and
+us = ı
+s√ s − s + C0
+s (A-12)
+Take inverse Laplace transformation us(s) →  Cs(/FS) for Eq. (A-12)
+and obtain
+Cs = C0 − ı[1 − e/FSerfc(−
+√
+/FS)] (A-13)
+References
+[1] S. Santhanagopalan, Q. Guo, P. Ramadass, R.E. White, J. Electrochem. Soc. 156 (2)
+(2006) 620.
+[2] T.F.  Fuller, M. Doyle, J. Newman, J. Electrochem. Soc. 141 (1) (1994) 1–10.
+[3] M. Doyle, J. Newman, J. Power Sources 54 (1995) 46–51.
+[4] H. Levy, F. Lessman, Finite Difference Equations, Dover publications, Dover, 1992.
+[5] G.F. Carey, B.A. Finlayson, Chem. Eng. Sci. 30 (1975) 587–596.
+[6] S.  Arora, S.S. Dhaliwal, V.K. Kukreja, Appl. Math. Comput. 171 (2005) 358–370.
+[7] S. Liu, Solid State Ionics 177 (53) (2006).
+[8] M. Guo, G. Sikha, R.E. White, J. Electrochem. Soc. 158 (2) (2011) A122–A132.
+[9] S. Atlung, K. West, T. Jacobsen, J. Electrochem. Soc. 126 (8) (1979) 1311–1321.

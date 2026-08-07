@@ -1,0 +1,982 @@
+===== PAGE 1 =====
+Journal of Computational Physics 505 (2024) 112918
+Available online 9 March 2024
+0021-9991/© 2024 Elsevier Inc. All rights reserved.
+Contentslistsavailableat ScienceDirect
+Journal of Computational Physics
+journal homepage: www.elsevier.com/locate/jcp
+Correcting model misspeciﬁcation in physics-informed neural 
+networks (PINNs)
+ZongrenZou a, XuhuiMeng b,∗, GeorgeEmKarniadakis a
+a Division of Applied Mathematics, Brown University, Providence, RI 02906, USA
+b Institute of Interdisciplinary Research for Mathematics and Applied Science, School of Mathematics and Statistics, Huazhong University of Science 
+and Technology, Wuhan 430074, China
+A R T I C L E I N F O A B S T R A C T
+Keywords:
+Model uncertainty
+Physics-informed neural networks
+Model misspeciﬁcation
+Uncertainty quantiﬁcation
+Non-Newtonian ﬂows
+Symbolic regression
+Data-driven discovery of governing equations in computational science has emerged as a new 
+paradigm for obtaining accurate physical models and as a possible alternative to theoretical 
+derivations. The recently developed physics-informed neural networks (PINNs) have also been 
+employed to learn governing equations given data across diverse scientiﬁc disciplines, e.g., 
+in biology and ﬂuid dynamics. Despite the eﬀectiveness of PINNs for discovering governing 
+equations, the physical models encoded in PINNs may be misspeciﬁed in complex systems as 
+some of the physical processes may not be fully understood, leading to the poor accuracy of PINN 
+predictions. In this work, we present a general approach to correct the misspeciﬁed physical 
+models in PINNs for discovering governing equations, given some sparse and/or noisy data. 
+Speciﬁcally, we ﬁrst encode the assumed physical models, which may be misspeciﬁed in PINNs, 
+and then employ other deep neural networks (DNNs) to model the discrepancy between the 
+imperfect models and the observational data. Due to the expressivity of DNNs, the proposed 
+method is capable of reducing the computational errors caused by the model misspeciﬁcation 
+and thus enables the applications of PINNs in complex systems where the physical processes 
+are not exactly known. Furthermore, we utilize the Bayesian physics-informed neural networks 
+(B-PINNs) and/or ensemble PINNs to quantify uncertainties arising from noisy and/or gappy 
+data in the discovered governing equations. A series of numerical examples including reaction-
+diﬀusion systems and non-Newtonian channel and cavity ﬂows demonstrate that the added DNNs 
+are capable of correcting the model misspeciﬁcation in PINNs and thus reduce the discrepancy 
+between the physical models encoded in PINNs and the observational data. In addition, the B-
+PINNs and ensemble PINNs can provide reasonable uncertainty bounds in the discovered physical 
+models, which makes the predictions more reliable. We also demonstrate that we can seamlessly 
+combine the present approach with the symbolic regression to obtain the explicit governing 
+equations upon the training of PINNs. We envision that the proposed approach will extend 
+the applications of PINNs for discovering governing equations in problems where the physico-
+chemical or biological processes are not well understood.
+* Corresponding author.
+E-mail address:xuhui_meng@hust.edu.cn(X.Meng).
+https://doi.org/10.1016/j.jcp.2024.112918
+Received 16 October 2023; Received in revised form 29 January 2024; Accepted 5 March 2024
+
+===== PAGE 2 =====
+Journal of Computational Physics 505 (2024) 112918
+2
+Z.Zou,X.MengandG.E.Karniadakis
+1. Introduction
+Accurate governing equations or physical models are essential for understanding and quantifying physical processes across diverse 
+scientiﬁc disciplines, such as the Navier-Stokes equations in ﬂuid dynamics and the transport equations in geosciences. Generally, 
+the governing equations are derived based on established theories such as the conservation of mass and momentum, thermodynamic 
+laws, and so on. However, there are also complex systems in which the governing equations are diﬃcult to obtain theoretically due 
+to the lack of understanding for certain physical processes, e.g., the constitutive relation in highly nonequilibrium ﬂows [1], the 
+forcing caused by solar and volcanic variability in climate problems [2], non-equilibrium reactions, etc. How to obtain analytical 
+expressions that represent physical phenomena in nature and engineering remains an open question.
+With the rapid growth of available data and computing power, data-driven discovery of governing equations based on ma-
+chine learning algorithms has emerged as a new paradigm for obtaining accurate physical models as the alternative to theoretical 
+derivations [3–11]. To name a few examples, Schmidt et al. presented a symbolic regression approach to discover equations from 
+experimental data [3]; Brunton et al. proposed the sparse identiﬁcation of nonlinear dynamical systems (SINDy) to learn both or-
+dinary and partial diﬀerential equations from data [4,5]. In addition, Chen et al. employed deep neural networks (DNNs), more 
+speciﬁcally the physics-informed neural networks (PINNs), which encode the physical laws into DNNs via automatic diﬀerentiation 
+[12], to discover governing equations from scarce data [6]. In most of the aforementioned approaches, a library of candidate terms 
+that describe all the possible physical processes is required as prior knowledge [3–6]. However, mathematical expressions or models 
+for certain physical processes are quite challenging to obtain in some complex real-world applications, e.g., chemical reactions in 
+combustion, the constitutive relation in highly partially ionized plasmas, etc. It is probable that we miss some details of the physi-
+cal process, hence misspecifying the physical models in such scenarios [13]. An incomplete or non-comprehensive library leads to 
+the discrepancy between the observational data and the assumed governing equations. In other words, the discovered governing 
+equations may not be accurate enough to describe the physical processes represented by the observational data.
+Several recent approaches have been developed to reduce the discrepancy between the observational data and the assumed 
+physical models. For instance, Ebers et al. [14]proposed  to learn the missing physicsor the discrepancy between the imperfect models 
+and the measurements using a plurality of methods, e.g. Gaussian process regression (GPR), DNNs, etc.; Chen et al. also employed 
+DNNs to recover the missing physicsin prior models [15]; in [16,17], combinations of PINNs and symbolic regression were employed 
+to identify the missing physics in biological problems, e.g. Alzheimer’s disease; Saurabh et al. [18]a n d Zhu et al. [19]d i s c o v e r e d 
+source terms of dynamic systems in a “gray-box” fashion with NN-based numerical integrators. However, most of the existing work 
+focuses on resolving the missing physics. Investigations on scenarios that we misspecify the physical modelsare rare to the best of our 
+knowledge. Further, the observational data from sensors in real-world applications are generally noisy, and may also be incomplete 
+due to the limitation of data collection techniques. Such noisy and incomplete or gappy data lead to uncertainties in the predictions of 
+machine learning algorithms or more speciﬁcally the scientiﬁc machine learning algorithms [20,21]. In addition, as widely discussed 
+in the climate change modeling [13,22,23], the incomplete understanding of physical processes will also result in uncertainties in 
+simulations. We point out that quantifying uncertainties arsing from noisy/gappy data as well as the incomplete understanding of the 
+physical processes is an important issue but has been largely ignored in the existing literature on data-driven discovery of governing 
+equations. In the current study, we refer to the uncertainties in the discovered physical models as model uncertainty.
+In the present work, we aim to address the issue of misspecifying physical models as well as quantifying model uncertainty in the 
+data-driven discovery of governing equations. Speciﬁcally, PINNs are employed as the backbone to discover the governing equations 
+or physical models from data due to their eﬀectiveness as well as easy implementations. In particular, we ﬁrst encode the assumed 
+physical models that may be misspeciﬁed in PINNs, and add another DNN as the correction to the misspeciﬁed model to alleviate the 
+discrepancy between the imperfect models and the observational data. We note that the library of candidate terms used in [3–6]is  not 
+required here since the added DNN can serve as a universal approximator to model the discrepancy. The Bayesian physics-informed 
+neural networks (B-PINNs) [24]and/or  ensemble PINNs [20,21]are  used to quantify the uncertainties in the discovered governing 
+equations or physical models arising from the noisy and/or gappy data. Further, the symbolic regression is utilized to obtain the 
+analytical expression for the unknown physics based on the trained DNNs that are used to correct the model misspeciﬁcations in 
+PINNs.
+The rest of this paper is organized as follows. In Sec.2, we introduce the model misspeciﬁcation in PINNs as well as our approach 
+to correct it, and also the methods for quantifying uncertainties in PINN predictions. In Sec.3, we conduct four numerical experiments 
+to demonstrate the eﬀectiveness of the proposed approach in addressing the model misspeciﬁcation issue in PINNs. We summarize 
+the present work in Sec.4.
+2. Model misspeciﬁcation in PINNs for learning governing equations
+2.1. Learning governing equations from data using PINNs
+Consider the following nonlinear ODE/PDE describing a physical system:
+𝜆[𝑢](𝑥)= 𝑓(𝑥),𝑥∈Ω, (1a)
+𝜆[𝑢](𝑥)= 𝑏(𝑥),𝑥∈𝜕Ω, (1b)
+
+===== PAGE 3 =====
+Journal of Computational Physics 505 (2024) 112918
+3
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.1. A schematic view of PINNs for learning governing equations from data. On the left, a general framework of PINNs is displayed where 𝜎denotes the activation 
+function, 𝜃denotes the DNN parameters, 𝑢𝜃denotes the output of the DNN that is used to approximate 𝑢, and 𝑓𝜃∕𝑏𝜃are computed via automatic diﬀerentiation 
+[12]. An example on learning governing equations with PINNs is illustrated on the right panel. Here a 1D Burgers equation is learned (𝜆1 =0, 𝜆2 =1, 𝜆3 =−𝜈where 
+𝜈denotes the viscosity) given data on 𝑢.
+where Ωis the domain, 𝜆is the model parameter, 𝑢is the sought solution, 𝑓is the source term, 𝑏is the boundary term, 𝜆and 
+𝜆are operators parameterized by 𝜆, deﬁning the equation and the boundary condition. The PINN method is capable of solving 
+ODEs/PDEs given initial/boundary conditions as well as learning governing equations and identifying model parameters from data 
+[21,24–44]. A schematic view of the PINN method is presented in Fig.1, in which a DNN with 𝜎as the activation function and 𝜃as 
+the parameter is built to approximate 𝑢with 𝑢𝜃and 𝑓, 𝑏with 𝑓𝜃, 𝑏𝜃, respectively, via automatic diﬀerentiation [12].
+In the present study, we focus on using PINNs to learn governing equations from data. The dataset for learning governing 
+equations with PINNs is denoted by , which can be expressed as  = 𝑢∪𝑓∪𝑏, where 𝑢={𝑥𝑢
+𝑖, 𝑢𝑖}𝑁𝑢
+𝑖=1 is the set of data for 
+𝑢, and 𝑓={𝑥𝑓
+𝑖, 𝑓𝑖}
+𝑁𝑓
+𝑖=1 and 𝑏={𝑥𝑏
+𝑖, 𝑏𝑖}𝑁𝑏
+𝑖=1 are sets of data for the physics. The model parameter 𝜆, which deﬁnes the equation, is 
+then obtained by optimizing the following PINN loss function with the gradient-descent method and its variants [45]:
+(𝜃)= 𝑤𝑢𝑢(𝜃)+ 𝑃𝐷𝐸(𝜃), (2)
+where
+𝑢(𝜃)= 1
+𝑁𝑢
+𝑁𝑢∑
+𝑖=1
+||𝑢𝜃(𝑥𝑢
+𝑖)−𝑢𝑖||2
+2,
+𝑃𝐷𝐸(𝜃)=
+𝑤𝑓
+𝑁𝑓
+𝑁𝑢∑
+𝑖=1
+||𝜆[𝑢𝜃](𝑥𝑓
+𝑖)−𝑓𝑖||2
+2 + 𝑤𝑏
+𝑁𝑏
+𝑁𝑏∑
+𝑖=1
+||𝜆[𝑢𝜃](𝑥𝑏
+𝑖)−𝑏𝑖||2
+2,
+𝑤𝑢, 𝑤𝑓, 𝑤𝑏are belief weights for balancing diﬀerent terms, and || ⋅||2 is the 𝓁2-norm for ﬁnite-dimensional vector. We note that 
+in certain cases we may not have data corresponding to the boundary/initial conditions, i.e., the last term in 𝑃𝐷𝐸(𝜃), and we can 
+directly drop this term in the computations.
+2.2. Correcting the model misspeciﬁcation in PINNs
+The computational accuracy of PINNs in learning governing equations strongly depends on the encoded physical models, i.e. 𝜆
+and/or 𝜆in Eq.(1). However, the correct speciﬁcation of the physics is not always guaranteed, leading to signiﬁcant discrepancy 
+between the observational data and the assumed governing equations. An example is demonstrated in Fig.2where the ﬂow is non-
+Newtonian but the physical model is misspeciﬁed as the one for Newtonian ﬂows (see Sec.3.3.1for details). As a result, the physics 
+and the data cannot be ﬁtted well at the same time: the training does not land on the region “IV”, where both the losses for the data 
+as well as the residual of the equations are close to zero, regardless of the choice of belief weights in the loss function Eq. (2), i.e. 𝑤𝑓
+for the physics and 𝑤𝑢for the data. Three results from PINNs are sampled and displayed in Fig.2(b): when 𝑢𝜃ﬁts the data (which 
+come from a non-Newtonian ﬂow), it does not satisfy the governing equations for Newtonian ﬂows; when 𝑢𝜃is forced to follow the 
+Newtonian ﬂow by setting large 𝑤𝑃𝐷𝐸, it presents Newtonian behavior and thus cannot ﬁt the data from the non-Newtonian ﬂow 
+well.
+The discrepancy between observational data and the assumed governing equations is caused by the physics/model misspeciﬁ-
+cation. In this regard, we propose a general approach developed upon the original PINN framework to quantify the discrepancy as 
+well as to correct the model misspeciﬁcation(see  Fig.3).In  this work, we focus on the misspeciﬁcation of the diﬀerential operator 
+𝜆, but the proposed approach can be easily generalized to the boundary/initial operator. In addition, prior information is required 
+regarding which operator is misspeciﬁed, the diﬀerential or the boundary one. For example, if we have data on the boundaries, then 
+
+===== PAGE 4 =====
+Journal of Computational Physics 505 (2024) 112918
+4
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.2. In (a), a breakdown of total uncertainty in PINNs is presented. In (b), results from PINNs encountering model misspeciﬁcations are displayed, where a physical 
+model of Newtonian ﬂuid is assumed but the real physics, which generates the data, is non-Newtonian. The PINN method is employed to identify the homogeneous 
+viscosity with diﬀerent belief weights in the loss function, i.e. pairs of 𝑤𝑃𝐷𝐸and 𝑤𝑢
+in (2), resulting in diﬀerent pairs of PDE loss 𝑃𝐷𝐸and data loss 𝑢
+, shown 
+in the left of (b). Due to the model misspeciﬁcation, the PDE loss 𝑃𝐷𝐸and the data loss 𝑢
+cannot be minimized simultaneously. Three results are presented in the 
+right of (b), corresponding to three cases in the left, + (data are ﬁtted well but the physics is not satisﬁed), * (the physics is satisﬁed but data are not ﬁtted), and x 
+(neither data nor physics are ﬁtted). We note that the boundary condition is hard-encoded in the modeling. Details can be found in Sec.3.3.1.
+we are able to detect whether or not there is misspeciﬁcation on the boundary condition and will assign a DNN to correct it if there 
+is. Here, we denote the misspeciﬁed diﬀerential operator by ̃𝜆and then the discrepancy can be quantiﬁed as follows:
+𝑠(𝑥)= 𝑓(𝑥)− ̃𝜆[𝑢](𝑥). (3)
+Inspired by the PINN method, in which the sought solution 𝑢is modeled with a DNN parameterized by 𝜃, we employ another DNN 
+parameterized by 𝜓to model 𝑠(𝑥), denoted as 𝑠𝜓(𝑥). The source term 𝑓(𝑥)is approximated by ̃𝜆[𝑢𝜃](𝑥) +𝑠𝜓(𝑥), and hence the term 
+penalizing the violation of the physics in the loss function Eq. (2)is  reformulated as:
+𝑃𝐷𝐸(𝜃,𝜓)=
+𝑤𝑓
+𝑁𝑓
+𝑁𝑢∑
+𝑖=1
+||̃𝜆[𝑢𝜃](𝑥𝑓
+𝑖)+ 𝑠𝜓(𝑥𝑓
+𝑖)−𝑓𝑖||2
+2 + 𝑤𝑏
+𝑁𝑏
+𝑁𝑏∑
+𝑖=1
+||𝜆[𝑢𝜃](𝑥𝑏
+𝑖)−𝑏𝑖||2
+2. (4)
+We note that 𝑠𝜓plays two important roles in our approach handling model misspeciﬁcation: (1) it approximates the function 
+quantifying the model discrepancy, i.e. 𝑠, and (2) it allows both the data term 𝑢(𝜃)and the PDE term 𝑃𝐷𝐸(𝜃, 𝜓)to be minimized 
+to very small values simultaneously in the training of PINNs such that data are ﬁtted by 𝑢𝜃and the (corrected) physics are satisﬁed. 
+Furthermore, 𝑠in general is a function of the solution 𝑢or possibly the derivatives of 𝑢. Here we treat 𝑠as a function of 𝑥and/or 𝑡, 
+which will not aﬀect its generality since 𝑢is also a function of 𝑥∕𝑡. However, this setup makes the present approach a general 
+framework and is able to reduce the prior knowledge on the formulation of 𝑠.
+
+===== PAGE 5 =====
+Journal of Computational Physics 505 (2024) 112918
+5
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 3.An overview of the proposed approach for correcting the misspeciﬁed physics. Here we assume that the nonlinear diﬀerential operator  is misspeciﬁed as 
+̃𝜆such that ̃𝜆[𝑢] ≠𝑓, which leads to poor performance of PINNs in learning governing equations. Compared to the conventional PINN method shown in Fig. 1, 
+an additional DNN, parameterized by 𝜓, is used to model the discrepancy. We note that 𝑠𝜓serves two roles: (1) correcting the equation such that data of 𝑢can be 
+explained, and (2) modeling the discrepancy of the physics. With posterior samples of 𝜓, we obtain the prediction as well as the model uncertainty of the discrepancy. 
+We also note that DNNs in this ﬁgure, namely 𝑢𝜃and 𝑠𝜓, are deterministic NNs in ensemble PINNs and Bayesian NNs (BNNs) in B-PINNs.
+2.3. Uncertainty quantiﬁcation
+As mentioned in Sec.2.2, a key step in the present work is to learn the correction term, i.e., 𝑠𝜓, that is used to ﬁx the issue of model 
+misspeciﬁcations in PINNs (see Fig.3). Generally, the measurements in real-world applications are noisy and can also be incomplete, 
+leading to the uncertainties in predictions from PINNs [20,21,32]. We refer to the uncertainties in 𝑠𝜓as model uncertainty. Here, two 
+typical approaches are employed for quantifying the uncertainties in 𝑠𝜓, i.e., ensemble PINNs [20,21]and  B-PINNs [24]. The former 
+is computationally eﬃcient but has diﬃculties preventing overﬁtting when the data are noisy, while the latter is able to handle the 
+noisy data well but is computationally more expensive. We therefore utilize the ensemble PINNs and B-PINNs for cases with clean 
+and noisy data, respectively.
+We now brieﬂy review the ensemble PINNs and B-PINNs. The ensemble PINN method follows the deep ensemble method, pro-
+posed in [46], and employs multiple standard training of PINNs independently. That is, PINNs with the PDE loss term in Eq. (4)
+are trained multiple times with random initialization of the DNN parameter. Each random initialization corresponds to one initial 
+guess for minimizing the PINN loss function (2)a n d each training is ﬁnding one global minimum. As a result, ensemble PINNs can 
+be considered as identifying diﬀerent maximum a posteriori (MAP) estimates of the PINN loss function [20]. On the other hand, the 
+B-PINN method focuses on estimating the posteriors for 𝜃and 𝜓based on the Bayes’ rule as follows:
+𝑝(𝜃,𝜓|)∝𝑝(|𝜃)𝑝(𝜃). (5)
+Here 𝑝(𝜃|)is the density function for the posterior distribution, 𝑝(|𝜃)for the likelihood, and 𝑝(𝜃)for the prior. Given independent 
+and identically distributed (i.i.d.) data, the density function for the likelihood distribution can be written as follows:
+𝑝(|𝜃)= 𝑝(𝑢|𝜃)𝑝(𝑓|𝜃)𝑝(𝑏|𝜃)=
+𝑁𝑢∏
+𝑖=1
+𝑝(𝑢𝑖|𝑥𝑢
+𝑖,𝜃)
+𝑁𝑓∏
+𝑖=1
+𝑝(𝑓𝑖|𝑥𝑓
+𝑖,𝜃)
+𝑁𝑏∏
+𝑖=1
+𝑝(𝑏𝑖|𝑥𝑏
+𝑖,𝜃). (6)
+If we further assume that the data for 𝑢, 𝑓and 𝑏follow Gaussian distribution with mean zero and standard deviation, 𝜎𝑢, 𝜎𝑓and 𝜎𝑏, 
+respectively, then correcting it follows that:
+𝑝(𝑢𝑖|𝑥𝑢
+𝑖,𝜃)= 1√
+2𝜋𝜎𝑢
+exp(−
+||𝑢𝜃(𝑥𝑖)−𝑢𝑖||2
+2
+2𝜎2
+𝑢
+), (7a)
+𝑝(𝑓𝑖|𝑥𝑓
+𝑖,𝜃)= 1√
+2𝜋𝜎𝑓
+exp(−
+||𝜆[𝑢𝜃](𝑥𝑓
+𝑖)+ 𝑠𝜓(𝑥𝑓
+𝑖)−𝑓𝑖||2
+2
+2𝜎2
+𝑓
+), (7b)
+𝑝(𝑏𝑖|𝑥𝑏
+𝑖,𝜃)= 1√
+2𝜋𝜎𝑏
+exp(−
+||𝜆[𝑢𝜃](𝑥𝑏
+𝑖)−𝑏𝑖||2
+2
+2𝜎2
+𝑏
+),. (7c)
+We note that 𝜎𝑢, 𝜎𝑓and 𝜎𝑏are often treated as scales of the additive Gaussian noise in measuring data of 𝑢, 𝑓and 𝑏, respectively. 
+Various methods, e.g. Markov Chain Monte Carlo (MCMC) and variational inference, have been proposed to tackle the posterior 
+
+===== PAGE 6 =====
+Journal of Computational Physics 505 (2024) 112918
+6
+Z.Zou,X.MengandG.E.Karniadakis
+distribution (5). In this work, we choose to use Hamiltonian Monte Carlo (HMC) method to estimate the posterior distribution by 
+sampling 𝜃and 𝜓from it. We also note that here we only consider the homogeneous noise, while more complicated noise models, 
+e.g. the heteroscedastic noise [20], are also compatible with the framework.
+In both the ensemble PINN and B-PINN methods, we obtain samples of the NN parameters, from which statistics of the prediction 
+are estimated. In general, the mean and the standard deviation are often chosen to represent the prediction and the uncertainty 
+[20], respectively. Speciﬁcally in this work, we obtain samples of 𝜃and 𝜓from ensemble PINNs and/or B-PINNs, denoted by {𝜃𝑖}𝑀
+𝑖=1
+and {𝜓𝑖}𝑀
+𝑖=1, respectively, where 𝑀denotes the number of samples. Then, the predicted means of the sought solution 𝑢and the 
+discrepancy 𝑠are estimated as follows:
+̂𝑢(𝑥)≈ 1
+𝑀
+𝑀∑
+𝑖=1
+𝑢𝜃𝑖(𝑥),̂𝑠(𝑥)≈ 1
+𝑀
+𝑀∑
+𝑖=1
+𝑠𝜓𝑖(𝑥), (8)
+where ̂𝑢and ̂𝑠denote the mean of 𝑢and 𝑠, respectively. Similarly, the predicted uncertainties are:
+𝑉𝑎𝑟[𝑢](𝑥)≈ 1
+𝑀
+𝑀∑
+𝑖=1
+(𝑢𝜃𝑖(𝑥)−̂𝑢(𝑥))2,𝑉𝑎 𝑟[𝑠](𝑥)≈ 1
+𝑀
+𝑀∑
+𝑖=1
+(𝑠𝜓𝑖(𝑥)−̂𝑠(𝑥))2, (9)
+where 𝑉𝑎𝑟[𝑢]and 𝑉𝑎𝑟[𝑠]denote the variance of 𝑢and 𝑠, respectively. Interested readers are directed to [20]for  a review and [21]
+for a comprehensive Python library termed NeuralUQ.
+We note that upon the computation of 𝑠𝜓(𝑥), it can be used in various ways: (1) its value represents the model discrepancy and its 
+uncertaintyrepresents  the uncertainty in the physical model which we refer to as model uncertainty; (2) it corrects the misspeciﬁed 
+physical models and identiﬁes a system which explains the data; and (3) it could also be used to obtain mathematical expressions for 
+the missing details of certain physical process via the symbolic regression [16,17,47]. Speciﬁcally in the present work, we employ the 
+symbolic regression method developed in [48]and  the associated Python library PySR to regress analytic mathematical expressions 
+for the unknown physical processes. At this step, we utilize the symbolic regression to obtain the relation between 𝑠and 𝑢(and/or 
+its derivatives depending on speciﬁc problems) in order to obtain a general expression of the governing equations, see Sec.3.1for a 
+demonstration example as well as the details of the procedure.
+3. Results and discussion
+In this section, we conduct four numerical experiments, i.e., (1) an ODE system, (2) a one-dimensional (1D) reaction-diﬀusion 
+equation, (3) a two-dimensional (2D) channel ﬂow, and (4) a 2D cavity ﬂow. In the ﬁrst two examples, reaction models are possibly 
+misspeciﬁed, and in the last two examples, we assume that we misspecify the constitutive relation in non-Newtonian ﬂows as 
+Newtonian ones. In all the test cases, we employ DNNs to correct the misspeciﬁed models as discussed in Sec. 2. Details for the 
+computations (e.g., training steps, NN architectures, etc.) can be found in AppendixA.
+3.1. Pedagogical example: an ODE system
+We ﬁrst consider the following one-dimensional ODE:
+𝑑𝑢
+𝑑𝑡=𝑓(𝑡)+ 𝜆𝑢(1−𝑢),𝑡∈[0,1],
+𝑢(𝑡=0)= 𝑢0,
+(10)
+where 𝜆is a non-negative constant, 𝑢0 is the initial condition, and 𝑓is the source term. In certain real-world applications, the reaction 
+term, i.e., 𝜆𝑢(1 −𝑢)in the right hand side of Eq.(10), may not be exactly known and herein it is misspeciﬁed as an empirical model. 
+In this regard, we study the eﬀect of diﬀerent prior knowledge about the reaction model in the discovery of governing equation. In 
+particular, the following cases are considered:
+1. Case (A): The reaction term is correctly speciﬁed as 𝜆𝑢(1 −𝑢), where 𝜆 ≥0is unknown.
+2. Case (B): The reaction term is misspeciﬁed as 𝜆 cos(𝑢), where 𝜆 ≥0is unknown.
+3. Case (C): The reaction term is misspeciﬁed as 𝜆 cos(𝑢)(with known 𝜆 =0.2) but we add 𝑠(𝑡)to correct it, i.e., 𝜆 cos(𝑢) +𝑠(𝑡).
+We denote the reaction term as 𝜙, and the target here is to identify 𝜙given data on 𝑢∕𝑓as well as diﬀerently speciﬁed models. In 
+Case (A) and (B), the problem degenerates to identifying the model parameter 𝜆, and 𝜙in these two cases can then be computed by 
+̃𝜆𝑢𝜃(1 −𝑢𝜃)and ̃𝜆cos(𝑢𝜃), respectively, where ̃𝜆is the PINN estimate of 𝜆. In Case(C), 𝜙is computed by ̃𝜆cos(𝑢𝜃) +𝑠𝜓(𝑡)where 𝑠𝜓
+is the estimation of the discrepancy induced by the model misspeciﬁcation. We note that in Case (C) we assume 𝜆is known and set 
+𝜆 =0.2for simplicity. This is because the discrepancy is already modeled by 𝑠(𝑡) and hence treating 𝜆as unknown does not make 
+any diﬀerence in correcting the misspeciﬁed model.
+To reduce the eﬀect of the noisy/gappy data on the predicted accuracy, we ﬁrst test the case with clean and suﬃcient data. The 
+training data are generated by solving Eq.(10)with  𝑓(𝑡) =sin(2𝜋𝑡)and 𝑢0 =0 using MATLAB ode45[49]. We assume that we have 
+101 data for 𝑢and 𝑓, uniformly sampled from 𝑡 ∈[0, 1], and we employ ensemble PINNs [20,21]to  learn the governing equation and 
+also quantify the uncertainties in predictions. In all the test cases here, we choose a DNN with two hidden layers, each of which has 
+
+===== PAGE 7 =====
+Journal of Computational Physics 505 (2024) 112918
+7
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 4.ODE system: Predictions for 𝑢, 𝑓and 𝜙from ensemble PINNs with clean and suﬃcient data. Ensemble PINNs with (a) the correct physical model, (b) a 
+misspeciﬁed physical model, and (c) the misspeciﬁed physical model plus a correction. Blue circles: Representative measurements for 𝑢and 𝑓; Red dashed line: 
+Predicted mean; Black solid line: Reference solution.
+50 neurons and is equipped with hyperbolic tangent as the activation function, to approximate 𝑢. The equations are then encoded 
+in PINNs via the automatic diﬀerentiation [12]. Further, we utilize an additional DNN to correct the model misspeciﬁcation in Case 
+(C), which has the same architecture as the one used for approximating 𝑢. The Adam optimizer [50]is  applied to train the ensemble 
+PINNs.
+As shown in Fig.4(a), PINNs with correct physical model (Case (A)) enable accurate inference of 𝜙and the surrogate model 𝑢𝜃
+ﬁts the data and satisﬁes the ODE simultaneously. In contrast, PINNs with misspeciﬁed physical model (Case (B)) yield completely 
+wrong estimate of 𝜙as displayed in Fig. 4(b). In Case (C), we add a DNN to correct the misspeciﬁed reaction model used in Case 
+(B). As illustrated in Fig. 4(c) as well as Table 1, the predicted accuracy for 𝜙improves signiﬁcantly as compared to the result in 
+
+===== PAGE 8 =====
+Journal of Computational Physics 505 (2024) 112918
+8
+Z.Zou,X.MengandG.E.Karniadakis
+Table1
+ODE system: Predictions for 𝜙, 𝑢and 𝑓and the reconstruction ̃𝑢. The metric is relative 𝐿2 error, and errors 
+are computed between the reference and the mean of 20 PINNs trained independently. The exact value of 𝜆
+is 1.5 and ̃𝜆denotes the PINN estimate of 𝜆(̃𝜆=0.2 is ﬁxed in Case (C)). We note that ̃𝑢is reconstructed 
+by solving the identiﬁed ODE system with the identiﬁed 𝜙, the inferred 𝑓and the initial condition 𝑢0. Cubic 
+spline data interpolation is employed to approximate the function 𝑓from the prediction of 𝑓on a uniform 
+grid.
+̃𝜆 Errorof 𝜙 Errorof 𝑢 Errorof 𝑓 Errorof ̃𝑢
+Case(A):Knownmodel 1.5000±0 .0001 0 .00% 0 .00% 0 .06% 0 .01%
+Case(B):Misspeciﬁedmodel 0.2254±0 .0001 41 .46% 1 .73% 6 .87% 4 .58%
+Case(C):Correctedmodel 0.20 .55% 0 .01% 0 .10% 0 .02%
+Table2
+ODE system: Relative 𝐿2 error for the reconstructed 𝑢from B-
+PINNs. Here the computational errors are calculated using the pre-
+dicted mean from B-PINNs.
+̃𝜆 Errorof ̃𝑢
+Case(A):Knownmodel 1.4867±0 .0488 1 .56%
+Case(B):Misspeciﬁedmodel 0.0000±0 .0000 12 .73%
+Case(C):Correctedmodel 0.2 2.61%
+Case (B). In addition, the computational accuracy for 𝑢, 𝑓and 𝜙in Case (C) is quite similar as in the Case (A), where the physical 
+model is correctly speciﬁed. We also conduct the experiment in which 𝜆is ﬁxed at a diﬀerent value (0.1 rather than 0.2) and the 
+discrepancy is modeled with a DNN. As presented in Fig.4(d), the predicted means and uncertainties of 𝑢, 𝑓and 𝜙are similar to the 
+ones from 𝜆 =0.2. The above results demonstrate the eﬀectiveness of the present approach. We note that the predicted uncertainties 
+in all cases are quite small, which is reasonable since we use suﬃcient data for both 𝑢and 𝑓to determine the unknown reaction term 
+here. Furthermore, we present more results as well as the related discussion for the case with clean but gappy data in AppendixB.1.
+We now keep the same setup as in Case (A) -(C)  but assume that the training data are both noisy and gappy. In these cases, 50
+data of 𝑓and 𝑢are randomly sampled from 𝑡 ∈[0, 1]and corrupted by independent additive Gaussian noises with known noise scales 
+(0.05for 𝑓and 0.01for 𝑢). As discussed in Sec.2, we will employ the B-PINNs to quantify the uncertainties arsing from the noise 
+as well as the incompleteness of the training data. As shown in Fig.5, (1) B-PINNs with correct physical model can obtain accurate 
+predictions for both 𝑢, 𝑓, and 𝜙, and the computational errors for 𝜙are generally bounded by the predicted uncertainties (Case (A), 
+Fig.5(a)); (2) B-PINNs with the misspeciﬁed physical model fails to provide accurate inference for 𝑢, 𝑓, or 𝜙(Case (B), Fig.5(b)); 
+and (3) B-PINNs with a DNN as correction to the misspeciﬁed model is able to improve the predicted accuracy for 𝑢, 𝑓, and 𝜙, as 
+compared to the results in Case (B) (Case (C), Fig.5(c)). Similar as in Case (A), the computational errors for 𝜙are bounded by the 
+predicted uncertainties here. In Fig.5(d), we present the result from ﬁxing 𝜆at a diﬀerent value (0.1). As shown, the predicted means 
+and uncertainties of 𝑢, 𝑓and 𝜙are similar to the ones from 𝜆 =0.2.
+In addition to the relation between the computational errors and the predicted uncertainties for 𝜙discussed above, we would like 
+to further discuss that: (1) it is interesting to observe in Case (A) and Case (C) that the predicted uncertainty near the right end is 
+larger than that near the left end. We note that the results here are reasonable since we do not have data for 𝑓on the right end; (2) 
+the predicted uncertainties of 𝜙for 𝑡 ∈[0, 1]in Case (C) are larger than those in Case (A) although we use the same training data as 
+well as prior for the BNN that is used to approximate 𝑢. We remark that the diﬀerence between the uncertainties in these two cases 
+is caused by the lack of knowledge on the physical model and reﬂects the uncertainty in physical models.
+We further verify the learned governing equation from the proposed approach. Speciﬁcally, we solve the equation 𝑑𝑢∕𝑑𝑡=
+𝑓(𝑡) +𝜙(𝑡)with the inferred 𝑓, 𝜙, and the initial condition 𝑢0 =0, using MATLAB ode45 to see if the solution for 𝑢agrees with the 
+reference solution. We denote the solution to the identiﬁed system by ̃𝑢. In particular, 1000 posterior samples of 𝑓and 𝜙from the 
+B-PINNs are used to compute ̃𝑢, as displayed in Fig.6. We further illustrate the relative 𝐿2 errors between the mean for ̃𝑢and the 
+reference solution in Table 2. As we can see, PINNs with correct physical model leads to the lowest error in ̃𝑢. Adding a DNN to 
+correct the misspeciﬁed model can signiﬁcantly improve the accuracy in ̃𝑢as compared to the case with misspeciﬁed model, and the 
+computational errors are slightly larger than the ones from the correct physical model. We also present the computational errors for 
+̃𝑢from the ensemble PINNs in Table1, which will not be discussed again since the results are similar as the above ones. Finally, we 
+would like to point out that (1) the uncertainties in the reconstructed 𝑢(i.e., ̃𝑢) are caused by the predicted uncertainties for 𝑓and 
+𝜙from B-PINNs, and (2) the computational errors for the mean of ̃𝑢in Case (A) and (C) are of the same order as the noise in the 
+measurements, suggesting the reasonableness of the current results.
+As discussed in Sec.2, the discovered physical models or governing equations up to now are expressed using the trained DNNs 
+(i.e., 𝑠𝜓), which are not explicitly presented. We can then combine the proposed method with the symbolic regression as the further 
+step to obtain the explicit governing equations. Here we take the results in Case (C) from both ensemble PINNs and B-PINNs to 
+demonstrate how to get the analytical expressions for the trained NNs, i.e., 𝑠𝜓. Recall that with the present methodology the reaction 
+term is now expressed as 𝜙(𝑡) = ̃𝜆cos(𝑢𝜃(𝑡)) +𝑠𝜓(𝑡). Assume that we now have the knowledge that the reaction term is autonomous 
+with respect to the solution, i.e. 𝜙 =𝑠(𝑢). We can then adopt the symbolic regression developed in [48]t o ﬁnd the analytical 
+expression of 𝑠(𝑢) from 𝑢𝜃and 𝑠𝜓. The data for the symbolic regression are generated as {𝑢𝜃(𝑡𝑖), 𝑠𝜓(𝑡𝑖) + ̃𝜆cos(𝑢𝜃(𝑡𝑖))}𝑁
+𝑖=1, where 
+
+===== PAGE 9 =====
+Journal of Computational Physics 505 (2024) 112918
+9
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.5. ODE system: Predictions for 𝑢, 𝑓and 𝜙from B-PINNs with noisy and gappy data. B-PINNs with (a) correct physical model, (b) misspeciﬁed physical model, 
+and (c) misspeciﬁed physical model plus a correction. Blue circles: Noisy measurements for 𝑢and 𝑓; Red dashed line: Predicted mean from B-PINNs; Black solid 
+line: Reference solution. Our approach alleviates the model misspeciﬁcation issue signiﬁcantly, providing more accurate predictions. Compared to correctly speciﬁed 
+model, the increase in the predicted uncertainty is caused by the lack of knowledge in the physical model and could be considered as model uncertainty.
+𝑡𝑖, 𝑖 =1, ..., 𝑁are 101 uniform grids points on [0, 1], and 𝑢𝜃and 𝑠𝜓are the predicted means from the trained ensemble PINNs/B-
+PINNs. As displayed in Table3, the recovered reaction model via symbolic regression agrees well with the reference solution as we 
+have suﬃcient clean data. However, for the case with noisy and gappy data, the expression for the reaction model from symbolic 
+regression does not match the reference solution. The result is expected since we can see in Fig.5(c) that the predicted mean for 𝜙
+does not agree well with the reference solution well and the predicted uncertainties are generally large. Generally, increasing the 
+number of training data is able to reduce the predicted uncertainty in B-PINNs [20,21]. Here we also show that the learned reaction 
+model agrees better with the reference solution as we increase the training data from 50 to 101 in B-PINNs. A recommendation here 
+
+===== PAGE 10 =====
+Journal of Computational Physics 505 (2024) 112918
+10
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 6.ODE system: Solving the identiﬁed system with the inferred 𝑓and 𝜙from B-PINNs with the initial condition 𝑢0 =0. The inferred 𝑓and 𝜙come from (a) 
+correct physical model, (b) misspeciﬁed physical model, and (c) our approach. Red dashed line: Predicted mean; Black solid line: Reference solution. It shows that the 
+misspeciﬁed physical model leads to wrong reconstruction ̃𝑢while our approach is able to correct it. Due to the lack of knowledge of the model, our approach yields 
+larger uncertainty than the correct physical model.
+Table3
+ODE system: Discovered equations from 𝜙(𝑢)using a symbolic regression method [48](see  Fig.B.14
+for plots of the discovered models). In all three cases, the symbolic regression is performed on the 
+predicted mean from ensemble PINNs and B-PINNs.
+Reference Cleanandsuﬃcientdata Noisyandgappydata Noisyandsuﬃcientdata
+1.5𝑢(1−𝑢)1 .4980𝑢−1.4929𝑢2 𝑢∕(𝑢+0.6213) 1 .3540𝑢−𝑢2
+is to use the predicted uncertainty as guidance, i.e., we use the symbolic regression for discovering equation when the predicted 
+uncertainty is small to achieve better accuracy. More results for the symbolic regression can be found in AppendixB.2.
+The method described in this section for identifying the mathematical expression of the misspeciﬁed physics and the symbolic 
+regression shares some similarity with the one from [6]: both utilize DNNs and automatic diﬀerentiation to compute the partial 
+derivatives of the sought solution 𝑢. The main diﬀerence is that the sparse regression method from [6]requires  speciﬁcation of math-
+ematical models for all possible physical processes as a candidate library, e.g. {𝑢, |𝑢|, 𝑢2, log(|𝑢|), ⋯ }, while the symbolic regression 
+only requires speciﬁcation of unitary and binary operations [48], which brings ﬂexibility and may avoid the curse of dimensionality.
+3.2. Reaction-diﬀusion equation
+We now consider the following time-dependent PDE that describes a reaction-diﬀusion system:
+𝜕𝑢
+𝜕𝑡=𝐷𝜕2𝑢
+𝜕𝑥2 +𝜆𝑔(𝑢)+ 𝑓(𝑥,𝑡),𝑥∈[0,1],𝑡∈[0,1],
+𝑢(𝑥,0)=0 .5sin2(𝜋𝑥),𝑥∈[0,1],
+𝑢(0,𝑡)= 𝑢(1,𝑡)=0 ,𝑡∈[0,1],
+(11)
+where 𝐷=0.01denotes the diﬀusion coeﬃcient, 𝑔(𝑢) =𝑢(1 −𝑢)is the reaction model, 𝜆is the reaction rate, and 𝑓(𝑥, 𝑡) =0 is the 
+source term. Similar as in Sec.3.1, we test the following three cases:
+1. Case (A): The reaction model is correctly speciﬁed and the reaction rate 𝜆 ≥0is unknown.
+2. Case (B): The reaction model is misspeciﬁed as 𝑢2 and the reaction rate 𝜆 ≥0is unknown.
+3. Case (C): The reaction model is misspeciﬁed as 𝑢2 and we correct it with a DNN, i.e., 𝜆𝑢2 +𝑠(with known 𝜆 =1).
+We denote the reaction term as 𝜙and we would like to identify 𝜙from data of 𝑢, 𝑓and diﬀerent physical models. In Case (A)/(B)/(C), 
+the estimate of 𝜙is ̃𝜆𝑢𝜃(1 −𝑢𝜃)/̃𝜆𝑢2
+𝜃/̃𝜆𝑢2
+𝜃+𝑠𝜓, where ̃𝜆is the estimate of 𝜆. We note that in Case (C) we assume 𝜆 =1 is known 
+because the model misspeciﬁcation induced by wrong 𝜆can be fully covered by 𝑠.
+Here we only consider a general scenario, i.e., the training data are noisy and gappy. In this case, we employ B-PINNs to identify 
+𝜙with uncertainties. We assume that we have 121 measurements on 𝑢and 195measurements of 𝑓, which are evenly distributed in 
+the temporal-spatial domain (𝑥, 𝑡) ∈[0, 1] ×[0, 1]. In addition, the measurement errors for both 𝑢and 𝑓are assumed to be Gaussian, 
+and the noise scales are 0.02and 0.05for 𝑢and 𝑓, respectively. Further, the reference solution is obtained by solving Eq.(11)with  
+𝑔(𝑢) =𝑢(1 −𝑢), 𝜆 =2, and 𝑓(𝑥, 𝑡) =0. Similar as in Sec.3.1, we use one DNN to model the sought solution 𝑢and another DNN to 
+approximate the discrepancy 𝑠in Case (C). Details of the B-PINN method, e.g. hyperparameters of NNs and HMC, can be found in 
+AppendixA.
+As shown in Fig.7, we observe that: (1) the predicted means for 𝑢and 𝜙agree the best with the reference solutions as the 
+reaction model is correctly speciﬁed (Case (A), second column in Fig.7); (2) the predictions for 𝑢and 𝜙show signiﬁcant discrepancy 
+
+===== PAGE 11 =====
+Journal of Computational Physics 505 (2024) 112918
+11
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 7.Time-dependent reaction-diﬀusion system: Predicted mean for 𝑢and 𝜙from B-PINNs with noisy data of 𝑢and 𝑓and diﬀerently speciﬁed reaction models. 
+Misspeciﬁed model (𝑢2) impairs the performance of B-PINNs signiﬁcantly in terms of the accuracy in predicting 𝑢and 𝜙. and the proposed approach is able to alleviate 
+the issue caused by model misspeciﬁcation; see Fig.8for UQ.
+Fig.8. Time-dependent reaction-diﬀusion system in slices (𝑡 =0.5, 0.75): Predicted uncertainty for 𝑢and 𝜙from B-PINNs with noisy data of 𝑢and 𝑓and diﬀerently 
+speciﬁed reaction models. Representative predicted uncertainties for (a) 𝑢, and (b) 𝜙. Red dashed line: Predicted mean from B-PINNs; Black solid line: Reference 
+solution. Our approach is able to improve thepredicted  mean and the predicted uncertainty signiﬁcantly. The decrease in the accuracy of predicted mean and increase 
+in the predicted uncertainty of our approach are caused by the lack of knowledge over the reaction model.
+as compared to the reference solution when the reaction model is misspeciﬁed (Case (B), third column in Fig.7); (3) the predicted 
+mean for 𝑢in Case (C) is similar as that in Case (A), in which the reaction model is correctly speciﬁed; and (4) the predicted mean 
+for 𝜙in Case (C) is not as good as the one in Case (A), but it is much better than the result in Case (B) where the reaction model is 
+
+===== PAGE 12 =====
+Journal of Computational Physics 505 (2024) 112918
+12
+Z.Zou,X.MengandG.E.Karniadakis
+misspeciﬁed. All the results demonstrate that the added DNNs are able to correct the misspeciﬁed model which in turn enhance the 
+computational accuracy in PINNs. A demonstration example for using the symbolic regression to obtain the explicit reaction model 
+is presented in AppendixC.
+We further illustrate the predicted uncertainties for both 𝑢and 𝜙in Fig. 8. In particular, we only depict the uncertainties at 
+one representative time for simplicity. As we can see, (1) the computational errors for both 𝑢and 𝜙are generally bounded by the 
+predicted uncertainties in Case (A) (ﬁrst column in Fig.8) and Case (C) (third column in Fig.8), while they cannot be bounded by 
+the predicted uncertainties in the case with misspeciﬁed reaction model i.e. Case (B) (second column in Fig.8), and (2) the predicted 
+uncertainties for 𝑢and 𝜙are generally larger in Case (C) (third column in Fig. 8) than those in Case (A) (ﬁrst column in Fig. 8), 
+which are similar as the results in Sec.3.1. Again, we attribute the diﬀerence between the predicted uncertainties for Case (A) and 
+(C) to the model uncertainty.
+3.3. 2D non-Newtonian ﬂows
+In this section, we test the capability of the present approach in non-Newtonian ﬂows where we misspecify the constitutive 
+relation as the Newtonian one, and then we employ DNNs to correct the misspeciﬁed models. In particular, we consider the steady 
+ﬂows in a 2D channel and a 2D cavity, and the employed non-Newtonian ﬂuids are power-law ones. The constitutive relation in a 
+power-law ﬂuid is expressed as 𝜇=𝜇0|𝐒|𝑛−1, where 𝜇is the dynamic viscosity of a ﬂuid, 𝜇0 is a constant, 𝐒 =∇𝐮 +(∇𝐮)𝑇denotes 
+the shear rate (|𝐒| =
+√
+(𝐒∶𝐒)∕2), 𝒖 is the ﬂuid velocify, and 𝑛is the power law index. Without loss of generality, the ﬂuids are 
+shear-thinning (pseudoplastic, 𝑛 <1) and shear-thickening (dilatant, 𝑛 >1) in the channel and cavity ﬂows, respectively.
+3.3.1. Channel ﬂow
+The following 2D non-Newtonian channel ﬂow is considered here and the corresponding governing equation is expressed as [51]:
+𝜕
+𝜕𝑦(𝜇(𝑦)𝜕𝑢
+𝜕𝑦)−𝜕𝑃
+𝜕𝑥=𝑓(𝑦),𝑦∈[−𝐻∕2,𝐻∕2],
+𝑢(−𝐻∕2)=𝑢(𝐻∕2)=0,
+(12)
+where 𝐻=1, 𝜕𝑃
+𝜕𝑥=𝑐is a constant, and 𝑓(𝑦) =0. The analytical solution reads as
+𝑢(𝑦)= 𝑛
+𝑛+1 (−1
+𝜇0
+𝜕𝑃
+𝜕𝑥)1∕𝑛[(𝐻
+2 )1+1∕𝑛−|𝑦|1+1∕𝑛]. (13)
+For this speciﬁc case, we set 𝑛 =0.25, 𝑐=−1, 𝐻=1, 𝜇0 =0.5to generate the reference solution as well as training data.
+In the ﬁrst test case, we assume that we have 30 clean measurements of 𝑢and 51 clean measurements of 𝑓, randomly and 
+uniformly sampled from [−𝐻∕2, 𝐻∕2], respectively. We assume the ﬂuid is a Newtonian one and the viscosity is an unknown 
+constant. We then employ the PINN method to identify the unknown viscosity 𝜇1 in the following equation:
+𝜕
+𝜕𝑦(𝜇1
+𝜕𝑢
+𝜕𝑦)−𝜕𝑃
+𝜕𝑥=𝑓(𝑦), (14)
+which describes Newtonian ﬂows. Speciﬁcally, the boundary condition is hard-encoded in the equation for 𝑢so that we only have 
+two terms in the PINN loss function (2), i.e., 𝑢for the data of 𝑢and 𝑃𝐷𝐸for the equation. As shown in Fig. 2(b), we cannot 
+minimize 𝑢and 𝑃𝐷𝐸simultaneously in PINNs, regardless of the choice of belief weights for those two terms, indicating that the 
+NN surrogate model 𝑢𝜃is not able to ﬁt the non-Newtonian data and satisfy the Newtonian physical law at the same time.
+Similar as in previous two examples in this section, we can add a DNN as the correction in Eq. (14)t o address the model 
+misspeciﬁcation issue in PINNs. The equation with the correction term can now be expressed as follows:
+𝜕
+𝜕𝑦(𝜇1
+𝜕𝑢
+𝜕𝑦)−𝜕𝑃
+𝜕𝑥+𝑠(𝑦)= 𝑓(𝑦), (15)
+where 𝑠denotes the correction term. Here we treat 𝜇1 as known and set 𝜇1 =0.1since we have a DNN to model the discrepancy. We 
+present the results from the PINNs with a correction in Fig.9(a), and we can see that the current predictions for 𝑢and 𝑓agree with 
+the reference solutions much better than in the case where the model is misspeciﬁed.
+We note that in this speciﬁc case we can also employ other approaches to address the issue that we cannot ﬁt the data and satisfy 
+the equation simultaneously in PINNs if the physical model is misspeciﬁed. A natural way is to treat the viscosity in Eq. (14)as  an 
+unknown function and employ a DNN to directly learn the constitutive relation. We present the corresponding results in Fig.9(b), in 
+which we employ the same setup, e.g., training data, NN architecture in PINNs, as used in Fig.2as well as Fig.9(a). As shown, PINNs 
+with a DNN for learning the viscosity now can ﬁt 𝑢and 𝑓much better than the results in Fig.2. We then compare the these results 
+with the ones in Fig. 9(a). As shown, the predictions for 𝑢are similar, but the PINN with a DNN as correction is able to provide 
+more accurate predictions for 𝑓, i.e., less ﬂuctuations are observed in Fig.9(a) than in Fig.9(b). Furthermore, we illustrate the loss 
+histories for training PINNs in these two approaches in Fig.9(c). As we can see, the training loss decreases faster and converges to 
+smaller values in the case where we add a DNN as correction to the misspeciﬁed model, as compared to the approach in which we 
+model the viscosity as an unknown function. We conjecture that the superior performance of the proposed approach can be attributed 
+to the following reason: modeling the viscosity as an unknown function via a DNN requires the accurate estimate of the derivatives in 
+Eq. (14), which is quite challenging since 𝑛 <1results in very sharp gradients for the viscosity around 𝑦 =0. However, the correction 
+
+===== PAGE 13 =====
+Journal of Computational Physics 505 (2024) 112918
+13
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 9.2D non-Newtonian channel ﬂow: Correcting the misspeciﬁed physics with two diﬀerent approaches, i.e. (a) modeling the discrepancy in the equation 𝑠(𝑦)
+with a DNN, and (b) modeling the unknown space-dependent viscosity 𝜇(𝑦)with a DNN. In (c), the PINN training losses are presented and they converge to smaller 
+values for both 𝑢
+and 𝑃𝐷𝐸in the case where we add a DNN as correction as compared to the one in which we use a DNN to approximate the viscosity.
+term, i.e., 𝑠in Eq. (14), is a quite smooth function, as shown in Fig.10. Hence, we can expect the easier training as well as better 
+accuracy in the proposed method.
+We now move to the noisy-data case and employ B-PINNs to quantify the model uncertainty. The same 30noisy measurements 
+of 𝑢and 51 noisy measurements of 𝑓are sampled but now they are corrupted by additive Gaussian noise with 0.005 and 0.05
+noise scales, respectively. In B-PINNs, we test two speciﬁc cases, i.e., (1) we assume the ﬂuid is Newtonian and encode Eq. (14)
+in B-PINNs. The objective is then to infer the unknown viscosity given data, similar as the case in Fig. 2; and (2) we are not sure 
+if the ﬂuid is Newtonian or not, we then add a DNN as the correction to the possible misspeciﬁed model, i.e., Eq. (15). Also, we 
+note that in this speciﬁc case 𝑠can be computed analytically by plugging the analytic solution of the power-law ﬂuid into Eq.(15): 
+𝑠(𝑦) =4𝜇1𝑐4|𝑦|3∕𝜇4
+0 +𝑐, which serves as the reference in what follows.
+The results from B-PINNs are illustrated in Fig. 10. As observed, the NN surrogate 𝑢𝜃is not able to ﬁt the data and satisfy the 
+misspeciﬁed physical model at the same time (Fig. 10(a)). In addition, with the additional DNN for correcting the misspeciﬁed 
+physical model in the previous case, 𝑢𝜃can now ﬁt the data and satisfy the corrected physical model simultaneously, as shown in 
+Fig.10(b). Also, we can see that the computational errors between the predicted mean and the reference solution for 𝑠are bounded 
+by the predicted uncertainties in the entire computational domain.
+3.3.2. Cavity ﬂow
+Next, we consider steady non-Newtonian ﬂow in a two-dimensional lid-driven square cavity (i.e., 𝑥, 𝑦 ∈[ 0, 1]), which can be 
+described by the incompressible Navier-Stokes equations as
+∇⋅𝒖=0, (16a)
+𝒖 ⋅∇𝒖=−∇𝑃+∇ ⋅[𝜈(∇𝒖+(∇𝒖)𝑇)]+ 𝒇, (16b)
+where 𝒖=(𝑢, 𝑣) denotes the velocity in 𝑥−and 𝑦−directions, respectively; 𝑃is the pressure; and 𝜈is the kinematic viscosity. In 
+particular, the boundary condition for the upper wall is expressed as
+𝑢=𝑈
+(
+1−
+cosh[𝑟(𝑥−𝐿
+2 )]
+cosh(𝑟𝐿
+2 )
+)
+,𝑣=0, (17)
+where 𝑈, 𝑟and 𝐿are constant. Speciﬁcally, 𝑟 =10, 𝐿 =1 is the length of the cavity. In addition, the remaining walls are stationary. 
+Here, the viscosity model is the same as the one used in channel ﬂow, i.e., 𝜇=𝜌𝜈=𝜇0|𝑺 |𝑛−1. The objective is to learn the governing 
+equations, which explain the data given measurements on 𝒖, 𝑃, and 𝒇. In particular, the training data as well as the reference 
+solution in this case are generated by solving Eq. (16a)u s i n g the lattice Boltzmann equation model (LBE) in [51]w i t h 𝑛 =1.5. 
+Details for the computations in LBE can be found in AppendixD.
+
+===== PAGE 14 =====
+Journal of Computational Physics 505 (2024) 112918
+14
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. 10.2D non-Newtonian channel ﬂow: Predictions for 𝑢, 𝑓and the discrepancy 𝑠from B-PINNs with noisy data. B-PINNs with (a) misspeciﬁed model, and (b) 
+misspeciﬁedmodel  plus a correction.
+Table4
+2D non-Newtonian Cavity ﬂow: Errors of the predicted means from ensemble PINNs. The error of 𝑢/𝑣
+is deﬁned as the relative 𝐿2 error, while the error of 𝑓𝑥/𝑓𝑦the mean squared error since the reference 
+solutions are 𝑓𝑥=0 and 𝑓𝑦=0.
+Errorof 𝑢 Errorof 𝑣 Errorof 𝑓𝑥 Errorof 𝑓𝑦
+Misspeciﬁedmodel 7.79% 11 .28% 3 .9153×10 −4 3.1466×10 −4
+Misspeciﬁedmodelwithcorrection 1.33% 2 .29% 7 .8389×10 −7 8.2283×10 −7
+Similar as in Sec.3.3.1, suppose we misspecify the governing equations as the ones for Newtonian ﬂows, and we then employ the 
+present approach to correct the model misspeciﬁcation as follows:
+∇⋅𝒖=0, (18a)
+𝒖 ⋅∇𝒖=−∇𝑃+𝜈0∇2𝒖+ 𝒇 + 𝒔, (18b)
+where 𝒔=(𝑠𝑥, 𝑠𝑦)are the two components correcting the momentum equations in 𝑥−and 𝑦−directions, respectively, and 𝑓𝑥(𝑥, 𝑦) =
+𝑓𝑦(𝑥, 𝑦) =0 for 𝑥, 𝑦 ∈[0, 1]. The continuity equation(18a)is  correctly speciﬁed and hence does not need correction.
+We assume that we have 400 random measurements of 𝑢, 400 random measurements of 𝑣, and 81 ×81 uniformly distributed 
+measurements of 𝑃from the reference solution. We evaluate the PDEs at 99 ×99 uniformly distributed mesh grid (residual points). 
+Here we consider the case with clean data and the ensemble PINNs are employed for quantifying the model uncertainty (The case 
+with noisy data is investigated in AppendixE). We would like to mention that we do not use B-PINNs here since we need to utilize 
+around 3.6 ×104 training data to achieve meaningful results, which is computationally expensive as the HMC is used for posterior 
+estimation. Similarly, we test two speciﬁc cases, i.e., (1) the viscosity in Eq. (18b)i s an unknown constant and we do not use the 
+correction 𝒔in PINNs, and (2) we have an initial guess for the viscosity in Eq. (18b)a n d we add 𝒔in PINNs for the correction for 
+the possible misspeciﬁcation. Speciﬁcally, we use one DNN to model the velocity 𝒖, one DNN to approximate the pressure 𝑝, and 
+one DNN to model the discrepancy in Eq.(18b), i.e. 𝒔. In particular, we set 𝜈0 =0.0001as the initial guess in Case (2) which will not 
+aﬀect the computational accuracy in PINNs since the model discrepancy is already leveraged by 𝒔.
+We present the predictions for 𝒖 in Fig. 11. As we can see, PINNs with misspeciﬁed model lead to inaccurate inference for 
+both 𝑢and 𝑣(Fig. 11(a)). The proposed approach, however, achieves much better results by adding a DNN to correct the model 
+misspeciﬁcation. We further illustrate the computational errors for both cases in Table4, which clearly shows the eﬀectiveness as 
+well as superiority of the present method. In addition, we show some representative 1D slices for the predicted 𝑢, 𝑣, 𝑓𝑥, and 𝑓𝑦with 
+uncertainties in Fig.12. Similarly, the PINNs with misspeciﬁed model cannot ﬁt the data and satisfy the physical model at the same 
+time (Fig.12(a)), while this issue can be handled well as we add a DNN to correct the misspeciﬁed model, as shown in Fig.12(b).
+
+===== PAGE 15 =====
+Journal of Computational Physics 505 (2024) 112918
+15
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.11. Non-Newtonian cavity ﬂow: Predictions from ensemble PINNs for 𝑢and 𝑣in contours. Red dashed line: Predicted mean; Black solid line: Reference solution.
+Fig.12. Non-Newtonian cavity ﬂow: Predictions for 𝑢, 𝑣, 𝑓𝑥, 𝑓𝑦in 1D slices. Red dashed line: predicted mean; black solid line: reference solution; uncertainty bound: 
+predicted uncertainty.
+4. Summary
+We presented a general approach to improve the accuracy of physics-informed neural networks (PINNs) for discovering governing 
+equations from data when the physical model is misspeciﬁed. In particular, we ﬁrst assume the mathematical models for the speciﬁc 
+problem we considered and encode them in PINNs via automatic diﬀerentiation. We note that the assumed models may be misspec-
+iﬁed in certain complex systems since not all the physical processes are fully understood here. We then utilize another deep neural 
+networks (DNN) to model the discrepancy between the imperfect models and the observational data in order to correct the misspec-
+iﬁed model. In addition, to quantify uncertainties arising from noisy and/or gappy data, we employ two typical uncertainty-induced 
+PINNs methods, i.e., the Bayesian physics-informed neural networks (B-PINNs) and ensemble PINNs. A series of numerical examples 
+are conducted to show the eﬀectiveness of the proposed method. Speciﬁcally, we considered (1) a reaction-diﬀusion system where 
+we misspeciﬁed the reaction model, and (2) non-Newtonian ﬂows in two-dimensional channel and cavity but misspeciﬁed the ﬂuid 
+viscosity. The results show that the present approach can achieve good accuracy since the added DNN is able to correct the misspeci-
+ﬁed physical models encoded in PINNs. Also, the B-PINNs and/or ensemble PINNs can provide reasonable uncertainty bounds for the 
+discovered physical models, which reﬂects the uncertainties in physical models, i.e., model uncertainty. Furthermore, we showcase 
+that we can seamlessly combine the proposed method with the symbolic regression to obtain explicit governing equations based on 
+the trained NNs using examplesof  both ODE and PDE systems.
+In the current study, we only consider model uncertainty or misspeciﬁcation in the physical model or governing equations. 
+However, there are also cases where both the governing equations and the boundary/initial conditions are misspeciﬁed, e.g., ﬂows 
+with slip in a channel. The present method needs to be further extended to ﬁt in the problems with uncertainties arsing from 
+multiple sources rather than one. In addition, lots of high-ﬁdelity data are required to obtain accurate correction to the model 
+
+===== PAGE 16 =====
+Journal of Computational Physics 505 (2024) 112918
+16
+Z.Zou,X.MengandG.E.Karniadakis
+misspeciﬁcation in both PINNs and B-PINNs, which may restrict the use of the present method in real-world applications. A possible 
+solution is to integrate the current approach and the multi-ﬁdelity modeling to reduce the amount of expensive high-ﬁdelity data. 
+We will leave these interesting topics as future study. Finally, we expect the proposed approach to be a promising tool in a wider 
+class of applications for solving problems where the physical processes are not fully understood.
+CRediT authorship contribution statement
+Zongren Zou:Conceptualization, Investigation, Methodology, Visualization, Writing – original draft, Validation, Writing – review 
+& editing. Xuhui Meng: Conceptualization, Formal analysis, Investigation, Methodology, Supervision, Validation, Visualization, 
+Writing – original draft, Writing – review & editing.GeorgeEm  Karniadakis:Conceptualization, Funding acquisition, Supervision, 
+Writing – original draft, Writing – review & editing, Project administration.
+Declaration of competing interest
+The authors declare that they have no known competing ﬁnancial interests or personal relationships that could have appeared to 
+inﬂuence the work reported in this paper.
+Data availability
+Data will be made available on request.
+Acknowledgement
+GEK and ZZ acknowledge the support of the MURI/AFOSR project (FA9550-20-1-0358), the DOE-MMICS SEA-CROGS project 
+(DE-SC0023191), the NIH grant Neural Operator Learning to Predict Aneurysmal Growth and Outcomes (R01HL168473), and the 
+NIH grant CRCNS: Waste-clearance ﬂows in the brain inferred using physics-informed neural networks (R01AT012312). XM would 
+like to acknowledge the support of the National Natural Science Foundation of China (No. 12201229) and the Xiaomi Young Talents 
+Program. Z.Z. thanks Dr. Khemraj Shukla from Brown University for helpful discussion.
+AppendixA.  Details of hyperparameters in numerical experiments
+In Sec. 3.1, DNNs used to model 𝑢/𝑠have two hidden layers, each of which has 50 neurons and is equipped with hyperbolic 
+tangent as the activation function, and take as input 𝑡and output 𝑢/𝑠. In Sec.3.2, DNNs have two hidden layers and each layer has 
+50 neurons and a hyperbolic tangent activation function. They take as input 𝑥, 𝑡and output 𝑢or 𝑠. In Sec. 3.3.1, DNNs have two 
+hidden layers (50neurons and a hyperbolic tangent activation function) and take as input 𝑦and output 𝑢or 𝑠. In Sec.3.3.2, a DNN 
+with three hidden layers (100neurons and a hyperbolic tangent activation function) is used to model 𝑢, 𝑣. That is, this DNN takes as 
+input 𝑥, 𝑦and outputs 𝑢, 𝑣. Another DNN with three hidden layers (100neurons and a hyperbolic tangent activation function) is used 
+to model 𝑝. Besides, an additional DNN with three hidden layers (100neurons and a hyperbolic tangent activation function) is used 
+to correct two misspeciﬁed equations and it takes as input 𝑥, 𝑦and outputs 𝑠2, 𝑠3.
+The ensemble PINN method [20,21]is  used for clean data to obtain predictions with UQ. In Sec.3.1, 20PINNs are independently 
+trained with Adam optimizer [50]( 10−3learning rate) for 100, 000 iterations. In Sec. 3.3.2, 10 PINNs are independently trained 
+with Adam optimizer (10−3learning rate) for 200, 000 iterations. To obtain results shown in Fig. 9, PINNs are trained with Adam 
+optimizer for 500, 000iterations. The learning rate decays from 10−3to 10−5for stable training.
+The B-PINN method [24]i s used for noisy data to obtain predictions with UQ. In all related examples, parameters of DNNs are 
+assumed to be identically independent distributed (i.i.d.) Gaussian as the prior distribution with mean zero and standard deviation 
+one. The likelihood distribution is also assumed to be independent Gaussian where the standard deviation is the known noise scale 
+for additive Gaussian noise. In addition, Hamiltonian Monte Carlo (HMC) with adaptive step size [52]i s used to obtain posterior 
+samples, in which the number of posterior samples is set to 1, 000and the number of steps for the leap-frog scheme is set to 50. The 
+number of burn-in samples and the initial step are tuned such that the acceptance rate lies between 50%and 70%. A open-sourced 
+Python library for UQ in scientiﬁc machine learning, termed NeuralUQ [21], is used for fast and convenient implementations.
+AppendixB.  Additional results for the ODE system
+B.1. Clean and gappy data
+In Sec.3.1, we considered both clean and noisy data cases. In clean data cases, we used suﬃcient clean data to demonstrate the 
+eﬀect of model misspeciﬁcations. Speciﬁcally, data are collected from values of 𝑢and 𝑓on 101sampling points uniformly distributed 
+on 𝑡 ∈[0, 1]. An alternative approach to estimate the reaction model 𝜙is using ﬁnite diﬀerence scheme to approximate 𝑑𝑢∕𝑑𝑡and 
+then compute 𝜙as 𝜙 =𝑑𝑢∕𝑑𝑡−𝑓. The shortcoming of this approach is that it is not applicable to more general dataset, e.g. data of 𝑢
+and 𝑓are not sampled on uniform grids and/or are not sampled from the same sensors. To showcase the generality of the proposed 
+method, here we further consider a case where the data is clean but randomly sampled from 𝑡 ∈[0, 1].
+
+===== PAGE 17 =====
+Journal of Computational Physics 505 (2024) 112918
+17
+Z.Zou,X.MengandG.E.Karniadakis
+Fig. B.13.ODE system: Predictions for 𝑢, 𝑓and 𝜙from ensemble PINNs with clean and gappy data. Ensemble PINNs with (a) the correct physical model, (b) a 
+misspeciﬁed physical model, and (c) the misspeciﬁed physical model plus a correction. Blue circles: Representative measurements for 𝑢and 𝑓; Red dashed line: 
+Predicted mean; Black solid line: Reference solution.
+TableB.5
+Results of PINNs for the ODE system with clean and gappy data; see the caption of Table1for details.
+̃𝜆 Errorof 𝜙 Errorof 𝑢 Errorof 𝑓 Errorof ̃𝑢
+Case(A):Knownmodel 1.4997±0 .0003 0 .02% 0 .01% 0 .09% 0 .03%
+Case(B):Misspeciﬁedmodel 0.2331±0 .0000 41 .59% 3 .14% 0 .16% 10 .20%
+Case(C):Correctedmodel 0.21 2 .03% 0 .43% 0 .04% 0 .75%
+As shown in Fig. B.13(a) and Table B.5, PINNs with correct physical model (Case (A)) yields the best results in predicting 𝜙
+and identifying the governing equations. The results of PINNs with misspeciﬁed physical model (Case (B)) and our approach deliver 
+consistent results with all the other cases in Sec. 3.1. As illustrated in Fig. B.13(c) as well as Table B.5, our approach produces 
+accurate inference of 𝜙and the surrogate model 𝑢𝜃is able to satisfy the ODE and ﬁt the data at the same time, indicating that the 
+generality of the present approach in handling model misspeciﬁcation with clean but gappy data. We also notice that, compared to 
+the case where data are clean and suﬃcient, here the predicted uncertainty and the error of 𝜙from our approach are much larger 
+(shown in Fig. B.13(c) and Table B.5). We note that when compared with Case (A) where the physical model is known with the 
+same dataset, the increase of the predicted uncertainty and the error is caused by the model uncertainty; when compared with the 
+clean-and-suﬃcient-data case, it is instead caused by the gappy data.
+
+===== PAGE 18 =====
+Journal of Computational Physics 505 (2024) 112918
+18
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.B.14. ODE system: Plots of the discovered equation 𝜙(𝑢)using symbolic regression, following our approach in correcting the model misspeciﬁcation; see Table3
+for the mathematical expressions. In (a), the symbolic regression is performed on the predicted mean from ensemble PINNs. In (b) and (c), the symbolic regression is 
+performed on the predicted mean as well as the upper and lower bounds of the uncertainty band (mean ±2stds) from B-PINNs. We note that the symbolic regression 
+is performed on 𝜙(𝑢)instead of 𝜙(𝑡).
+B.2. Symbolic regression
+In Fig.B.14, we present plots of the discovered equation 𝜙(𝑢)using symbolic regression in various cases; see Sec.3.1for details 
+and Table 3 for the discovered mathematical expressions. Recall that in noisy-data cases, we employed B-PINNs and obtained 
+uncertainties in predicting 𝑢and 𝜙. By forming the data for symbolic regression as {𝑢𝜃(𝑡𝑖), 𝑠𝜓(𝑡𝑖) + ̃𝜆cos(𝑢𝜃(𝑡𝑖))}𝑁
+𝑖=1, we in fact obtain 
+uncertainty in 𝜙(𝑢)as well, which is leveraged in the following symbolic regression. As shown in Fig.B.14, for noisy-data cases, we 
+also perform symbolic regression on the upper and lower bounds of the uncertainty band in predicting 𝜙(𝑢). Although the discovered 
+mathematical expressions in Table 3 from noisy-data cases are not as accurate, the error in function values is bounded by the 
+upper and lower bounds. Besides, due to the increase of data, the predicted uncertainty from the noisy-and-suﬃcient-data case is 
+signiﬁcantly smaller.
+AppendixC.  Additional results for the 1D reaction-diﬀusion equation
+In this section, we utilize the proposed method in combination with the symbolic regression to (1) correct the misspeciﬁed physics 
+in these cases independently and (2) discover the explicit expression for the reaction model based on the trained NNs. Speciﬁcally, 
+the ﬁrst test case here is Case (C) in Sec.3.2, where the reaction model is misspeciﬁed as 𝜆𝑢2 (with known 𝜆 =1), and we use an 
+additional NN to correct it. The misspeciﬁed part, i.e., 𝜙 =𝜆𝑢2 +𝑠𝜓in the governing equation is illustrated in Fig.7. The symbolic 
+regression is then employed to identify the mathematical expression for 𝜙, which is now treated as a function of 𝑢. The results are 
+presented in TableC.7, and discovered reaction model is close to the reference solution as observed.
+To further improve the predicted accuracy, we assume that we have additional data from the same reaction-diﬀusion system, i.e., 
+the governing equation is the same, but with diﬀerent initial/boundary conditions, which are shown in TableC.6. Speciﬁcally, we 
+assume that we have data from two additional cases where the initial/boundary conditions are diﬀerent from the one used in Case 
+(C). We note that the problem setups for the two new cases are the same as in Case (C), and we then employ the proposed method to 
+correct the misspeciﬁcation of the reaction model in PINNs. We denote the solutions as 𝑢1/𝑢2/𝑢3 and the corrections as 𝑠1/𝑠2/𝑠3 for 
+the cases in TableC.6(from left to right). The learned reaction terms 𝜙1/𝜙2/𝜙3 can then be expressed as 𝜆𝑢2
+1 +𝑠1/𝜆𝑢2
+2 +𝑠2/𝜆𝑢2
+3 +𝑠3.
+We now proceed to identify the misspeciﬁed physics using symbolic regression given data on all the three cases. Similar to Case 
+(C), we assume that the reaction term 𝜙is a function of the solution 𝑢, i.e. 𝜙 =𝜙(𝑢), and it has the same formulation in the there test 
+cases. We then apply the method from [48]to  regress the analytic expression of the reaction term using the followingdata:
+TableC.6
+Diﬀerent initial and boundary conditions for the reaction-diﬀusion equation. The initial/boundary conditions 
+are for Case (C) of Sec.3.2.
+Initialcondition( 𝑥∈[0,1]) 𝑢(𝑥,0)=0 .5sin2(𝜋𝑥) 𝑢(𝑥,0)= 𝑥(1−cos2(𝜋𝑥)) 𝑢(𝑥,0)=cos 2(𝜋𝑥)
+Boundarycondition( 𝑡∈[0,1]) 𝑢(0,𝑡)= 𝑢(1,𝑡)=0 𝑢(0,𝑡)= 𝑢(1,𝑡)=0 𝑢(0,𝑡)= 𝑢(1,𝑡)=1
+TableC.7
+The identiﬁed mathematical expressions of the reaction term 𝜙(𝑢) in the 
+reaction-diﬀusion equation (11)u s i n g symbolic regression and data from 
+multiple initial/boundary conditions. The exact is 2𝑢(1 −𝑢). The data for 
+the symbolic regression are displayed in Fig.C.15.
+Oneinitial/boundarycondition Threeinitial/boundaryconditions
+𝑢(2.0878−2.0745𝑢)−0.0229 𝑢(1.9698−1.9524𝑢)
+
+===== PAGE 19 =====
+Journal of Computational Physics 505 (2024) 112918
+19
+Z.Zou,X.MengandG.E.Karniadakis
+Fig.C.15. Data for the identiﬁcation of the reaction term 𝜙(𝑢), obtained from correcting the misspeciﬁed physics in three initial/boundary conditions (presented in 
+TableC.6) independently using our approach. The exact 𝜙-𝑢relation is 𝜙 =2𝑢(1 −𝑢).
+∪3
+𝑗=1{𝑢𝜃𝑗(𝑥𝑖
+𝑓,𝑡𝑖
+𝑓),𝜆𝑢2
+𝜃𝑗
+(𝑥𝑖
+𝑓,𝑡𝑖
+𝑓)+ 𝑠𝜓𝑗(𝑥𝑖
+𝑓,𝑡𝑖
+𝑓)}
+𝑁𝑓
+𝑖=1,
+where 𝑥𝑖
+𝑓, 𝑡𝑖
+𝑓, 𝑖 =1, ..., 𝑁𝑓are grid points on which the source term 𝑓is evaluated and 𝑁𝑓is the number of data. The training data 
+used in the symbolic regression are shown in Fig.C.15, in which we can see that data are scattered around the exact 𝜙-𝑢relation. In 
+addition, we observe that the data from the same equation but diﬀerent initial conditions are able to provide extra information, e.g. 
+data near 𝑢 =1, which is able to improve the accuracy for identifying the reaction model, as illustrated in TableC.7. We note that 
+the current approach for identifying the mathematical expressions for the misspeciﬁed physics is quite ﬂexible and does not require 
+the candidate library for the all possible formulations of the reaction process as in [6].
+AppendixD.  Details for the computations in lattice Boltzman equation model
+In this section, we provide details for generating data of the non-Newtonian Cavity ﬂow in Sec.3.3.2using the lattice Boltzman 
+equation model (LBE) in [51]. We set Re =𝑈2−𝑛𝐿∕𝜈0 =100, 𝐿 =1, 𝑈=0.01, 𝜌 =1, 𝑛 =1.5and use a uniform mesh of size 101 ×101
+on [0, 1]2 to perform the simulations.
+AppendixE.  Additional results for the non-Newtonian cavity ﬂow
+In Sec.3.3.2, we considered clean data from a non-Newtonian Cavity ﬂow for correcting model misspeciﬁcation. Here, we present 
+additional results from noisy data. Speciﬁcally, data of 𝑢, 𝑣are corrupted by additive Gaussian noise with 0.02noise scale and we 
+conduct the same experiments to validate the presented approach. Similarly, the ensemble PINN method is employed for uncertainty 
+quantiﬁcation and stable predictions. The results are displayed in Table E.8 from which we observe that our approach is able to 
+correct the misspeciﬁcation and ﬁt both the data and the PDE signiﬁcantly better than the vanilla PINN approach when data of 𝑢, 𝑣
+are noisy. The degradation in the accuracy compared to the case with clean data is caused by noise in the data.
+We further consider a case where the data of 𝒇 are also corrupted by additive Gaussian noise with the same scale and employ 
+our approach to correct the misspeciﬁed physics. As shown in TableE.8, the errors of 𝑢, 𝑣are approximately the same as the ones 
+from the case where data of 𝒇 are clean while the error of 𝒇 is higher due to the noise. The ﬁtting of 𝑢, 𝑣and 𝒇 is still improved 
+signiﬁcantly, demonstrating the eﬀectiveness of our approach in addressing noisy data in the cavity ﬂow example.
+TableE.8
+2D non-Newtonian Cavity ﬂow: Errors of the predicted means from ensemble PINNs for noisy data. The error 
+of 𝑢/𝑣is deﬁned as the relative 𝐿2 error, while the error of 𝑓𝑥/𝑓𝑦the mean squared error since the reference 
+solutions are 𝑓𝑥=0 and 𝑓𝑦=0.
+Errorof 𝑢 Errorof 𝑣 Errorof 𝑓𝑥 Errorof 𝑓𝑦
+Misspeciﬁedmodel(clean 𝒇) 7.82% 11 .48% 3 .9435×10 −4 3.0826×10 −4
+Misspeciﬁedmodelwithcorrection(clean 𝒇) 2.96% 3 .22% 1 .0542×10 −6 8.7208×10 −7
+Misspeciﬁedmodelwithcorrection(noisy 𝒇) 3.04% 3 .21% 1 .2174×10 −5 1.3537×10 −5
+References
+[1] J. Zhang, W. Ma, Data-driven discovery of governing equations for ﬂuid dynamics based on molecular simulation, J. Fluid Mech. 892 (2020) A5.
+
+===== PAGE 20 =====
+Journal of Computational Physics 505 (2024) 112918
+20
+Z.Zou,X.MengandG.E.Karniadakis
+[2] J.C. Fyfe, V.V. Kharin, B.D. Santer, J.N. Cole, N.P. Gillett, Signiﬁcant impact of forcing uncertainty in a large ensemble of climate model simulations, Proc. Natl. 
+Acad. Sci. 118(23)  (2021) e2016549118.
+[3] M. Schmidt, H. Lipson, Distilling free-form natural laws from experimental data, Science 324(5923)  (2009) 81–85.
+[4] S.L. Brunton, J.L. Proctor, J.N. Kutz, Discovering governing equations from data by sparse identiﬁcation of nonlinear dynamical systems, Proc. Natl. Acad. Sci. 
+113(15)  (2016) 3932–3937.
+[5] S.H. Rudy, S.L. Brunton, J.L. Proctor, J.N. Kutz, Data-driven discovery of partial diﬀerential equations, Sci. Adv. 3(4)  (2017) e1602614.
+[6] Z. Chen, Y. Liu, H. Sun, Physics-informed learning of governing equations from scarce data, Nat. Commun. 12(1)  (2021) 6136.
+[7] Z. Zhang, Y. Shin, G. EmKarniadakis,  GFINNs: GENERIC formalism informed neural networks for deterministic and stochastic dynamical systems, Philos. Trans. 
+R. Soc. A 380(2229)  (2022) 20210207.
+[8] K. Lee, N. Trask, P. Stinis, Structure-preserving sparse identiﬁcation of nonlinear dynamics for data-driven modeling, in: Mathematical and Scientiﬁc Machine 
+Learning, PMLR, 2022, pp.65–80.
+[9] R. González-García, R. Rico-Martìnez, I.G. Kevrekidis, Identiﬁcation of distributed parameter systems: a neural net based approach, Comput. Chem. Eng. 22 
+(1998) S965–S968.
+[10] R. Rico-Martinez, K. Krischer, I. Kevrekidis, M. Kube, J. Hudson, Discrete-vs. continuous-time nonlinear signal processing of cu electrodissolution data, Chem. 
+Eng. Commun. 118(1)  (1992) 25–48.
+[11] S. Zhang, G. Lin, Robust data-driven discovery of governing physical laws with error bars, Proc. R. Soc. A, Math. Phys. Eng. Sci. 474(2217)  (2018) 20180305.
+[12] M. Raissi, P. Perdikaris, G.E. Karniadakis, Physics-informed neural networks: a deep learning framework for solving forward and inverse problems involving 
+nonlinear partial diﬀerential equations, J. Comput. Phys. 378 (2019) 686–707.
+[13] L. Berger, M. Marinacci, Model uncertainty in climate change economics: a review and proposed framework for future research, Environ. Resour. Econ. 77(3)  
+(2020) 475–501.
+[14] M.R. Ebers, K.M. Steele, J.N. Kutz, Discrepancy modeling framework: learning missing physics, modeling systematic residuals, and disambiguating between 
+deterministic and random eﬀects, arXiv preprint arXiv :2203 .05164, 2022.
+[15] Z. Chen, D. Xiu, On generalized residual network for deep learning of unknown dynamical systems, J. Comput. Phys. 438 (2021) 110362.
+[16] Z. Zhang, Z. Zou, E. Kuhl, G.E. Karniadakis, Discovering a reaction-diﬀusion model for Alzheimer’s disease by combining PINNs with symbolic regression, 
+Comput. Methods Appl. Mech. Eng. 419 (2024) 116647.
+[17] B. Eastman, L. Podina, M. Kohandel, A PINN approach to symbolic diﬀerential operator discovery with sparse data, in: The Symbiosis of Deep Learning and 
+Diﬀerential Equations II, 2022.
+[18] S. Malani, T.S. Bertalan, T. Cui, J.L. Avalos, M. Betenbaugh, I.G. Kevrekidis, Some of the variables, some of the parameters, some of the times, with some physics 
+known: identiﬁcation with partial information, arXiv preprint arXiv :2304 .14214, 2023.
+[19] A. Zhu, T. Bertalan, B. Zhu, Y. Tang, I.G. Kevrekidis, Implementation and (inverse modiﬁed) error analysis for implicitly-templated ode-nets, arXiv preprint 
+arXiv :2303 .17824, 2023.
+[20] A.F. Psaros, X. Meng, Z. Zou, L. Guo, G.E. Karniadakis, Uncertainty quantiﬁcation in scientiﬁc machine learning: methods, metrics, and comparisons, J. Comput. 
+Phys. 477 (2023) 111902.
+[21] Z. Zou, X. Meng, A.F. Psaros, G.E. Karniadakis, NeuralUQ: a comprehensive library for uncertainty quantiﬁcation in neural diﬀerential equations and operators, 
+SIAM Rev. 66(1)  (2024) 161–190.
+[22] W.S. Parker, Ensemble modeling, uncertainty and robust predictions, Wiley interdisciplinary reviews, Clim. Change 4(3)  (2013) 213–223.
+[23] S.N. Gosling, G.R. McGregor, J.A. Lowe, The beneﬁts of quantifying climate model uncertainty in climate change impacts assessment: an example with heat-
+related mortality change estimates, Clim. Change 112 (2012) 217–231.
+[24] L. Yang, X. Meng, G.E. Karniadakis, B-PINNs: Bayesian physics-informed neural networks for forward and inverse PDE problems with noisy data, J. Comput. 
+Phys. 425 (2021) 109913.
+[25] L. Lu, X. Meng, Z. Mao, G.E. Karniadakis, DeepXDE: a deep learning library for solving diﬀerential equations, SIAM Rev. 63(1)  (2021) 208–228.
+[26] S. Cai, Z. Mao, Z. Wang, M. Yin, G.E. Karniadakis, Physics-informed neural networks (PINNs) for ﬂuid mechanics: a review, Acta Mech. Sin. 37 (12) (2021) 
+1727–1738.
+[27] G. Pang, L. Lu, G.E. Karniadakis, fPINNs: fractional physics-informed neural networks, SIAM J. Sci. Comput. 41(4)  (2019) A2603–A2626.
+[28] E. Kharazmi, Z. Zhang, G.E. Karniadakis, hp-VPINNs: variational physics-informed neural networks with domain decomposition, Comput. Methods Appl. Mech. 
+Eng. 374 (2021) 113547.
+[29] A.D. Jagtap, G.E. Karniadakis, Extended physics-informed neural networks (XPINNs): a generalized space-time domain decomposition based deep learning 
+framework for nonlinear partial diﬀerential equations, in: AAAI Spring Symposium: MLPS, Vol.10,  2021.
+[30] A.D. Jagtap, E. Kharazmi, G.E. Karniadakis, Conservative physics-informed neural networks on discrete domains for conservation laws: applications to forward 
+and inverse problems, Comput. Methods Appl. Mech. Eng. 365 (2020) 113028.
+[31] Z. Zou, G.E. Karniadakis, L-HYDRA: multi-head physics-informed neural networks, arXiv preprint arXiv :2301 .02152, 2023.
+[32] Z. Zou, X. Meng, G.E. Karniadakis, Uncertainty quantiﬁcation for noisy inputs-outputs in physics-informed neural networks and neural operators, arXiv preprint 
+arXiv :2311 .11262, 2023.
+[33] K. Linka, A. Schäfer, X. Meng, Z. Zou, G.E. Karniadakis, E. Kuhl, Bayesian physics informed neural networks for real-world nonlinear dynamical systems, Comput. 
+Methods Appl. Mech. Eng. 402 (2022) 115346.
+[34] P. Chen, T. Meng, Z. Zou, J. Darbon, G.E. Karniadakis, Leveraging multi-time Hamilton-Jacobi PDEs for certain scientiﬁc machine learning problems, arXiv 
+preprint arXiv :2303 .12928, 2023.
+[35] P. Chen, T. Meng, Z. Zou, J. Darbon, G.E. Karniadakis, Leveraging Hamilton-Jacobi PDEs with time-dependent hamiltonians for continual scientiﬁc machine 
+learning, arXiv preprint arXiv :2311 .07790, 2023.
+[36] G. Lin, Y. Wang, Z. Zhang, Multi-variance replica exchange SGMCMC for inverse and forward problems via Bayesian PINN, J. Comput. Phys. 460 (2022) 111173.
+[37] W.T. Leung, G. Lin, Z. Zhang NH-PINN, Neural homogenization-based physics-informed neural network for multiscale problems, J. Comput. Phys. 470 (2022) 
+111539.
+[38] K. Tang, X. Wan, C. Yang, DAS-PINNs: a deep adaptive sampling method for solving high-dimensional partial diﬀerential equations, J. Comput. Phys. 476 (2023) 
+111868.
+[39] K. Tang, J. Zhai, X. Wan, C. Yang, Adversarial adaptive sampling: unify PINN and optimal transport for the approximation of PDEs, arXiv preprint arXiv :
+2305 .18702, 2023.
+[40] X. Meng, H. Babaee, G.E. Karniadakis, Multi-ﬁdelity Bayesian neural networks: algorithms and applications, J. Comput. Phys. 438 (2021) 110361.
+[41] M. Sarabian, H. Babaee, K. Laksari, Physics-informed neural networks for brain hemodynamic predictions using medical imaging, IEEE Trans. Med. Imaging 
+41(9)  (2022) 2285–2303.
+[42] L. Guo, H. Wu, X. Yu, T. Zhou, Monte Carlo fPINNs: deep learning method for forward and inverse problems involving high dimensional fractional partial 
+diﬀerential equations, Comput. Methods Appl. Mech. Eng. 400 (2022) 115523.
+[43] Z. Gao, L. Yan, T. Zhou, Failure-informed adaptive sampling for PINNs, SIAM J. Sci. Comput. 45(4)  (2023) A1971–A1994.
+[44] M. Yin, Z. Zou, E. Zhang, C. Cavinato, J.D. Humphrey, G.E. Karniadakis, A generative modeling framework for inferring families of biomechanical constitutive 
+laws in data-sparse regimes, J. Mech. Phys. Solids 181 (2023) 105424.
+
+===== PAGE 21 =====
+Journal of Computational Physics 505 (2024) 112918
+21
+Z.Zou,X.MengandG.E.Karniadakis
+[45] S. Ruder, An overview of gradient descent optimization algorithms, arXiv preprint arXiv :1609 .04747, 2016.
+[46] B. Lakshminarayanan, A. Pritzel, C. Blundell, Simple and scalable predictive uncertainty estimation using deep ensembles, Adv. Neural Inf. Process. Syst. 30 
+(2017).
+[47] E. Kiyani, K. Shukla, G.E. Karniadakis, M. Karttunen, A framework based on symbolic regression coupled with eXtended physics-informed neural networks for 
+gray-box learning of equations of motion from data, arXiv preprint arXiv :2305 .10706, 2023.
+[48] M. Cranmer, Interpretable machine learning for science with PySR and SymbolicRegression.jl, arXiv preprint arXiv :2305 .01582, 2023.
+[49] T.M. Inc., Matlab version: 9.13.0 (r2022b), https://www .mathworks .com, 2022.
+[50] D.P. Kingma, J.Ba  Adam, A method for stochastic optimization, arXiv preprint arXiv :1412 .6980, 2014.
+[51] L. Wang, J. Mi, X. Meng, Z. Guo, A localized mass-conserving lattice Boltzmann approach for non-Newtonian ﬂuid ﬂows, Commun. Comput. Phys. 17(4)  (2015) 
+908–924.
+[52] R.M. Neal, et al., MCMC using Hamiltonian dynamics, in: Handbook of Markov Chain Monte Carlo 2(11),  2011, p.2.

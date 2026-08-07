@@ -1,0 +1,1711 @@
+===== PAGE 1 =====
+Integrating Physics-Based Modeling with Machine Learning for Lithium-Ion Batteries
+Hao Tua, Scott Mourab, Yebin Wangc, Huazhen Fanga,∗
+aDepartment of Mechanical Engineering, University of Kansas, Lawrence, KS 66045, USA
+bDepartment of Civil and Environmental Engineering, University of California, Berkeley, CA 94720, USA
+cMitsubishi Electric Research Laboratories, Cambridge, MA 02139, USA
+Abstract
+Mathematical modeling of lithium-ion batteries (LiBs) is a primary challenge in advanced battery management. This paper
+proposes two new frameworks to integrate physics-based models with machine learning to achieve high-precision modeling for
+LiBs. The frameworks are characterized by informing the machine learning model of the state information of the physical model,
+enabling a deep integration between physics and machine learning. Based on the frameworks, a series of hybrid models are
+constructed, through combining an electrochemical model and an equivalent circuit model, respectively, with a feedforward neural
+network. The hybrid models are relatively parsimonious in structure and can provide considerable voltage predictive accuracy under
+a broad range of C-rates, as shown by extensive simulations and experiments. The study further expands to conduct aging-aware
+hybrid modeling, leading to the design of a hybrid model conscious of the state-of-health to make prediction. The experiments
+show that the model has high voltage predictive accuracy throughout a LiB’s cycle life.
+Keywords: Hybrid modeling, Physics, Machine learning, Lithium-ion batteries
+1. Introduction
+Lithium-ion batteries (LiBs) represent a key energy storage
+technology for our industry and society. Today, they not only
+power billions of consumer electronics devices, but also en-
+able electrified transportation, smart grid, and renewable energy
+adoption to drive the world forward into a decarbonized energy
+future. The surging use of LiBs has led to ever-growing de-
+mands for higher operating performance and safety. Optimal
+operation of LiBs involves state estimation, control, and diag-
+nosis, which all rely on accurate and e fficient dynamic models
+of LiBs. Mathematical modeling of LiBs hence has attracted
+intense research interest in the past decade [1, 2]. In this pa-
+per, we propose to integrate physics-based modeling with data-
+driven machine learning to develop a new breed of models that
+harness their respective merits. The proposed models will be
+shown to offer high voltage predictive accuracy, computational
+efficiency and applicability to a broad range of C-rates.
+1.1. Literature Review
+The literature includes two main types of physics-based LiB
+models, namely, electrochemical models and equivalent circuit
+models (ECMs). Electrochemical models use electrochemical
+principles to comprehensively characterize the electrochemi-
+cal reactions, lithium-ion di ffusion and concentration changes
+in the electrode /electrolyte, as well as various associated pro-
+cesses during charging /discharging of LiBs. A well-known
+electrochemical model is the Doyle-Fuller-Newman (DFN)
+∗Corresponding author
+Email address: fang@ku.edu (Huazhen Fang)
+model, which is broadly considered reliable and precise enough
+for almost all LiB management scenarios [3, 4]. Its accuracy yet
+comes with enormous computational complexity. This hence
+has motivated an incessant search for streamlined electrochem-
+ical models to balance between accuracy and computational
+costs. The single particle model (SPM) is one of the most
+parsimonious, which represents each electrode as a spherical
+particle and delineates lithium-ion intercalation and di ffusion
+in the particles [5]. With its simplified structure, it is com-
+putationally fast but accurate only for low to medium C-rates
+(below 1 C-rate). Based on the SPM, there is a wide range of
+improved versions for higher accuracy under di fferent condi-
+tions. They usually supplement the SPM with characterizations
+of thermal behavior [6, 7], electrolyte dynamics [8–11], degra-
+dation physics [12], and stress buildup [11]. Another important
+line of research lies in applying model order reduction methods
+to the DFN, SPM or other electrochemical models, with the aim
+of accelerating numerical computation [13–19].
+Differently, ECMs leverage electrical circuits, usually based
+on resistors, capacitors, and voltage sources, to capture LiBs’
+current/voltage dynamics in a physically interpretable way.
+Compared to electrochemical models, ECMs have greatly more
+parsimonious structures and simpler governing equations, thus
+advantageous for computation and conducive to real-time con-
+trol, prediction, and simulation. Some widely used ECMs in-
+clude the Rint model, the Thevenin model, and the Dual Po-
+larization model [20–22]. Recent literature has expanded the
+development of ECMs toward better prediction accuracy. Some
+studies seek to account for the effects of hysteresis and tempera-
+ture on a LiB’s electrical dynamics [23–27]. Others design new
+ECMs to approximate certain electrochemical models [28–32].
+Preprint submitted to Applied Energy August 23, 2024
+arXiv:2112.12979v3  [cs.CE]  22 Aug 2024
+
+===== PAGE 2 =====
+While ECMs have found increasing popularity, their structural
+simplicity restricts their accuracy, making them useful only for
+low to medium C-rates.
+For all the aforementioned models, their effectiveness and fi-
+delity will decrease as a LiB ages, since many parameters of
+a model can change drastically with the LiB’s state-of-health
+(SoH). This hence has stimulated research on aging-aware mod-
+eling, where electrochemical models [33–38] or ECMs [24, 39–
+42] are coupled with different aging or degradation mechanisms
+intrinsic to LiBs.
+Besides physical modeling, extracting models from data di-
+rectly has become appealing, as ubiquitous onboard sensing has
+increased data availability for today’s LiB systems. Machine
+learning (ML) tools, such as neural networks (NNs) [43] and
+support vector machine [44], have been used to learn battery
+models from measurement data. These ML models are black-
+box approximations of LiBs’ dynamics. Bypassing the use of
+physical principles, they can be constructed from data conve-
+niently in practice and su fficiently accurate if trained on rich,
+informative enough data. Meanwhile, data can help grasp vari-
+ous uncertain factors that affect a LiB cell’s dynamic behaviors.
+However, unlike physics-based models, pure ML models gen-
+erally lack generalizability and risk producing physically un-
+reasonable or incorrect prediction in out-of-sample scenarios.
+Also, training them often requires large amounts of high-quality
+data, which may not always be possible.
+A close inspection indicates that physical modeling and ML
+modeling are constructively complementary to each other. On
+the one hand, physics-based models can o ffer physical inter-
+pretations of LiBs’ dynamic behaviors and extrapolate to any
+charging/discharging scenarios meeting model assumptions.
+However, they either require much computation, as in the case
+of the DFN, or have inadequate accuracy when the model as-
+sumptions are not satisfied—for instance, the SPM and ECMs,
+usually designed for low to medium C-rates, will poorly pre-
+dict LiBs’ dynamics at high C-rates. Besides, some physical
+parameters of these models, like the di ffusion coe fficients in
+electrochemical models and resistances in ECMs, are subject
+to change due to di fferent operating conditions, such as tem-
+perature and LiB’s aging. This will eventually result in model
+mismatch if these parameters are not corrected in time. On the
+other hand, ML-based modeling is able to extract complicated
+input-to-output relationships underlying data, especially those
+evading precise characterization by physical principles or suf-
+fering uncertainty. As another benefit, ML models, once after
+being trained on datasets, can run fast with only fixed compu-
+tational costs. Based on the above, there is an emerging in-
+terest in hybrid physics-ML modeling for LiBs to combine the
+respective merits of the two modeling approaches. The study
+in [45] couples a one-dimensional electrochemical model with
+different kinds of NNs. In [46], recurrent NNs are used to learn
+the residuals between a LiB’s terminal voltage and the SPM’s
+output voltage. In [47], a simplified SPM and a lumped ther-
+mal model are combined with an NN in series to predict the
+terminal voltage. These hybrid models have a similar underly-
+ing structure—an NN takes the current and output voltage of
+a physical model as its input, and predicts the residual or ac-
+Challenges in Physics-Based Modeling 
+8Computational Complexity
+Model Accuracy
+ECMs
+(Low to medium C-rates)
+DFN model
+(Low to high C-rates)
+SPM model
+(Low to medium C-rates)
+Physics-ML 
+modeling
+Figure 1: Comparison of physics-based models for LiB and their applicable
+current range.
+tual terminal voltage as its output. However, from a physical
+perspective, the mappings represented by such NNs do not ef-
+fectively hold at the level of LiBs’ dynamics. The NNs, and
+consequently the hybrid models, are often not accurate enough
+in prediction even if they can achieve satisfactory training ac-
+curacy. Therefore, while the present studies indicate a promise
+of hybrid modeling for LiBs, this subject is still underexplored
+to live up to its potential.
+1.2. Contributions
+The goal of our study is to develop hybrid physics-ML mod-
+els to enable highly accurate voltage prediction while preserv-
+ing low computational complexity for LiBs, as visualized in
+Fig. 1. As pointed out in the literature survey, the existing hy-
+brid models, e.g., [45–47], use NNs to learn relationships or
+mappings that are not physically meaningful, and thus see their
+predictive accuracy limited. To overcome this limitation, we
+propose a new perspective: the NN must be informed of the in-
+ternal state of the physical model to correctly learn what the
+physical model misses in comparison to the actual physics of
+LiBs. In other words, the success of a hybrid model depends on
+whether the NN represents a physically sound mapping; to this
+end, the NN must be made to take the physical model’s state
+as an input. The perspective leads us to develop the following
+specific contributions.
+• We develop two hybrid physics-ML LiB modeling frame-
+works, named as HYBRID-1 and HYBRID-2, respec-
+tively, which integrate physical LiB models with feedfor-
+ward neural networks (FNNs). HYBRID-1 leverages an
+FNN to capture the residuals of a physical model, and
+HYBRID-2 uses an FNN to predict the terminal voltage
+based on a physical model. Di fferent from the literature,
+both of them critically feed state information of the phys-
+ical model to the FNN. In particular, we provide a math-
+2
+
+===== PAGE 3 =====
+ematical reasoning to prove that the designed frameworks
+are physically reasonable.
+• We apply the above frameworks to e ffectively integrate
+electrochemical models and ECMs with FNNs. Our first
+effort combines the SPM with thermal dynamics (SPMT)
+with an FNN, and the second blends the nonlinear dou-
+ble capacitor (NDC) model, an ECM proposed recently
+in [28, 29], with an FNN. The developed models, first of
+their kind, are validated via extensive simulations or ex-
+periments, demonstrating high voltage predictive accuracy
+across broad C-rate ranges.
+• We further propose to incorporate aging awareness into
+hybrid modeling and develop an upgraded hybrid model
+that utilizes a LiB cell’s SoH information for voltage pre-
+diction. The model is shown capable of making accurate
+prediction throughout a cell’s cycle life.
+Compared to the existing hybrid models, the proposed frame-
+works and models can generalize and predict precisely beyond
+training datasets, thanks to the distinct attribute of making the
+FNN aware of the physical model’s state. They may find poten-
+tial use in various LiB energy storage applications, especially
+those involving high C-rates and high power load conditions. A
+further view of their applications is given in Section 6.
+1.3. Organization
+This paper is organized as follows. Section 2 presents the two
+proposed hybrid modeling frameworks. Based on the frame-
+works, Sections 3-4 develop hybrid models based on integrat-
+ing the SPMT and the NDC with FNNs, respectively, and val-
+idate them. Then, Section 5 constructs an aging-aware hybrid
+model based upon Sections 3-4 and verifies the results. Sec-
+tion 6 provides our remarks about the results. Finally, Section
+7 concludes the study.
+A preliminary conference version of the work appeared in
+[48], which deals with only the integration of electrochemical
+modeling with ML. This paper introduces significant extensions
+to improve the study in both depth and breadth. The extensions
+include the following: 1) the addition of a mathematical ratio-
+nale to explain the correctness of the proposed hybrid model-
+ing frameworks, 2) the development of new hybrid models by
+integrating an ECM with ML, and evaluation of them by ex-
+periments, and 3) the expansion of the proposed frameworks to
+aging-aware hybrid modeling along with experimental valida-
+tion.
+2. Hybrid Physics-ML Modeling for LiBs
+In this section, we present two hybrid physics-ML modeling
+frameworks, referring to them as HYBRID-1 and HYBRID-2,
+respectively. They both are designed to blend physical model-
+ing with an FNN, and their difference lies in the learning objec-
+tive set for the FNN. We further provide an overview of FNNs
+for the sake of completeness.
+Current 𝐼
+𝑉phy
+＋
+𝑉hybrid
+Hybrid modelling
+5
+𝑿Physical 
+Model
+FNN
+Terminal voltage 𝑉true
+Δ𝑉
+(a)
+𝑉true𝐼
+𝑿
+𝑉hybrid
+6
+Physical 
+Model
+FNN
+(b)
+Figure 2: Block diagrams of (a) the HYBRID-1 framework and (b) the
+HYBRID-2 framework.
+2.1. The Proposed Hybrid Modeling Frameworks
+As shown in Fig. 2a, HYBRID-1 is composed of a physical
+model in cascade with an FNN, with them operating simulta-
+neously. The physical model approximately represents a LiB
+cell’s electrochemical, electrical, or thermal behaviors. It is not
+perfectly accurate relative to the cell’s true dynamics, due to in-
+evitable model mismatch or uncertainty. The FNN is used to
+learn biases of the physical model. Here, it is set to capture
+∆V = Vtrue − Vphy, which is the physical model’s residual er-
+ror with respect to the true terminal voltage. Leveraging the
+FNN’s prediction ∆V to correct Vphy, HYBRID-1 will output
+Vhybrid = Vphy + ∆V to emulate the cell’s actual voltage. As an
+extension, we propose HYBRID-2 shown in Fig. 2b, in which
+the FNN is made to learn the LiB’s terminal voltage Vtrue di-
+rectly, rather than the residual. By design, the FNN here is also
+informed of the state information of the physical model as in
+HYBRID-1.
+It is critical to select the input variables of the FNN so that
+the FNN can learn correct relationships consistent with the LiB
+cell’s true dynamics. We propose that the FNN should take the
+physical model’s state information X and the applied current I
+as its input. The reasoning is as follows. Without loss of gen-
+erality, let us consider that the LiB’s actual dynamics follows a
+3
+
+===== PAGE 4 =====
+high-dimensional nonlinear model of the form
+
+˙ξ = f (ξ, I),
+Vtrue = h(ξ, I), (1)
+where ξ ∈ Rp is the full-order state. The model may be derived
+from the ordinary differential equations or discretization of the
+partial di fferential equations governing the LiB [13, 17, 19].
+The physical model can be viewed as a reduced-order represen-
+tation of the LiB’s full actual dynamics, which approximates
+the original model in (1) as
+
+˙X = fr(X, I),
+Vphy = hr(X, I), (2)
+where X ∈ Rq with q ≪ p is the reduced-order state. From
+the perspective of model order reduction, one can view X as
+the result of projecting the full state ξ into a low-dimensional
+space. The projection can be described as X = σ(ξ), where
+σ : Rp → Rq. Note that it is not possible to exactly reconstruct
+ξ using X. However, since both ξ and X represent or reflect the
+state of the same LiB, it is reasonable to assume that there exists
+a nonlinear transformation to approximately project X back to
+ξ:
+ξ = ψ(X, I) + ϵ, (3)
+where ϵ is the approximation error. Then, according to (1)-(3),
+the residual ∆V can be expressed as
+∆V = Vtrue − Vphy
+= h(ψ(X, I) + ϵ, I) − hr(X, I)
+≈ h (ψ(X, I), I) − hr(X, I),
+where the approximate equality follows from the zeroth-order
+Taylor expansion of h(ψ(X, I) + ϵ, I) around X and ϵ = 0. This
+implies an approximate mapping ( X, I) → ∆V. We hence can
+use an FNN to learn this mapping as in the HYBRID-1 frame-
+work, with (X, I) as the input and ∆V as the output of the FNN.
+Following similar lines, we can find
+Vtrue ≈ h (ψ(X, I), I) .
+This relation justifies using an FNN to learn the approximate
+mapping ( X, I) → Vtrue, as is done in the HYBRID-2 frame-
+work.
+Remark 1. The pivotal difference of the above hybrid model-
+ing design from the literature, e.g., [45–47], is that information
+about the physical model’s state is fed as part of the input to the
+FNN. This, as is reasoned above, makes the FNN capable of
+learning physically consistent relationships, and the resultant
+tighter physics-ML integration will lead to enhanced accuracy
+in prediction.
+Remark 2. HYBRID-1 and HYBRID-2 are modular and exten-
+sible frameworks that allow execution in versatile ways to con-
+struct different hybrid models. First, one can use either an elec-
+trochemical model or an ECM as the physical model compo-
+nent, depending on the specific objective of hybrid modeling. To
+1
+𝑥1
+𝑥2
+𝑥3
+𝑥𝑚
+𝑦𝑛
+Input 
+layer
+Hidden layers
+Output 
+layer
+𝑦2
+Figure 3: FNN architecture with two fully connected hidden layers.
+demonstrate this, we will exploit the SPMT model and the NDC
+model, respectively, in Sections 3-4. Further, the frameworks
+can be readily extended to meet more needs. For instance, in
+Section 5, we will incorporate the SoH information into the for-
+mulation, enabling the FNN to make prediction with an aware-
+ness of a LiB’s aging condition. This improvement will lead to
+hybrid models being able to predict voltage dynamics through-
+out the LiB’s cycle life. Finally, the frameworks are open to
+using other ML models, e.g., Gaussian processes or support
+vector machines, even though this study focuses on the FNN.
+Remark 3. Physics-informed ML for battery modeling has at-
+tracted growing attention recently. Among the few studies, NNs
+are used in [49] to estimate the internal states of a physical
+model, e.g., concentrations and potentials in the electrodes and
+the electrolyte, and in [50] to capture the variability in the non-
+ideal voltage term of an electrochemical model. While these are
+meaningful ways to enhance battery modeling, this paper pur-
+sues a di fferent goal of using physics-informed ML for highly
+accurate voltage prediction over broad C-rate ranges. This type
+of battery modeling is useful and important for a variety of bat-
+tery management tasks, and its potential applications is further
+discussed in Section 6.
+2.2. The FNN Model
+FNNs are an important class of ML methods designed to ap-
+proximate complex functions. Their network structure contains
+no cycle or feedback connections, making them the simplest
+type of NNs and easy to train and implement. The theoret-
+ical performance of FNNs is guaranteed by the universal ap-
+proximation theorem, which generally states that a continuous
+vector-valued function in the real space can be approximated
+with arbitrary accuracy by an FNN [51]. An overview of FNNs
+is offered below, which is mainly based on [52, 53].
+Consider an unknown function g∗, which is a mapping from
+an m-dimensional input x to an n-dimensional output y. An
+FNN aims to approximate it by defining a parameterized map-
+ping y = g (x, θ) and learning the collection of parameters θ
+from the data (xi, yi), i = 1, 2, . . . ,N	. As Fig. 3 shows, the
+4
+
+===== PAGE 5 =====
+structure of an FNN includes three parts interconnected in se-
+ries, namely the input layer, hidden layers, and output layer.
+The input layer takes the input x and passes it to the first hid-
+den layer. A hidden layer makes a nonlinear transformation of
+its input. For example, the first hidden layer will transform x
+into ϕ(W1 x + b1), where ϕ is a chosen nonlinear mapping often
+called as activation function, W1 is the weight matrix, and b1 is
+a correction term. The following hidden layers then run similar
+nonlinear transformations sequentially. Finally, the output layer
+generates an output value to match y. An L-layer FNN can be
+described in a general form:
+z1 = x,
+zl = ϕ (Wl−1 zl−1 + bl−1) , l = 2, 3, . . . ,L − 1,
+y = WL−1 zL−1 + bL−1,
+where zl−1 and zl are the input and output of the l-th layer, re-
+spectively. Note that the information flows only in the forward
+direction from x to y in the above network model, which is why
+the model is called as f eed f orwardNN.
+For the FNN, θ is the collection of Wl and bl for l =
+1, 2, . . . ,L − 1. The training of the FNN is to identifyθ from the
+measurement data (xi, yi)	. A common approach is based on
+maximum likelihood estimation, which minimizes the follow-
+ing cost function:
+J(θ) = −Ex,y∼ ˆpdata log pmodel (y | x, θ) ,
+where ˆpdata is the data-based empirical distribution of x and y,
+and pmodel is the probability distribution of y over the parameter
+space θ based on the FNN model. Under some assumptions,
+J(θ) can reduce to a mean squared error cost:
+J(θ) = 1
+N
+NX
+i=1
+yi − g (xi, θ)
+2
+.
+The minimization is usually achieved using stochastic gradient
+descent algorithms. The computation of the gradient can be
+complicated, especially for multi-layer FNNs, but it can still be
+done efficiently by the back-propagation algorithm or its gener-
+alizations.
+3. Hybrid Modeling via SPMT+FNN
+Based on the HYBRID-1 and HYBRID-2 frameworks, we
+integrate the SPMT model with an FNN to build two hybrid
+models, named as SPMTNet-1 and SPMTNet-2, respectively.
+The proposed models are validated via extensive simulations.
+3.1. The SPMTNet-1 and SPMTNet-2 Models
+Developed in [6], the SPMT model couples the SPM model
+with a bulk thermal model to predict the electrochemical and
+thermal behaviors simultaneously. The SPM simplifies each
+electrode of a LiB cell as a spherical particle and disregards the
+electrolyte dynamics. The transport of the lithium ions inside
+a particle is governed by the Fick’s di ffusion law in spherical
+coordinates:
+∂c±
+s
+∂t (r, t) = 1
+r2
+∂
+∂r
+"
+D±
+s r2 ∂c±
+s
+∂r (r, t)
+#
+, (4)
+where c±
+s (r, t) is the solid-phase lithium-ion concentration of
+positive (+) or negative (−) electrode, and D±
+s is the solid-phase
+diffusion coefficient. The boundary conditions of (4) are given
+by
+∂c±
+s
+∂r (0, t) = 0 and ∂c±
+s
+∂r (R±
+s , t) = − 1
+D±s
+j±
+n ,
+where R±
+s is the particle radius and j±
+n is the molar flux at the
+particle surface. Here,
+j±
+n = ∓ I(t)
+a±s FAL ± ,
+where a±
+s is the specific interfacial area, F is the Faraday’s con-
+stant, A is an electrode’s surface area, and L± is the electrode’s
+thickness. Further, j±
+n results from the electrochemical kinet-
+ics and depends on the overpotential of the electrodes η±. The
+relation is characterized by the Butler-V olmer equation:
+j±
+n = 1
+F i±
+0
+
+exp
+ αaF
+RT η±
+
+− exp
+ −αcF
+RT η±
+
+. (5)
+Here, αa and αc are the anodic and cathodic charge transfer
+coefficients, respectively, andi±
+0 is the exchange current density
+given by
+i±
+0 = k± 
+c0
+e
+αa  c±
+ss(t)αc
+
+c±
+s,max − c±
+ss(t)
+αa
+,
+where k± is the kinetic reaction rate, c0
+e is the constant
+electrolyte-phase lithium-ion concentration, c±
+ss(t) = c±
+s
+ R±
+s , t
+is the solid-phase lithium-ion concentration at the particle sur-
+face and c±
+s,max is the maximum solid-phase lithium-ion concen-
+tration. By assuming αa = αc = 0.5, (5) indicates that η± can
+be expressed as
+η± = 2RT
+F sinh−1
+ F
+2i±
+0
+j±
+n
+!
+.
+The terminal voltage V is
+VSPMT(t) = U+(c+
+ss(t)) − U−(c−
+ss(t)) + η+ − η−
+−
+
+R+
+f
+a+s L+ +
+R−
+f
+a−s L−
+ I(t), (6)
+where U+ and U− are the equilibrium potentials, andR+
+f and R−
+f
+are the solid-electrolyte interphase film resistances.
+The charging/discharging of LiBs is accompanied by the heat
+generation and transfer. The change in temperature can be in-
+tense at large currents and notably a ffects the lithium-ion dif-
+fusion and electrochemical kinetics. Here, the temperature de-
+pendence of D±
+s and k± is governed by the Arrhenius law:
+ψ = ψref exp
+" Eψ
+R
+ 1
+Tref
+− 1
+T(t)
+!#
+, (7)
+5
+
+===== PAGE 6 =====
+Δ𝑉𝐼(𝑡)
+𝑉SPMT
+＋
+𝑉hybrid
+Hybrid modelling
+1
+SoCbulk
+SoCsurf
+𝑇
+SoC(0)
+𝑇(0)
+SPMT
+FNN
+(a)
+SoCbulk
+SoCsurf
+𝑇 𝑉hybrid
+Hybrid modelling
+2
+SoC(0)
+𝑇(0)
+𝐼(𝑡)
+SPMT
+FNN
+(b)
+Figure 4: Block diagrams of (a) the SPMTNet-1 model and (b) the SPMTNet-2
+model.
+where ψ is the D±
+s or k±, T(t) is the lumped temperature,R is the
+universal gas constant, and Eψ is the activation energy. Based
+on the energy balance principle, the change of T(t) is assumed
+to follow
+ρavgcp
+dT (t)
+dt = ˙qgen + ˙qconv, (8)
+where ρavg is the cell bulk density,cp is the lumped specific heat
+capacity, ˙qgen denotes the heat generation rate due to ohmic and
+entropic heating, and ˙qconv is the convective heat removal rate
+with the ambience. Further, ˙qgen and ˙qconv are given by
+˙qgen = I(t)V(t) − (U+(¯c+
+s (t)) − U−(¯c−
+s (t)))
++ I(t)T(t) ∂
+∂T
+U+(¯c+
+s (t)) − U−(¯c−
+s (t)) ,
+˙qconv = −hcell (T(t) − Tamb(t)) ,
+where Tamb is the ambient temperature, hcell is the convective
+heat transfer coe fficient, and the bulk concentration ¯ c±
+s (t) is
+given by:
+¯c±
+s (t) = 3
+(R±s )3
+Z R±
+s
+0
+r2c±
+s (r, t)dr.
+We define the anodic surface SoC and bulk SoC as
+SoCsurf = c−
+ss(t)
+c−s,max
+, SoCbulk = ¯c−
+s (t)
+c−s,max
+. (9)
+Summarizing (4)-(9), we obtain a complete formulation of
+the SPMT model. This model is among the most computation-
+ally fast electrochemical models. It can o ffer good accuracy
+Current
+profile
+RMSE
+(SPMT)
+RMSE
+(SPMTNet-1)
+RER
+(%)
+Training
+0.2 C 5.80 mV 2.53 mV 56.38
+1 C 20.34 mV 4.29 mV 78.91
+2 C 31.80 mV 6.23 mV 80.41
+4 C 62.48 mV 5.90 mV 90.56
+6 C 106.38 mV 4.64 mV 95.64
+8 C 157.58 mV 4.24 mV 97.31
+10 C 212.65 mV 4.93 mV 97.68
+US06 30.18 mV 9.51 mV 68.49
+LA92 23.54 mV 9.83 mV 58.24
+Testing
+0.5 C 11.12 mV 4.65 mV 58.18
+3 C 44.91 mV 9.06 mV 79.83
+5 C 83.31 mV 4.99 mV 94.01
+7 C 131.25 mV 5.46 mV 95.84
+9 C 184.78 mV 4.61 mV 97.51
+UDDS 27.68 mV 10.23 mV 63.04
+SC04 26.27 mV 8.82 mV 66.43
+(a)
+Current
+profile
+RMSE
+(SPMT)
+RMSE
+(SPMTNet-2)
+RER
+(%)
+Training
+0.2 C 5.80 mV 2.86 mV 50.69
+1 C 20.34 mV 3.36 mV 83.48
+2 C 31.80 mV 5.56 mV 82.52
+4 C 62.48 mV 4.55 mV 92.72
+6 C 106.38 mV 3.73 mV 96.49
+8 C 157.58 mV 3.81 mV 97.58
+10 C 212.65 mV 3.41 mV 98.40
+US06 30.18 mV 10.71 mV 64.51
+LA92 23.54 mV 7.17 mV 69.54
+Testing
+0.5 C 11.12 mV 5.07 mV 54.41
+3 C 44.91 mV 6.03 mV 86.57
+5 C 83.31 mV 4.38 mV 94.74
+7 C 131.25 mV 3.49 mV 97.34
+9 C 184.78 mV 4.38 mV 97.63
+UDDS 27.68 mV 8.73 mV 68.46
+SC04 26.27 mV 9.77 mV 62.81
+(b)
+Table 1: Training /testing performance of (a) the SPMTNet-1 model and (b)
+the SPMTNet-2 model under different current profiles, in comparison with the
+SPMT model.
+when low to medium currents are applied. However, its pre-
+diction performance at high C-rates or in the presence of un-
+certainty will deteriorate seriously, due to some simplifications
+inherent to it.
+Building upon the HYBRID-1 and HYBRID-2 frameworks,
+we propose SPMTNet-1 and SPMTNet-2, with their structures
+shown in Figs. 4a and 4b. These two hybrid models both com-
+bine the SPMT model with an FNN. SPMTNet-1 is designed to
+capture the residual between the actual voltage and the SPMT’s
+prediction, and SPMTNet-2 is made to approximate the termi-
+nal voltage. For both, the FNN takes SoC bulk, SoC surf and T
+derived from the SPMT model as its input variables, leveraging
+an awareness of the physical model’s state to make prediction.
+Remark 4. The choice is non-unique for the variables used
+to represent the SPMT’s electrochemical state and fed to the
+FNN. For instance, an expedient way is to just use the full
+6
+
+===== PAGE 7 =====
+0 5 10 15 20 25 30 35
+Discharge Capacity (Ah/m2)
+3.2
+3.3
+3.4
+3.5
+3.6
+3.7
+3.8
+3.9
+4
+4.1Voltage(V)
+0.5 C
+3 C
+7 C
+(a) Testing results of the SPMTNet-1 model under 0.5/3/7 C constant-current
+discharging. Marker symbols: line “ −” for DFN; circle “◦” for SPMT; plus
+“+” for SPMTNet-1.
+0 500 1000 1500 2000 2500
+-5
+0
+5
+10Current [C-rate]
+0 500 1000 1500 2000 2500
+3.2
+3.4
+3.6
+3.8
+4
+4.2
+4.4Voltage [V]
+DFN
+SPMT
+SPMTNet-1
+0 500 1000 1500 2000 2500
+Time [s]
+-100
+-50
+0
+50
+Voltage Error [mV]
+SPMT
+SPMTNet-1
+280 290 300 310 320 330
+3.4
+3.6
+3.8
+4
+Voltage [V]
+2250 2260 2270 2280 2290 2300
+3.4
+3.5
+3.6
+3.7
+3.8
+(b) Testing results of the SPMTNet-1 model under SC04 discharging.
+0 500 1000 1500 2000 2500 3000
+-5
+0
+5
+10Current [C-rate]
+0 500 1000 1500 2000 2500 3000
+3.2
+3.4
+3.6
+3.8
+4
+4.2
+4.4Voltage [V]
+DFN
+SPMT
+SPMTNet-2
+0 500 1000 1500 2000 2500 3000
+Time [s]
+-100
+-50
+0
+50
+Voltage Error [mV]
+SPMT
+SPMTNet-2
+200 220 240
+3.5
+3.6
+3.7
+3.8Voltage [V]
+2600 2610 2620 2630 2640 2650
+3.4
+3.5
+3.6
+3.7
+3.8 (c) Testing results of the SPMTNet-2 model under discharging by the UDDS
+profile.
+Figure 5: Testing results of the SPMTNet-1 and SPMTNet-2 models.
+electrochemical state of the SPMT. This, however, will cause
+extremely high training and computational costs. Our study
+shows that just several simple, aggregated state variables will
+suffice. This feature in e ffect reduces demands for training
+data and computation considerably, making the proposed hy-
+brid modeling frameworks amenable to practical applications.
+After much trial-and-error search, we identify that the pair of
+SoCbulk, SoCsurf and T is a favorable choice for SPMTNet-1
+and SPMTNet-2 in terms of both computational e fficiency and
+prediction performance.
+7
+
+===== PAGE 8 =====
+3.2. Simulation Validation
+We performed simulation to validate the effectiveness of the
+proposed SPMTNet-1 and SPMTNet-2 models. The simulation
+settings are as follows:
+• The DFN model with thermal dynamics, which is ac-
+knowledged as a generic and reliable electrochemical-
+thermal model, was used as the benchmark to assess the
+SPMTNet-1 and SPMTNet-2 models.
+• We used parameters from the DUALFOIL simulation
+package [54] to run the DFN model representing an
+LCO/graphite battery that operates between 4.1 and 3.2
+V to generate synthetic data as the ground truth.
+• The synthetic data were divided into the training and test
+datasets. The training datasets were produced by apply-
+ing constant discharging currents at 0.2/1/2/4/6/8/10 C and
+variable currents created based on the US06 and LA92
+driving cycles [55]. The test datasets were obtained by
+applying constant discharging currents at 0.5 /3/5/7/9 C
+and variable currents created based on the UDDS and
+SC04 [55]. Here, all variable current profiles were scaled
+to a maximum current of around 10 C. In all cases, the
+initial temperature T(0) = Tamb = 25◦C.
+• Both the SPMTNet-1 and SPMTNet-2 models employ a
+four-layer FNN as shown in Fig. 3. Each of the two hidden
+layers has 32 neurons. The input and output of the FNN
+are as specified in Section 3.1. The rectified linear unit
+(ReLU) function was chosen as the activation function for
+the two hidden layers, and the linear activation function
+chosen for the output layer. Keras, a Python-based deep
+learning library, was used to create, train and implement
+the FNN. Because the magnitudes of the FNN’s input vari-
+ables vary across different orders of magnitude, the input
+data were pre-processed by normalization, as often recom-
+mended in the practice of NNs.
+• We utilized the root-mean-square error as a metric to eval-
+uate a model’s performance:
+RMSE =
+vut
+1
+N
+NX
+i=1
+ Vtrue,i − Vmodel,i
+2,
+where Vtrue,i is the true voltage at time i, Vmodel,i is the
+model-based voltage prediction, and N is the total num-
+ber of data points. Furthermore, a relative error reduction
+(RER) was introduced to quantify the improvement of the
+SPMTNet-1 and SPMTNet-2 over the SPMT, which is de-
+fined as
+RER = RMSESPMT − RMSESPMTNet
+RMSESPMT
+× 100%.
+We began with validating the SPMTNet-1 model. Table 1a
+summarizes its performance over all the training datasets and
+compares it with the baseline SPMT model. We observed that
+the SPMTNet-1 model offers remarkable accuracy in all train-
+ing scenarios. It consistently outperforms the SPMT model by
+a considerable margin, especially at medium to very high cur-
+rents. Further, we applied the trained SPMTNet-1 model to the
+test datasets to appraise its prediction performance. Table 1a
+shows a quantitative evaluation, and Figs. 5a-5b demonstrate
+a visual assessment in the cases of constant 0.5 /3/7 C and the
+SC04 profiles. As is seen, the SPMTNet-1 still retains high ac-
+curacy in the testing phase, proving its strong predictive ability.
+For the SPMTNet-2 model, Table 1b further shows its
+training/testing performance across di fferent test datasets, and
+Fig. 5c displays its prediction under the UDDS-based test
+dataset. These results show that the SPMTNet-2 is also greatly
+effective in grasping and forecasting the dynamics of LiBs.
+Finally, we emphasize that the SPMTNet-1 and SPMTNet-2
+models provide higher testing accuracy and better voltage pre-
+dictive performance than the existing hybrid models for LiBs,
+e.g., [46], as extensive simulation reveals. This underscores
+the efficacy of the proposed design that feeding a physics-based
+model’s state information into the ML model.
+4. Hybrid Modeling via NDC+FNN
+Section 3 shows the effectiveness of integrating electrochem-
+ical modeling with ML for modeling of LiBs. A subsequent
+question of interest is whether we can integrate ECMs with
+ML based on the proposed HYBRID-1 and HYBRID-2 frame-
+works. ECMs have simplistic structures and fast computation,
+and hybrid models based on them can be beneficial for various
+real-world battery management tasks. In this section, we blend
+the NDC model, an ECM developed recently in [28, 29], with
+an FNN to develop two hybrid models, named NDCNet-1 and
+NDCNet-2, respectively, and experimentally investigate their
+performance.
+4.1. The NDCNet-1 and NDCNet-2 Models
+The NDC model maps the diffusion and electrical processes
+in a LiB cell to a circuit of electrical components. As shown in
+Fig. 6a, the circuit includes two coupled parts. The first (left)
+part simulates the diffusion in the cell’s electrode, which com-
+prises two R-C pairs, Rb-Cb and Rs-Cs, configured in parallel.
+The Rb-Cb analogously represents the bulk inner region of the
+electrode, and the Rs-Cs represents the surface region of the
+electrode. As such, Cb ≫ Cs and Rb ≫ Rs, where Rs can often
+be set as 0 [28]. The charge transfer betweenCb and Cs mimics
+the diffusion of lithium ions in the electrode [56]. The second
+(right) part simulates the dynamic output voltage of the battery,
+which consists of a voltage source U, a resistor R0, and an R-C
+pair R1-C1 pair connected in series. Here, U = h(Vs) plays the
+role of the open-circuit voltage source. In addition, the R1-C1
+approximates the voltage transients caused by charge transfer
+on the electrode /electrolyte interface, and R0 accounts for the
+ohmic resistance and solid electrolyte interface resistance.
+8
+
+===== PAGE 9 =====
+𝑅0
+𝑅𝑠𝑅𝑏
+𝐶𝑠𝐶𝑏
+𝐼
+𝑈 = ℎ 𝑉𝑠
+𝐼
+𝑅1
+𝐶1
+𝑉NDC
+𝑉𝑏 𝑉𝑠
+(a)
+Δ𝑉
+𝑉𝑏
+𝑉𝑠
+𝑉1
+𝑉NDC
+＋
+𝑉hybrid
+Hybrid modelling
+3
+𝑇
+𝐼(𝑡)
+SoC(0)
+NDC
+FNN
+(b)
+𝑇
+𝑉𝑏
+𝑉𝑠
+𝑉1 𝑉hybrid
+Hybrid modelling
+4
+𝐼(𝑡)
+SoC(0)
+NDC
+FNN
+(c)
+Figure 6: (a) The NDC model, (b) the NDCNet-1 model and (c) the NDCNet-2
+model.
+The state-space equations of the NDC model are given by
+
+˙Vb(t)
+˙Vs(t)
+˙V1(t)
+ = A
+
+Vb(t)
+Vs(t)
+V1(t)
+ + BI(t), (10a)
+VNDC(t) = h(Vs(t)) − V1(t) + R0I(t), (10b)
+where Vb, Vs and V1 are the voltage across Cb, Cs and C1, re-
+spectively. Here,
+A =
+
+−1
+Cb(Rb+Rs)
+1
+Cb(Rb+Rs) 0
+1
+Cs(Rb+Rs)
+−1
+Cs(Rb+Rs) 0
+0 0 −1
+R1C1
+ , B =
+
+Rs
+Cb(Rb+Rs)
+Rb
+Cs(Rb+Rs)
+−1
+C1
+ .
+In this study, we parameterize the h(Vs) as
+h(Vs) = α1V2
+s + α2Vs + α3
+V3s + α4V2s + α5Vs + α6
+,
+where αi for i = 1, 2, ..., 6 are the coefficients. Further, we have
+Vb = Vs = 0 V when the cell is depleted (SoC = 0%), and
+Current
+profile
+RMSE
+(NDC)
+RMSE
+(NDCNet-1)
+RER
+(%)
+Training
+1 C 20.47 mV 3.56 mV 82.61
+2 C 68.77 mV 5.05 mV 92.66
+5 C 194.67 mV 5.17 mV 97.34
+7 C 274.75 mV 4.35 mV 98.42
+8 C 318.85 mV 5.62 mV 98.24
+US06 33.70 mV 8.67 mV 74.27
+SC04 38.19 mV 6.68 mV 82.50
+Testing
+3 C 112.67 mV 11.25 mV 90.02
+4 C 150.63 mV 10.87 mV 92.78
+6 C 236.51 mV 7.83 mV 96.69
+UDDS 32.92 mV 10.96 mV 66.71
+LA92 28.36 mV 9.30 mV 67.21
+(a)
+Current
+profile
+RMSE
+(NDC)
+RMSE
+(NDCNet-2)
+RER
+(%)
+Training
+1 C 20.47 mV 3.96 mV 80.65
+2 C 68.77 mV 4.80 mV 93.02
+5 C 194.67 mV 5.24 mV 97.31
+7 C 274.75 mV 2.77 mV 99.00
+8 C 318.85 mV 4.08 mV 98.72
+US06 33.70 mV 9.24 mV 72.58
+SC04 38.19 mV 5.99 mV 84.32
+Testing
+3 C 112.67 mV 14.05 mV 87.53
+4 C 150.63 mV 10.72 mV 92.88
+6 C 236.51 mV 9.14 mV 96.14
+UDDS 32.92 mV 10.85 mV 67.04
+LA92 28.36 mV 8.60 mV 69.68
+(b)
+Table 2: Training/testing performance of (a) the NDCNet-1 model and (b) the
+NDCNet-2 model under different current profiles, in comparison with the NDC
+model.
+Vb = Vs = 1 V when the cell is fully charged (SoC = 100%).
+The total charge capacity of the cell thus is Cb + Cs. Then, the
+SoC is given by
+SoC = CbVb + CsVs
+Cb + Cs
+× 100%. (11)
+Finally, the internal resistance R0 is assumed to be SoC-
+dependent:
+R0 = γ1 + γ2e−γ3SoC + γ4e−γ5(1−SoC). (12)
+The NDC model, as summarized in (10)-(12), simulates the
+charge diffusion in an electrode and the nonlinear voltage dy-
+namics simultaneously. With this characteristic, it presents
+higher voltage predictive accuracy at low to medium C-rates
+than earlier ECMs, including the Thevenin’s model, and has
+found desirable use in SoC estimation and optimal charg-
+ing [57, 58]. However, as with the SPM, its accuracy will de-
+cline at high C-rates. We are hence intrigued to develop NDC-
+based hybrid models to improve the predictive performance.
+We construct the NDCNet-1 and NDCNet-2, based on the
+HYBRID-1 and HYBRID-2 frameworks, respectively. Their
+structures are shown in Figs. 6b-6c. Here, the NDCNet-1 is
+9
+
+===== PAGE 10 =====
+0 500 1000 1500 2000 2500 3000 3500 4000
+-5
+0
+5Current [C-rate]
+0 500 1000 1500 2000 2500 3000 3500 4000
+3
+3.5
+4
+4.5Voltage [V]
+True
+NDC
+NDCNet-1
+0 500 1000 1500 2000 2500 3000 3500 4000
+Time [s]
+-100
+-50
+0
+50
+100Voltage Error [mV]
+NDC
+NDCNet-1
+850 900 950
+3.4
+3.6
+3.8
+4
+Voltage [V]
+3700 3750 3800
+3.2
+3.4
+3.6
+(a) Testing results of the NDCNet-1 model under discharging by the LA92
+profile with the cooling fan off.
+0 500 1000 1500 2000 2500 3000 3500 4000
+-5
+0
+5Current [C-rate]
+0 500 1000 1500 2000 2500 3000 3500 4000
+3
+3.5
+4
+Voltage [V]
+True
+NDC
+NDCNet-2
+0 500 1000 1500 2000 2500 3000 3500 4000
+Time [s]
+-50
+0
+50Voltage Error [mV]
+NDC
+NDCNet-2
+200 220 240 260 280
+3.6
+3.7
+3.8
+3.9
+4
+Voltage [V]
+3700 3750 3800
+3
+3.1
+3.2
+3.3
+3.4
+(b) Testing results of the NDCNet-2 model under discharging by the UDDS
+profile with the cooling fan off.
+Figure 7: Testing results of the NDCNet-1 and the NDCNet-2 models.
+designed to capture the NDC model’s residual relative to the
+true terminal voltage directly, and the NDCNet-2 is made to
+learn and reproduce the terminal voltage. As the frameworks
+mandate, we feed the state variables of the NDC model, Vb,
+Vs and V1, to the FNN so that the FNN can perform physics-
+informed prediction. Besides, the temperature T is fed to the
+FNN so that the FNN can capture the e ffect of the temperature
+in its voltage prediction.
+4.2. Experimental Validation
+We evaluated the proposed NDCNet-1 and NDCNet-2 mod-
+els through experimental validation. The experimental settings
+are as follows:
+• All the experimental data were collected on a Samsung
+INR18650-25R LiB cell using the PEC SBT4050 battery
+tester. The cell has a nominal capacity of 2.5 Ah and an
+operating range from 4.2 V to 2.8 V , with a maximum con-
+tinuous discharging current of 20 A (8 C).
+• The NDC model was extracted from experimental data us-
+ing the parameter identification 1.0 approach in [28].
+• The training datasets were collected from experiments by
+applying constant discharging currents at 1 /2/5/7/8 C and
+variable current profiles based on the US06 and SC04. The
+test datasets were based on constant discharging currents
+at 3/4/6 C and variable current profiles UDDS and LA92.
+Here, all variable current profiles were scaled to be be-
+tween 0∼8 C. The datasets were purposefully designed so
+as to validate the proposed models across low to very high
+C-rates.
+• In order to capture the influence of temperature, all types
+of current profiles were applied twice with an electric
+cooling fan on and o ff. The temperature was measured
+by a thermocouple attached to the cell’s surface. Dur-
+ing the experiments, the cell’s temperature varied between
+19∼55◦C.
+• Both the NDCNet-1 and NDCNet-2 models adopt the
+same FNN architecture as in the SPMTNet-1 and
+SPMTNet-2. The performance metrics for evaluation are
+RMSE and RER as defined in Section 3.2.
+The validation results of the NDCNet-1 and NDCNet-2 mod-
+els are summarized in Tables 2a and 2b, respectively. Both
+models show considerable training accuracy—compared to the
+NDC model, they substantially decrease the prediction errors
+10
+
+===== PAGE 11 =====
+FNN-A FNN-B FNN-C FNN-D
+NDCNet-1 (8 neurons)NDCNet-1 (32 neurons)NDCNet-1 (64 neurons)
+0
+5
+10
+15
+20
+25
+30
+35RMSE [mV]
+US06
+SC04
+(a)
+FNN-A FNN-B FNN-C FNN-D
+NDCNet-1 (8 neurons)NDCNet-1 (32 neurons)NDCNet-1 (64 neurons)
+0
+5
+10
+15
+20
+25
+30
+35RMSE [mV]
+UDDS
+LA92
+(b)
+Figure 8: (a) Training and (b) testing accuracy of pure FNN models and
+NDCNet-1 under variable current profiles when the cooling fan was o ff. The
+numbers of neurons in each hidden layer are shown in the parentheses.
+as measured by RMSE, especially when high C-rates are ap-
+plied. The testing accuracy for both slightly declines but still
+remains high. Figs. 7a-7b further display the voltage prediction
+of the NDCNet-1 and NDCNet-2 models in comparison with
+the NDC model when the LA92 and UDDS profiles are applied.
+It is seen that the two models consistently deliver much better
+prediction and, in particular, bring more performance enhance-
+ments at large currents. These results demonstrate the NDCNet-
+1 and NDCNet-2 models as e ffective and powerful for voltage
+prediction. Note that both models are more parsimonious in
+structure than the SPMTNet-1 and SPMTNet-2 models, due to
+the simplicity of the NDC model. This makes them potentially
+more amenable to computation and real-world applications.
+Further, we compared the NDCNet-1 model with pure FNN
+modeling to evaluate our hybrid modeling design. Here, we
+trained the NDCNet-1 model with 8/32/64 neurons in each hid-
+den layer of the FNN. The pure FNN models were designed to
+use the present and history information to predict the terminal
+voltage. They were set up as below:
+• The FNN-A model: Input: I(k), I(k − 1) ,T(k), T(k − 1),
+SoC(k), and SoC( k − 1), where k is the discrete time in-
+dex, and SoC is based on Coulomb counting. Output:
+V(k). Structure: two hidden layers with 128 neurons in
+each layer.
+• The FNN-B model: Input and output: the same as the
+FNN-A model. Structure: two hidden layers with 256 neu-
+rons in each layer.
+• The FNN-C model: Input: I(k), I(k − 1) ,T(k), T(k − 1),
+SoC(k), SoC(k − 1), and V(k − 1). Output: V(k). Structure:
+two hidden layers with 128 neurons in each layer.
+• The FNN-D model: Input and output: the same as the
+FNN-C model. Structure: two hidden layers with 256 neu-
+rons in each layer.
+Figs. 8a-8b illustrate the comparison results. We highlight
+two observations. First, all the versions of the NDCNet-1
+model, despite having much smaller numbers of neurons and
+being trained on the same datasets, considerably outperform all
+the four pure FNN models in both training and testing. Second,
+pure ML models are prone to giving unreasonable predictions
+in testing scenarios. For instance, the FNN-D model has only
+slightly less accuracy than the NDCNet-1 model when tested
+by the LA92 profile, but has much poorer performance under
+UDDS profile. The comparison shows that our hybrid modeling
+design can provide better prediction performance with simpler
+model structure and offer good consistency in accuracy between
+training and testing.
+5. Aging-Aware Hybrid Modeling
+LiB cells age during cycling, which causes changes
+in material properties and a ffects the processes in charg-
+ing/discharging [1, 32, 59]. Aging manifests itself in capacity
+fade, internal resistance growth, and fast heat buildup. A LiB
+cell hence represents a time-varying system indeed. However,
+it has been found non-trivial to perform aging-aware LiB mod-
+eling, even though the problem has attracted some research.
+A main di fficulty lies in characterizing physical relationships
+between aging and changes in a model’s di fferent parameters,
+which are often convoluted or elusive. Yet, the notion of hy-
+brid modeling proposed in this paper can potentially allow to
+include an aging awareness into ML-based prediction, with-
+out tediously analyzing the underlying physics. To validate this
+promise, we further investigate aging-aware hybrid modeling in
+this section and focus on expanding the NDCNet-1 model, with
+similar results consistently obtained for the other proposed hy-
+brid models if they are modified in the same way.
+11
+
+===== PAGE 12 =====
+𝑇
+𝑉NDC
+Health-aware Hybrid Model Based on SPMT Model
+8
+Δ𝑉
+＋
+𝑉hybrid
+SoH
+𝑉𝑏
+𝑉𝑠
+𝑉1
+𝐼(𝑡)
+SoC(0)
+NDC
+FNN
+Figure 9: Block diagram of the AA-NDCNet-1.
+To quantify the aging condition, we consider SoH defined
+as the ratio between a cell’s current capacity Qa and its initial
+capacity Qinit:
+SoH = Qa
+Qinit
+× 100%.
+While SoH can be described in di fferent ways, this definition
+suffices for our hybrid modeling, and its conciseness helps
+ensure model parsimony. Proceeding forward, we expand
+the NDCNet-1 model by including the above SoH. The new
+model is named as aging-aware NDCNet-1 (AA-NDCNet-1)
+and shown in Fig. 9. It presents two main features. First, we ap-
+ply SoH, which is calculated on a regular basis, as an additional
+input to the FNN. As such, the FNN becomes informed and
+aware of SoH when making prediction. Second, for the AA-
+NDCNet-1 model, we do not have to update the NDC model
+continually based on the aging condition. Instead, we solely
+use the FNN to capture the e ffect of SoH on the terminal volt-
+age. This would bring significant convenience in practical use
+of the proposed model.
+Next, we present the experimental validation of the AA-
+NDCNet-1 model. The experimental settings are as follows.
+• We collected the experimental data from two Samsung
+INR18650-25R LiB cells labeled as #1 and #2, re-
+spectively. Both cells underwent the same 450 charg-
+ing/discharging cycles until their capacity Qa reached
+about 81% of the initial capacity Qinit. For a cy-
+cle, the cells were first charged based on the constant-
+current/constant-voltage charging protocol. Then, they
+were discharged by repeatedly and periodically applying
+the constant 1/2/3/4/5/6 C and UDDS/US06/LA92/SC04-
+based variable current profiles one after another. The cell’s
+actual capacity Qa can be determined based on constant-
+current discharging at 4 C, as suggested by the cell’s data
+sheet.
+• Cell #1 was intended to generate training data, and cell
+#2 was used to test the model. Here, we only used
+part of the datasets from cell #1 to train the model; they
+included 1 /2/4/6 C constant current profiles and vari-
+able current profiles based on the UDDS and US06 for
+SoH=81∼100%. The testing datasets from cell #2 con-
+tained constant discharging current profiles at 3 /5 C and
+0
+80
+50
+100
+RMSE [mV]
+85
+150
+200
+SoH [%]
+90
+5 C
+95 3 C
+LA92
+SC04100
+(a)
+0
+80
+50
+100
+RMSE [mV]
+85
+150
+200
+SoH [%]
+90
+5 C
+95 3 C
+LA92
+SC04100
+(b)
+Figure 10: Comparison of (a) the NDC model and (b) the AA-NDCNet-1 model
+under different testing current profiles and SoH values.
+variable current profiles based on the LA92 and SC04 for
+SoH = 81∼100%. All variable current profiles were scaled
+to be between 0 and 6 C in magnitude. The datasets span
+low to high C-rates in order to su fficiently assess the per-
+formance of the AA-NDCNet-1 model.
+• The NDC model was identified only once, using the data
+gathered from cell #1 when SoH=100%. The FNN hence
+aimed to capture the residual between VNDC and Vtrue for
+different SoH values. For all scenarios, SoC and C-rates
+were calculated relative to the initial capacity Qinit.
+• The AA-NDCNet-1 used the same FNN architecture as the
+NDCNet-1 in Section 4.2 and was evaluated by RMSE.
+Figs. 10a-10b show the testing performance of AA-NDCNet-
+1 model compared with the NDC model when SoH =
+99/95/93/90/88/86/84/81%. Two observations are noteworthy.
+12
+
+===== PAGE 13 =====
+First, the RMSE of the identified NDC model steadily increases
+as the cell ages. However, the AA-NDCNet-1 model not only
+produces much smaller RMSE, almost consistently below 20
+mV in all scenarios, but also preserves high accuracy through-
+out the aging process. Second, the AA-NDCNet-1 model, even
+though trained on cell #1, is capable of well predicting the volt-
+age behaviors of cell #2 throughout its cycle life. This suggests
+the promise of making the AA-NDCNet-1 model a “universal”
+hybrid model—one learned from a cell but widely applicable to
+other cells of the same type.
+6. Discussion
+Based on the results in Sections 3-5, we have the following
+remarks.
+• Predictive accuracy . The proposed catalog of hybrid
+models has shown not only high accuracy but also strong
+physical consistency in both simulations and experiments.
+We highlight that this merit rests on two factors. First,
+our hybrid models exploit physics-informed ML by feed-
+ing the state of a physical model into the FNN. The aware-
+ness of the physical model’s status helps the FNN make
+better voltage prediction. Second, data play a significant
+role in the overall prediction performance. Even though
+the proposed hybrid modeling frameworks reduce the de-
+pendence on data amounts compared to pure ML models,
+we still must use sufficient quantities of informative data to
+train the FNN. The data should effectively cover the spec-
+trum of a LiB’s dynamics and span the prediction ranges
+intended for the model in terms of C-rates, SoC, and SoH.
+• Computational efficiency. For the proposed hybrid mod-
+els, most of the computational burden comes from the
+FNN training. The training costs can vary, depending on
+the quantities of data and the structure of the FNN. How-
+ever, we point out that the FNN employed in a proposed
+hybrid model can have a much simpler structure, com-
+pared to the case when a pure FNN is used for dynamic
+modeling of LiBs. This implies significantly lower com-
+putational costs in training. When deployed for online pre-
+diction, the hybrid models would allow fast computation.
+Our experiences showed the SPMTNet-1 and SPMTNet-
+2 models run much faster than the DFN model; further,
+the NDC-based hybrid models offer even higher computa-
+tional efficiency.
+• Prospective applications . As a main feature, the pro-
+posed hybrid frameworks and models are capable of mak-
+ing accurate voltage prediction over wide C-rate ranges.
+This makes them very useful for various kinds of prac-
+tical LiB energy storage systems. In particular, they are
+suitable for LiB systems that must operate at high power
+conditions, for which accurate modeling is still beyond the
+reach of today’s electrochemical models (e.g., the SPMT
+model) and ECMs (e.g., the Thevenin or NDC model) be-
+cause of their either high computational costs or lack of
+accuracy. An application example in point is electric air-
+craft, which runs at up to 5 C in the take-o ffand landing
+phases [60, 61]. For such applications, the proposed hy-
+brid models can be used to estimate the state-of-power and
+state-of-energy with their strong voltage prediction capa-
+bilities. This will be part of our subsequent work as an
+extension of the presented study. The proposed models
+can also find promising use in LiB systems that operate at
+only low to medium C-rates. For such systems, a physi-
+cal model with good fidelity is often easily available, but
+an FNN can be used to complement the physical model
+to capture the uncertain nonlinear voltage. The resultant
+hybrid models will well lend themselves to voltage pre-
+diction and SoC estimation in this case.
+• FNN architecture selection . A four-layer FNN, with
+the two hidden layers each having 32 neurons, was used
+throughout the model validation in the study, so as to as-
+sess the models on a common ground. However, we found
+out that other FNN architectures, e.g., one with fewer neu-
+rons in the hidden layers, can even lead to comparable per-
+formance. A practitioner may want to use an architecture
+to strike a balance between prediction accuracy and model
+size or complexity. This can be achieved by empirical
+tuning or deploying automated architecture search meth-
+ods [62]. Finally, our tries in the model validation with re-
+current and long short-term memory NNs showed they can
+also be alternatives to FNNs here, though we choose the
+latter to present the study for their simplicity and tractabil-
+ity for practical application.
+7. Conclusion
+The ever-increasing adoption of LiBs across various sec-
+tors presents a pressing demand for accurate and computa-
+tionally e fficient models. In this paper, we proposed to in-
+tegrate physics-based modeling with data-driven ML to meet
+this need. From this perspective, we developed the HYBRID-
+1 and HYBRID-2 modeling frameworks characterized by in-
+forming the ML model of the physical model’s state informa-
+tion to significantly improve the voltage prediction performance
+and simplify the ML architecture. We then applied the frame-
+works to investigate their viability in enabling e ffective inte-
+gration of electrochemical models and ECMs with ML, respec-
+tively. We constructed four hybrid models, based on the no-
+tions of SPMT+FNN and NDC+FNN. We conducted extensive
+simulations and experiments to illustrate that all the four hybrid
+models can offer exceptionally high voltage predictive accuracy
+for LiBs operating at a wide range of C-rates. Further, we ex-
+panded the hybrid modeling design to embed an awareness of a
+LiB’s aging condition into prediction, through making the ML
+informed of SoH. An NDC +FNN hybrid model was upgraded
+to achieve this end and experimentally validated to be capable
+of making accurate prediction under di fferent SoH conditions.
+Our future work will include the application of the proposed
+models to different battery management tasks.
+13
+
+===== PAGE 14 =====
+Acknowledgement
+This work was supported in part by National Science Foun-
+dation under Awards CMMI-1763093 and CMMI-1847651.
+References
+[1] U. Krewer, F. R ¨oder, E. Harinath, R. D. Braatz, B. Bed ¨urftig, R. Find-
+eisen, Review—dynamic models of Li-ion batteries for diagnosis and op-
+eration: A review and perspective, Journal of The Electrochemical Soci-
+ety 165 (16) (2018) A3656–A3673.
+[2] N. A. Chaturvedi, R. Klein, J. Christensen, J. Ahmed, A. Kojic, Algo-
+rithms for advanced battery-management systems, IEEE Control Systems
+Magazine 30 (3) (2010) 49–68.
+[3] M. Doyle, T. F. Fuller, J. Newman, Modeling of galvanostatic charge and
+discharge of the lithium /polymer/insertion cell, Journal of The Electro-
+chemical Society 140 (6) (1993) 1526–1533.
+[4] S. B. Lee, S. Onori, A robust and sleek electrochemical battery model im-
+plementation: A MATLAB® framework, Journal of The Electrochemical
+Society 168 (9) (2021) 090527.
+[5] S. Santhanagopalan, R. E. White, Online estimation of the state of charge
+of a lithium ion cell, Journal of Power Sources 161 (2) (2006) 1346–1355.
+[6] M. Guo, G. Sikha, R. White, Single-particle model for a lithium-ion cell:
+Thermal behavior, Journal of The Electrochemical Society 158 (2) (2011)
+A122.
+[7] T. R. Tanim, C. D. Rahn, C.-Y . Wang, State of charge estimation of a
+lithium ion cell based on a temperature dependent and electrolyte en-
+hanced single particle model, Energy 80 (2015) 731–739.
+[8] S. Khaleghi Rahimian, S. Rayman, R. E. White, Extension of physics-
+based single particle model for higher charge–discharge rates, Journal of
+Power Sources 224 (2013) 180–194.
+[9] S. J. Moura, F. B. Argomedo, R. Klein, A. Mirtabatabaei, M. Krstic, Bat-
+tery state estimation for a single particle model with electrolyte dynamics,
+IEEE Transactions on Control Systems Technology 25 (2) (2017) 453–
+468.
+[10] X. Han, M. Ouyang, L. Lu, J. Li, Simplification of physics-based elec-
+trochemical model for lithium ion battery on electric vehicle. part I: Dif-
+fusion simplification and single particle model, Journal of Power Sources
+278 (2015) 802–813.
+[11] J. Li, N. Lotfi, R. G. Landers, J. Park, A single particle model for lithium-
+ion batteries with electrolyte and stress-enhanced diffusion physics, Jour-
+nal of The Electrochemical Society 164 (4) (2017) A874–A883.
+[12] J. Li, K. Adewuyi, N. Lotfi, R. Landers, J. Park, A single particle model
+with chemical /mechanical degradation physics for lithium ion battery
+State of Health (SOH) estimation, Applied Energy 212 (2018) 1178–
+1190.
+[13] L. Xia, E. Najafi, Z. Li, H. Bergveld, M. Donkers, A computationally effi-
+cient implementation of a full and reduced-order electrochemistry-based
+model for Li-ion batteries, Applied Energy 208 (2017) 1285–1296.
+[14] J. L. Lee, A. Chemistruck, G. L. Plett, One-dimensional physics-based
+reduced-order model of lithium-ion dynamics, Journal of Power Sources
+220 (2012) 430–448.
+[15] K. A. Smith, C. D. Rahn, C.-Y . Wang, Control oriented 1D electrochem-
+ical model of lithium ion battery, Energy Conversion and Management
+48 (9) (2007) 2565–2578.
+[16] D. W. Limoge, P. Y . Bi, A. M. Annaswamy, A. Krupadanam, A reduced-
+order model of a lithium-ion cell using the absolute nodal coordinate for-
+mulation approach, IEEE Transactions on Control Systems Technology
+26 (3) (2018) 1001–1014.
+[17] M. A. Kehs, M. D. Beeney, H. K. Fathy, Computational e fficiency of
+solving the DFN battery model using descriptor form with legendre poly-
+nomials and galerkin projections, in: 2014 American Control Conference,
+2014, pp. 260–267.
+[18] H. Fang, Y . Wang, Z. Sahinoglu, T. Wada, S. Hara, State of charge estima-
+tion for lithium-ion batteries: An adaptive approach, Control Engineering
+Practice 25 (2014) 45–54.
+[19] L. Cai, R. E. White, Reduction of model order based on proper orthog-
+onal decomposition for lithium-ion battery simulations, Journal of The
+Electrochemical Society 156 (3) (2009) A154.
+[20] H. He, R. Xiong, J. Fan, Evaluation of lithium-ion battery equivalent cir-
+cuit models for state of charge estimation by an experimental approach,
+Energies 4 (4) (2011) 582–598.
+[21] S. M. Mousavi G., M. Nikdel, Various battery models for various simula-
+tion studies and applications, Renewable and Sustainable Energy Reviews
+32 (2014) 477–485.
+[22] G. Plett, Battery Management Systems, V olume I: Battery Modeling,
+Artech House, 2015.
+[23] X. Hu, S. Li, H. Peng, A comparative study of equivalent circuit models
+for Li-ion batteries, Journal of Power Sources 198 (2012) 359–367.
+[24] K. Li, F. Wei, K. J. Tseng, B.-H. Soong, A practical lithium-ion battery
+model for state of energy and voltage responses prediction incorporating
+temperature and ageing effects, IEEE Transactions on Industrial Electron-
+ics 65 (8) (2018) 6696–6708.
+[25] K.-T. Lee, M.-J. Dai, C.-C. Chuang, Temperature-compensated model for
+lithium-ion polymer batteries with extended kalman filter state-of-charge
+estimation for an implantable charger, IEEE Transactions on Industrial
+Electronics 65 (1) (2018) 589–596.
+[26] X. Lin, H. E. Perez, S. Mohan, J. B. Siegel, A. G. Stefanopoulou, Y . Ding,
+M. P. Castanier, A lumped-parameter electro-thermal model for cylindri-
+cal batteries, Journal of Power Sources 257 (2014) 1–11.
+[27] M. Bahramipanah, D. Torregrossa, R. Cherkaoui, M. Paolone, Enhanced
+equivalent electrical circuit model of lithium-based batteries accounting
+for charge redistribution, state-of-health, and temperature e ffects, IEEE
+Transactions on Transportation Electrification 3 (3) (2017) 589–599.
+[28] N. Tian, H. Fang, J. Chen, Y . Wang, Nonlinear double-capacitor model
+for rechargeable batteries: Modeling, identification, and validation, IEEE
+Transactions on Control Systems Technology 29 (1) (2021) 370–384.
+[29] N. Tian, H. Fang, J. Chen, A new nonlinear double-capacitor model for
+rechargeable batteries, in: IECON 2018 - 44th Annual Conference of the
+IEEE Industrial Electronics Society, 2018, pp. 1613–1618.
+[30] Z. Geng, S. Wang, M. J. Lacey, D. Brandell, T. Thiringer, Bridging
+physics-based and equivalent circuit models for lithium-ion batteries,
+Electrochimica Acta 372 (2021) 137829.
+[31] Y . Li, M. Vilathgamuwa, T. Farrell, S. S. Choi, N. T. Tran, J. Teague, A
+physics-based distributed-parameter equivalent circuit model for lithium-
+ion batteries, Electrochimica Acta 299 (2019) 451–469.
+[32] W. Li, N. Sengupta, P. Dechent, D. Howey, A. Annaswamy, D. U. Sauer,
+One-shot battery degradation trajectory prediction with deep learning,
+Journal of Power Sources 506 (2021) 230024.
+[33] P. Ramadass, B. Haran, P. Gomadam, R. White, B. Popov, Development
+of first principles capacity fade model for Li-ion cells, Journal of The
+Electrochemical Society 151 (2) (2004) A196–A203.
+[34] S. Tippmann, D. Walper, L. Balboa, B. Spier, W. G. Bessler, Low-
+temperature charging of lithium-ion cells part I: Electrochemical mod-
+eling and experimental investigation of degradation behavior, Journal of
+Power Sources 252 (2014) 305–316.
+[35] N. Legrand, B. Knosp, P. Desprez, F. Lapicque, S. Ra ¨el, Physical char-
+acterization of the charging process of a Li-ion battery and prediction of
+Li plating by electrochemical modelling, Journal of Power Sources 245
+(2014) 208–216.
+[36] X.-G. Yang, Y . Leng, G. Zhang, S. Ge, C.-Y . Wang, Modeling of lithium
+plating induced aging of lithium-ion batteries: Transition from linear to
+nonlinear aging, Journal of Power Sources 360 (2017) 28–40.
+[37] C. von L ¨uders, J. Keil, M. Webersberger, A. Jossen, Modeling of lithium
+plating and lithium stripping in lithium-ion batteries, Journal of Power
+Sources 414 (2019) 41–47.
+[38] J. Keil, A. Jossen, Electrochemical modeling of linear and nonlinear ag-
+ing of lithium-ion cells, Journal of The Electrochemical Society 167 (11)
+(2020) 110535.
+[39] A. Millner, Modeling lithium ion battery degradation in electric vehicles,
+in: 2010 IEEE Conference on Innovative Technologies for an E fficient
+and Reliable Electricity Supply, 2010, pp. 349–356.
+[40] H. E. Perez, X. Hu, S. Dey, S. J. Moura, Optimal charging of Li-ion bat-
+teries with coupled electro-thermal-aging dynamics, IEEE Transactions
+on Vehicular Technology 66 (9) (2017) 7761–7770.
+[41] M. Chen, G. Rincon-Mora, Accurate electrical battery model capable of
+predicting runtime and I-V performance, IEEE Transactions on Energy
+Conversion 21 (2) (2006) 504–511.
+[42] T. Kim, W. Qiao, A hybrid battery model capable of capturing dynamic
+circuit characteristics and nonlinear capacity e ffects, IEEE Transactions
+on Energy Conversion 26 (4) (2011) 1172–1180.
+14
+
+===== PAGE 15 =====
+[43] G. Capizzi, F. Bonanno, G. M. Tina, Recurrent neural network-based
+modeling and simulation of lead-acid batteries charge–discharge, IEEE
+Transactions on Energy Conversion 26 (2) (2011) 435–443.
+[44] J. Wang, Q. Chen, B. Cao, Support vector machine based battery model
+for electric vehicles, Energy Conversion and Management 47 (7) (2006)
+858–864.
+[45] R. Refai, S. Yayathi, D. Chen, B. Fern ´andez-Rodr´ıguez, Hybrid neural
+net model of a lithium ion battery, in: ASME 2011 Dynamic Systems
+and Control Conference and Bath/ASME Symposium on Fluid Power and
+Motion Control, V ol. 2, 2011, pp. 239–246.
+[46] S. Park, D. Zhang, S. Moura, Hybrid electrochemical modeling with re-
+current neural networks for Li-ion batteries, in: 2017 American Control
+Conference, 2017, pp. 3777–3782.
+[47] F. Feng, S. Teng, K. Liu, J. Xie, Y . Xie, B. Liu, K. Li, Co-estimation of
+lithium-ion battery state of charge and state of temperature based on a
+hybrid electrochemical-thermal-neural-network model, Journal of Power
+Sources 455 (2020) 227935.
+[48] H. Tu, S. Moura, H. Fang, Integrating electrochemical modeling with
+machine learning for lithium-ion batteries, in: Proceedings of American
+Control Conference, 2021, pp. 4401–4407.
+[49] W. Li, J. Zhang, F. Ringbeck, D. J ¨ost, L. Zhang, Z. Wei, D. U. Sauer,
+Physics-informed neural networks for electrode-level state estimation in
+lithium-ion batteries, Journal of Power Sources 506 (2021) 230034.
+[50] R. G. Nascimento, M. Corbetta, C. S. Kulkarni, F. A. Viana, Hybrid
+physics-informed neural networks for lithium-ion battery modeling and
+prognosis, Journal of Power Sources 513 (2021) 230526.
+[51] K. Hornik, M. Stinchcombe, H. White, Multilayer feedforward networks
+are universal approximators, Neural Networks 2 (5) (1989) 359–366.
+[52] I. Goodfellow, Y . Bengio, A. Courville, Deep Learning, MIT Press, 2016.
+[53] M. Malmstr ¨om, I. Skog, D. Axehill, F. Gustafsson, Asymptotic predic-
+tion error variance for feedforward neural networks, IFAC-PapersOnLine
+53 (2) (2020) 1108–1113.
+[54] J. Newman, (2008) Fortran programs for the simulation of electrochemi-
+cal systems. [online]. Available: http://www.cchem.berkeley.edu
+/jsngrp/fortran.html.
+[55] Environmental Protection Agency, Vehicle and fuel emission testing,
+Technical Report.
+[56] H. Fang, Y . Wang, J. Chen, Health-aware and user-involved battery charg-
+ing management for electric vehicles: Linear quadratic strategies, IEEE
+Transactions on Control Systems Technology 25 (3) (2017) 911–923.
+[57] H. Movahedi, N. Tian, H. Fang, R. Rajamani, Hysteresis compensation
+and nonlinear observer design for state-of-charge estimation using a non-
+linear double-capacitor Li-ion battery model, IEEE /ASME Transactions
+on Mechatronics (in press).
+[58] N. Tian, H. Fang, Y . Wang, Real-time optimal lithium-ion battery charg-
+ing based on explicit model predictive control, IEEE Transactions on In-
+dustrial Informatics 17 (2) (2021) 1318–1330.
+[59] X. Tang, C. Zou, K. Yao, J. Lu, Y . Xia, F. Gao, Aging trajectory prediction
+for lithium-ion batteries via model migration and bayesian monte carlo
+method, Applied Energy 254 (2019) 113591.
+[60] A. Bills, S. Sripad, W. L. Fredericks, M. Guttenberg, D. Charles, E. Frank,
+V . Viswanathan, Universal battery performance and degradation model
+for electric aircraft (2021). arXiv:2008.01527.
+[61] X.-G. Yang, T. Liu, S. Ge, E. Rountree, C.-Y . Wang, Challenges and key
+requirements of batteries for electric vertical takeoffand landing aircraft,
+Joule 5 (7) (2021) 1644–1659.
+[62] P. Ren, Y . Xiao, X. Chang, P.-Y . Huang, Z. Li, X. Chen, X. Wang, A com-
+prehensive survey of neural architecture search: Challenges and solutions,
+ACM Computing Surveys 54 (4) (2022) 1–34.
+15
