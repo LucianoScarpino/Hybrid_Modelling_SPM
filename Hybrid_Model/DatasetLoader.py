@@ -171,6 +171,18 @@ class Loader(object):
 
         return torch.from_numpy(self.simplified_profiles[indices])
 
+    def get_tau(self, split):
+        """Return dimensionless times associated with a stored split."""
+        if self.split_indices is None:
+            raise RuntimeError("split_dataset must be called first.")
+
+        if split not in self.split_indices:
+            raise ValueError(
+                "split must be 'train', 'validation', or 'test'."
+            )
+
+        return self.tau[self.split_indices[split]].copy()
+
     def get_device(self):
         if torch.cuda.is_available():
             return torch.device("cuda")

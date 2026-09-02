@@ -9,13 +9,26 @@ from time import perf_counter
 class Testing(object):
     """Evaluate and reconstruct the FVM--FFN hybrid concentration model.
 
-    It enforces a zero-volume-average correction, compares baseline and hybrid
+    It fixes the volume-average correction, compares baseline and hybrid
     profiles, records timing/physics metrics, and exports corrected datasets.
     """
 
-    def __init__(self,test_loader,radius,simplified_profiles):
+    def __init__(
+            self,
+            test_loader,
+            radius,
+            simplified_profiles,
+            test_tau,
+            inventory_offset
+            ):
         self.test_loader = test_loader
         self.radius = np.asarray(radius,dtype=float)
+        self.test_tau = np.asarray(test_tau,dtype=float)
+        self.inventory_offset = float(inventory_offset)
+        self.concentration_metrics = None
+
+        if not np.isfinite(self.inventory_offset):
+            raise ValueError("The inventory offset must be finite.")
 
         if torch.is_tensor(simplified_profiles):
             simplified_profiles = simplified_profiles.detach().cpu().numpy()
@@ -27,6 +40,14 @@ class Testing(object):
 
         if self.radius.ndim != 1:
             raise ValueError("The radial grid must be one-dimensional.")
+
+        if self.test_tau.ndim != 1:
+            raise ValueError("The test time grid must be one-dimensional.")
+
+        if len(self.test_tau) != len(self.test_loader.dataset):
+            raise ValueError(
+                "The test time grid and test dataset must have the same length."
+            )
 
         if self.simplified_profiles.shape != (
                 len(self.test_loader.dataset),
@@ -62,6 +83,7 @@ class Testing(object):
         inference_time_seconds = 0.0
         test_predictions = []
         test_targets = []
+        test_average_corrections = []
 
         model.eval()
         print(f"Testing...")
@@ -74,7 +96,9 @@ class Testing(object):
                 self.synchronize_device(device)
                 inference_start = perf_counter()
                 pred = model(x)
-                pred = self.enforce_zero_average_correction(pred)
+                pred, _, average_correction = self.apply_inventory_constraint(
+                    pred
+                )
                 self.synchronize_device(device)
                 inference_time_seconds += perf_counter() - inference_start
 
@@ -84,15 +108,31 @@ class Testing(object):
 
                 test_predictions.append(pred.detach().cpu().numpy())
                 test_targets.append(y.detach().cpu().numpy())
+                test_average_corrections.append(
+                    average_correction.detach().cpu().numpy()
+                )
 
         test_loss = test_loss/num_points
         test_predictions = np.concatenate(test_predictions,axis=0)
         test_targets = np.concatenate(test_targets,axis=0)
+        test_average_corrections = np.concatenate(
+            test_average_corrections,
+            axis=0
+        )
 
         concentration_metrics = self.compute_concentration_metrics(
             test_targets,
             test_predictions
         )
+        concentration_metrics["test_constant_average_temporal_drift"] = (
+            self.compute_temporal_drift(test_average_corrections)
+        )
+        concentration_metrics["test_inventory_constraint_max_error"] = float(
+            np.max(
+                np.abs(test_average_corrections - self.inventory_offset)
+            )
+        )
+        self.concentration_metrics = concentration_metrics.copy()
         test_loss = concentration_metrics["hybrid_concentration_mse"]
 
         print(f"Test_loss: {test_loss}")
@@ -111,6 +151,14 @@ class Testing(object):
             "Average concentration RMSE | "
             f"Simplified: {concentration_metrics['baseline_average_concentration_rmse']:.6e} | "
             f"Hybrid: {concentration_metrics['hybrid_average_concentration_rmse']:.6e}"
+        )
+        print(
+            "Constant-average temporal drift: "
+            f"{concentration_metrics['test_constant_average_temporal_drift']:.6e}"
+        )
+        print(
+            "Inventory constraint maximum error: "
+            f"{concentration_metrics['test_inventory_constraint_max_error']:.6e}"
         )
         print(f"Inference time: {inference_time_seconds:.6f} s")
         print("-"*100)
@@ -166,17 +214,52 @@ class Testing(object):
 
         return spherical_weights / np.sum(spherical_weights)
 
-    def enforce_zero_average_correction(self,corrections):
-        """Project each radial correction onto the zero-volume-average subspace."""
+    def apply_inventory_constraint(self,corrections):
         weights = torch.as_tensor(
             self.average_weights,
             dtype=corrections.dtype,
             device=corrections.device
         )
 
-        correction_average = corrections @ weights
+        if corrections.ndim != 2:
+            raise ValueError(
+                "Corrections must have shape (batch_size, n_radius)."
+            )
 
-        return corrections - correction_average[:,None]
+        if corrections.shape[1] != weights.numel():
+            raise ValueError(
+                "Corrections and radial weights have incompatible dimensions."
+            )
+
+        raw_average = corrections @ weights
+        constant_average = torch.full_like(
+            raw_average,
+            self.inventory_offset
+        )
+        final_corrections = (
+            corrections
+            - raw_average[:,None]
+            + constant_average[:,None]
+        )
+        final_average = final_corrections @ weights
+
+        return final_corrections,raw_average,final_average
+
+    def compute_temporal_drift(self,average_corrections):
+        """Return maximum average-correction drift from the earliest test time."""
+        average_corrections = np.asarray(average_corrections,dtype=float)
+
+        if average_corrections.shape != self.test_tau.shape:
+            raise ValueError(
+                "Average corrections and test times must have the same shape."
+            )
+
+        time_order = np.argsort(self.test_tau)
+        ordered_averages = average_corrections[time_order]
+
+        return float(
+            np.max(np.abs(ordered_averages - ordered_averages[0]))
+        )
 
     @staticmethod
     def compute_error_metrics(errors):
@@ -223,10 +306,16 @@ class Testing(object):
         )
 
         baseline_average_metrics = self.compute_error_metrics(
-            baseline_errors @ self.average_weights
+            np.sum(
+                baseline_errors * self.average_weights[None,:],
+                axis=1
+            )
         )
         hybrid_average_metrics = self.compute_error_metrics(
-            hybrid_errors @ self.average_weights
+            np.sum(
+                hybrid_errors * self.average_weights[None,:],
+                axis=1
+            )
         )
 
         hybrid_profiles = self.simplified_profiles + predictions
@@ -265,7 +354,8 @@ class Testing(object):
             "hybrid_physical_bounds_violation_fraction": float(
                 physical_bounds_violations / hybrid_profiles.size
             ),
-            "zero_average_correction_enforced": True
+            "constant_average_correction_enforced": True,
+            "inventory_offset": self.inventory_offset
         }
 
         return metrics
@@ -276,7 +366,7 @@ class Testing(object):
             device,
             simplified_dataset
             ):
-        """Predict mass-neutral corrections for a full simplified dataset.
+        """Predict constant-average corrections for a full simplified dataset.
 
         Returns tensors containing simplified concentrations and corrections.
         """
@@ -310,15 +400,15 @@ class Testing(object):
 
         simplified_concentrations = torch.tensor(
             profiles.to_numpy(),
-            dtype=torch.float32,
-            device=device,
+            dtype=torch.float64
         )
 
         model.eval()
 
         with torch.no_grad():
             corrections = model(features)
-            corrections = self.enforce_zero_average_correction(corrections)
+            corrections, _, _ = self.apply_inventory_constraint(corrections)
+            corrections = corrections.detach().cpu().to(dtype=torch.float64)
 
         return simplified_concentrations, corrections
 
@@ -439,7 +529,10 @@ class Testing(object):
                 "The dataset and correction radial grids do not match."
             )
 
-        average_concentration = new_concentrations @ self.average_weights
+        average_concentration = np.sum(
+            new_concentrations * self.average_weights[None,:],
+            axis=1
+        )
         surface_concentration = new_concentrations[:,-1]
 
         new_frame["concentration"] = new_concentrations.reshape(-1)

@@ -70,6 +70,20 @@ def check_common_grid(reference,*models):
             raise ValueError("The time grids do not match.")
 
 
+def check_hybrid_inventory(simplified,hybrid,radius):
+    """Check that the hybrid average correction is constant in time."""
+    average_correction = (
+        compute_average(hybrid,radius)
+        - compute_average(simplified,radius)
+    )
+
+    if np.max(np.abs(average_correction - average_correction[0])) > 1e-6:
+        raise ValueError(
+            "The hybrid dataset does not use a constant average correction. "
+            "Run HybridDemo.py again."
+        )
+
+
 def load_pinn_model():
     """Load the frozen PINN and return model, checkpoint metadata, and device."""
     network_spec = spec_from_file_location(
@@ -188,22 +202,18 @@ def save_figure(fig,filename):
 
 
 def plot_concentration_fields(time,radius,fields):
-    selected_fields = (
-        fields["Reference"],
-        fields["PINN"],
-        fields["Hybrid"]
-    )
-    color_minimum = min(np.min(field) for field in selected_fields)
-    color_maximum = max(np.max(field) for field in selected_fields)
+    color_minimum = min(np.min(field) for field in fields.values())
+    color_maximum = max(np.max(field) for field in fields.values())
 
     fig,axes = plt.subplots(
-        1,
-        3,
-        figsize=(15,4.5),
+        2,
+        2,
+        figsize=(13,8),
         sharex=True,
         sharey=True,
         constrained_layout=True
     )
+    axes = axes.ravel()
 
     mesh = None
 
@@ -211,6 +221,7 @@ def plot_concentration_fields(time,radius,fields):
             axes,
             (
                 ("Reference FVM",fields["Reference"]),
+                ("Simplified",fields["Simplified"]),
                 ("PINN",fields["PINN"]),
                 ("Hybrid",fields["Hybrid"])
             )
@@ -228,6 +239,7 @@ def plot_concentration_fields(time,radius,fields):
         axis.set_xlabel("Physical time [s]")
 
     axes[0].set_ylabel("Dimensionless radius, $\\rho$")
+    axes[2].set_ylabel("Dimensionless radius, $\\rho$")
     fig.colorbar(
         mesh,
         ax=axes,
@@ -483,6 +495,11 @@ def main():
     hybrid = load_concentration_field(HYBRID_DATASET)
 
     check_common_grid(reference,simplified,hybrid)
+    check_hybrid_inventory(
+        simplified["concentration"],
+        hybrid["concentration"],
+        reference["radius"]
+    )
 
     pinn_concentration,pinn_flux = compute_pinn_field(
         reference["radius"],

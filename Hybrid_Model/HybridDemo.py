@@ -1,4 +1,7 @@
 from pathlib import Path
+
+import torch
+
 from DatasetLoader import Loader
 from Processor import Processing
 from Tester import Testing
@@ -29,25 +32,53 @@ hidden_dim = 32
 output_dim = 101
 
 #training
-processor = Processing(
-    train_loader,
-    val_loader
+torch.manual_seed(26)
+inventory_offset = Processing.estimate_inventory_offset(
+    y_train,
+    dataloader.radius
 )
 
-trained_model = processor.train(
+print('-'*100)
+print(f"Estimated inventory offset: {inventory_offset:.4e}")
+
+processor = Processing(
+    train_loader,
+    val_loader,
+    dataloader.radius,
+    inventory_offset
+)
+
+trained_model, training_metrics = processor.train(
     lr,
     epochs,
     early_stopping_patience= early_stopping,
     input_dim=input_dim,
     out_dim=output_dim,
     hidden_dim=hidden_dim,
-    device=device
+    device=device,
+    save_model_checkpoint=False
 )
+
+processor.checkpoint_path = processor.save_checkpoint(
+    trained_model,
+    training_metrics["best_val_loss"],
+    optimizer_name="Adam",
+    lr=lr,
+    training_metrics=training_metrics,
+    output_name="selected_checkpoint.pth",
+    output_folder=RESULTS_FOLDER / "Models"
+)
+
+print(f"Inventory offset: {inventory_offset:.4e}")
+print(f"Selected checkpoint: {processor.checkpoint_path.resolve()}")
+print('-'*100)
 
 tester = Testing(
     test_loader,
     dataloader.radius,
-    dataloader.get_simplified_profiles("test")
+    dataloader.get_simplified_profiles("test"),
+    dataloader.get_tau("test"),
+    inventory_offset
 )
 tester.test(
     trained_model,
@@ -65,6 +96,7 @@ simplified_concentrations, correction = tester.compute_corrections(
     device,
     simplified_dataset
 )
+
 corrected_concentrations = simplified_concentrations + correction
 
 tester.generate_new_dataset(
