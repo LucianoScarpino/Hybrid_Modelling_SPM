@@ -1,0 +1,153 @@
+{
+  "device": "auto",
+  "deterministic_algorithms": false,
+  "split_seed": 26,
+  "timing": {
+    "warmup": 2,
+    "inference_repetitions": 30,
+    "solver_repetitions": 10,
+    "end_to_end_repetitions": 10
+  },
+  "simulation": {
+    "Rp": 8.5e-06,
+    "Sp": 1.167,
+    "reference_Ds": 1.213e-14,
+    "simplified_Ds": 1.213e-14,
+    "alpha": 1.0,
+    "F": 96487.0,
+    "cs_max": 51410.0,
+    "C0": 0.5,
+    "I1C": 1.656,
+    "profile": "operating",
+    "tr": 300.0,
+    "tload": 3600.0,
+    "tf": 6000.0,
+    "T_ref": 298.15,
+    "T_amb": 298.15,
+    "Ea": 35000.0,
+    "Rg": 8.314462618,
+    "m": 0.045,
+    "cp": 900.0,
+    "R_el": 0.1,
+    "h": 10.0,
+    "A_th": 0.01,
+    "N": 100,
+    "Ntau": 201,
+    "abs_tol": 1e-08,
+    "rel_tol": 1e-06,
+    "ODE_solver": "solve_ivp"
+  },
+  "fvm_hybrid": {
+    "learning_rate": 0.001,
+    "epochs": 10000,
+    "early_stopping_patience": 800,
+    "hidden_dim": 32,
+    "batch_size": 32,
+    "evaluate_variants": true
+  },
+  "pinn": {
+    "learning_rate": 0.001,
+    "epochs": 10000,
+    "scheduler_patience": 200,
+    "early_stopping_patience": 800,
+    "lbfgs_max_iterations": 500,
+    "batch_size": 512,
+    "lambda_data": 1.0,
+    "lambda_pde": 1.0,
+    "lambda_boundary": 1.0,
+    "initial_concentration": 0.5,
+    "surface_flux": -0.20046160073059885,
+    "tau_final": 1.0073356401384084
+  },
+  "hybrid_pinn": {
+    "checkpoint": null,
+    "learning_rate": 0.001,
+    "epochs": 3000,
+    "early_stopping_patience": 300,
+    "batch_size": 512,
+    "physics_diagnostics": false
+  },
+  "thermal": {
+    "ambient_temperature": 298.15,
+    "thresholds": [0.001, 0.003, 0.01, 0.03],
+    "ffn_learning_rate": 0.001,
+    "ffn_epochs": 2000,
+    "ffn_early_stopping_patience": 200
+  },
+  "presets": {
+    "smoke": {
+      "models": [
+        "reference_fvm",
+        "simplified_fvm",
+        "fvm_hybrid",
+        "pinn",
+        "hybrid_pinn",
+        "thermal_sindyc",
+        "thermal_ffn"
+      ],
+      "seeds": [26],
+      "repeats": 1,
+      "overrides": {
+        "timing": {
+          "warmup": 0,
+          "inference_repetitions": 2,
+          "solver_repetitions": 1,
+          "end_to_end_repetitions": 1
+        },
+        "fvm_hybrid": {
+          "epochs": 3,
+          "early_stopping_patience": 3
+        },
+        "pinn": {
+          "epochs": 1,
+          "early_stopping_patience": 1,
+          "lbfgs_max_iterations": 0
+        },
+        "hybrid_pinn": {
+          "epochs": 3,
+          "early_stopping_patience": 3
+        },
+        "thermal": {
+          "ffn_epochs": 3,
+          "ffn_early_stopping_patience": 3
+        }
+      }
+    },
+    "standard": {
+      "models": [
+        "reference_fvm",
+        "simplified_fvm",
+        "fvm_hybrid",
+        "pinn",
+        "hybrid_pinn",
+        "thermal_sindyc",
+        "thermal_ffn"
+      ],
+      "seeds": [11, 26, 42],
+      "repeats": 1,
+      "overrides": {}
+    },
+    "publication": {
+      "models": [
+        "reference_fvm",
+        "simplified_fvm",
+        "fvm_hybrid",
+        "pinn",
+        "hybrid_pinn",
+        "thermal_sindyc",
+        "thermal_ffn"
+      ],
+      "seeds": [7, 19, 26, 41, 73],
+      "repeats": 2,
+      "overrides": {
+        "timing": {
+          "warmup": 5,
+          "inference_repetitions": 100,
+          "solver_repetitions": 30,
+          "end_to_end_repetitions": 30
+        },
+        "deterministic_algorithms": true
+      }
+    }
+  }
+}

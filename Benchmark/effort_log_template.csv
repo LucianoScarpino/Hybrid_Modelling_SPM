@@ -1,0 +1,10 @@
+date,phase,activity,role,person_hours,calendar_days,evidence,notes
+,problem_definition,Requirements and acceptance criteria,,,,,
+,reference_model,Physical formulation and verification,,,,,
+,dataset_engineering,Design and generation of reference datasets,,,,,
+,surrogate_development,PINN or residual-model implementation,,,,,
+,training,Tuning and repeated optimization,,,,,
+,validation,Accuracy robustness and physical-consistency checks,,,,,
+,integration,Packaging API and downstream integration,,,,,
+,documentation,Report model cards and handover,,,,,
+,maintenance,Monitoring incident response and retraining,,,,,

@@ -261,6 +261,27 @@ Dataset generation and full training can be computationally expensive. Saved
 datasets and checkpoints allow plotting and post-processing to be repeated
 without retraining every model.
 
+## Automated reproducible benchmarks
+
+The [`Benchmark`](Benchmark/) package executes the reference FVM, simplified
+FVM, PINN, Hybrid-PINN, FVM--FNN, SINDYc, and thermal FFN through one common
+measurement protocol. It supports independent seeds and repeated processes,
+synchronized accelerator timings, physical and accuracy diagnostics, frozen
+model robustness tests, statistical aggregation, dataset hashes, compute-only
+break-even estimates, and an optional manually recorded engineering-effort
+log.
+
+Start with the short integration check:
+
+```bash
+cd Benchmark
+python run_benchmarks.py --preset smoke
+```
+
+The `standard` and `publication` presets use the full training settings and
+can require substantial computation. See [`Benchmark/README.md`](Benchmark/README.md)
+before starting them.
+
 ## Report
 
 The mathematical formulation, numerical discretization, training procedures,

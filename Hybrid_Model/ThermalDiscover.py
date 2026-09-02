@@ -1,7 +1,11 @@
 import torch
-import pysindy as ps
 import pandas as pd
 import numpy as np
+
+try:
+    import pysindy as ps
+except ImportError:
+    ps = None
 
 from copy import deepcopy
 from pathlib import Path
@@ -118,6 +122,11 @@ class SINDyc(object):
 
         Returns the selected model, validation rollout, and sparsity threshold.
         """
+        if ps is None:
+            raise ModuleNotFoundError(
+                "SINDYc requires the optional 'pysindy' dependency. "
+                "Install the project dependencies before running this model."
+            )
         training_datasets = (
             list(self.reference_dataset)
             if isinstance(self.reference_dataset, (list, tuple))
