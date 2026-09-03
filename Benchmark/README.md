@@ -44,9 +44,17 @@ accuracy or timing conclusions.
 # Three independent initialization seeds and production training settings.
 python run_benchmarks.py --preset standard
 
-# More seeds and timing repetitions, with deterministic algorithms requested.
+# Five seeds, two fresh-process repeats, and expanded timing repetitions.
 python run_benchmarks.py --preset publication
 ```
+
+With all seven models selected, `standard` runs seeds `11`, `26`, and `42`
+once, for 21 isolated executions. `publication` runs seeds `7`, `19`, `26`,
+`41`, and `73` twice, for 70 isolated executions. A repeat uses the same
+model seed in a fresh process; it checks determinism and machine-time
+variability but does not constitute an additional independent initialization.
+The finalized publication run `20260903_085820` completed all 70 executions
+without failures or skipped models.
 
 The standard preset uses a lower-overhead PINN protocol: validation is run
 every 10 epochs, detailed diagnostics every 100 epochs, materially small
@@ -164,6 +172,22 @@ Each invocation creates `Benchmark/results/YYYYMMDD_HHMMSS/` containing:
 An accuracy--latency scatter plot is generated only when `--plot` is passed.
 Numerical files remain the primary output.
 
+## Meaning of the accuracy metrics
+
+Concentration-field RMSE and relative L2 error compare each approximate
+pipeline with the stored reference-FVM field on the same evaluation grid.
+They quantify agreement with that numerical reference, not agreement with
+experimental ground truth or the unknown physical solution.
+
+The benchmark also executes the reference pipeline to measure its latency,
+mass balance, and reproducibility. Its computed field error of order `1e-14`
+is a self-comparison and only reflects floating-point round-off and
+data-storage precision. It has no independent accuracy meaning and must not
+be reported as evidence that the reference model is physically accurate.
+When the reference point appears in the optional logarithmic
+accuracy--latency plot, use it only as a latency anchor; comparisons of field
+accuracy apply to the approximate models.
+
 ## Meaning of the timings
 
 All timings use a monotonic wall clock. CUDA and Apple MPS are synchronized
@@ -177,12 +201,25 @@ immediately before and after measured calls.
 - `online_end_to_end`: simplified finite-volume simulation plus FNN correction;
 - `rollout`: integration of a thermal model over a complete test trajectory;
 - `worker_wall_seconds`: full process time, including imports, data loading,
-  setup, training, evaluation, and result serialization.
+  setup, training, evaluation, and result serialization;
 - `offline_dataset_generation_seconds`: FVM solve plus in-memory dataset
   assembly; CSV serialization is deliberately excluded.
 
 The correction-only FVM--FNN latency must not be presented as the complete
 simulator latency. Use `online_end_to_end` for deployment comparisons.
+
+Compute-only break-even is obtained by dividing offline model cost by the
+mean online-time saving relative to the reference FVM. It excludes human
+effort, reference-data generation, validation, and maintenance. For
+Hybrid-PINN it also excludes production of the frozen PINN checkpoint, so
+that value is an incremental correction-stage estimate rather than a full
+lifecycle break-even.
+
+Timing values are specific to the recorded implementation and hardware.
+In the finalized publication run, FVM-based pipelines ran on CPU and
+PINN-based pipelines on Apple MPS. Their end-to-end latencies can be compared
+as deployed pipelines on that machine, but the measurements are not a
+hardware-neutral ranking of the underlying algorithms.
 
 ## Seeds and repeats
 
@@ -196,8 +233,13 @@ PINN progress is written to the run-specific `worker.log`. Each validation line
 reports elapsed time and an upper-bound ETA based on the configured maximum
 number of epochs; early stopping can make the actual duration shorter.
 
-For scientific reporting, use at least five independent model seeds. Confidence
-intervals produced from fewer than five seeds are descriptive only.
+For scientific reporting, use at least five independent model seeds. The
+summary files aggregate completed run values, so two repeats of one seed
+appear as two observations even though they share the same initialization
+seed. Publication results must therefore describe the normal-approximation
+intervals as descriptive. For inference specifically about initialization
+variability, aggregate repeats within each seed before computing uncertainty
+or use a hierarchical analysis that separates seed and repeat effects.
 
 ## Important interpretation limits
 

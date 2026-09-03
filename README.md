@@ -65,7 +65,7 @@ simplified baseline while still allowing a non-zero initial inventory offset.
 ## Repository structure
 
 ```text
-Software/
+Software_V2/
 ├── Hybrid_PINN_for_SPM.pdf          # Complete technical report
 ├── Single_Particle_Model_V3/        # Full and simplified FVM particle models
 │   ├── Config.py                    # Command-line physical/numerical settings
@@ -94,21 +94,29 @@ Software/
 │   ├── Results/                     # Checkpoints and metric histories
 │   └── Images/                      # PINN/Hybrid-PINN figures
 │
-└── Hybrid_Model/                    # FVM--FFN and thermal hybrid studies
-    ├── DatasetLoader.py             # Aligned profile datasets and splits
-    ├── NeuralNetwork.py             # Profile-correction and thermal FFNs
-    ├── Processor.py                 # Training with hard inventory projection
-    ├── Tester.py                    # Reconstruction and inventory diagnostics
-    ├── HybridDemo.py                # FVM--FFN hybrid training entry point
-    ├── Visualizer.py                # Corrected-field visualization
-    ├── PlotHybrid.py                # Plot a saved corrected dataset
-    ├── ThermalDiscover.py           # SINDYc/FFN identification and rollout
-    ├── TemperatureField.py          # Thermal model selection and comparison
-    ├── CompareMethods.py            # Cross-method concentration comparison
-    ├── ConvergenceTest.py           # Frozen-model tests across C0/Ds variants
-    ├── Dataset/                     # Baseline, reference, corrected, variants
-    ├── Results/                     # Training/test histories and checkpoints
-    └── Images/                      # Hybrid and thermal figures
+├── Hybrid_Model/                    # FVM--FFN and thermal hybrid studies
+│   ├── DatasetLoader.py             # Aligned profile datasets and splits
+│   ├── NeuralNetwork.py             # Profile-correction and thermal FFNs
+│   ├── Processor.py                 # Training with hard inventory projection
+│   ├── Tester.py                    # Reconstruction and inventory diagnostics
+│   ├── HybridDemo.py                # FVM--FFN hybrid training entry point
+│   ├── Visualizer.py                # Corrected-field visualization
+│   ├── PlotHybrid.py                # Plot a saved corrected dataset
+│   ├── ThermalDiscover.py           # SINDyC/FFN identification and rollout
+│   ├── TemperatureField.py          # Thermal model selection and comparison
+│   ├── CompareMethods.py            # Cross-method concentration comparison
+│   ├── ConvergenceTest.py           # Frozen-model robustness tests
+│   ├── Dataset/                     # Baseline, reference, corrected, variants
+│   ├── Results/                     # Training/test histories and checkpoints
+│   └── Images/                      # Hybrid and thermal figures
+│
+└── Benchmark/                       # Reproducible multi-seed evaluation suite
+    ├── run_benchmarks.py            # Benchmark orchestration and aggregation
+    ├── worker.py                    # Isolated execution of each model/run
+    ├── default_config.json          # Smoke, standard, and publication presets
+    ├── effort_log_template.csv      # Human-effort input template
+    ├── README.md                    # Protocol and interpretation guidance
+    └── results/                     # Timestamped machine-readable outputs
 ```
 
 Generated datasets, model checkpoints, metric histories, and figures are kept
@@ -137,16 +145,24 @@ mass-balance, bounds, boundary-flux, PDE, and regularity checks.
 
 ### Simplified-FVM residual correction
 
-For the nominal trajectory, the FVM--FFN hybrid reduces the full-field RMSE
-from `8.2082e-03` for the simplified FVM to `4.1431e-04`, corresponding to a
-`94.95%` reduction. The centre and surface RMSE reductions are `94.02%` and
-`95.94%`, respectively. The volume-average RMSE changes from `9.4944e-07` to
-`7.7267e-07`.
+In the final publication benchmark (five seeds and two repeats per seed), the
+simplified FVM obtains a mean full-field RMSE of `8.2082e-03` and a mean
+relative L2 error of `1.1016e-02`. The FVM--FNN hybrid reduces these values to
+`2.9637e-04` and `3.9776e-04`, respectively. Since the baseline and corrected
+fields are evaluated as a paired pipeline in every run, this corresponds to a
+mean nominal RMSE reduction of `96.39%`.
 
-The maximum mass-balance residual remains practically unchanged
-(`4.5522e-05` for the simplified FVM and `4.5525e-05` for the hybrid model),
-as expected from the hard constant-average projection. The measured temporal
-drift and inventory-constraint error are of order `1e-09`.
+The hybrid mean maximum mass-balance residual is `4.4996e-05`, compared with
+`4.5522e-05` for the simplified FVM, and no physical-bound violations are
+detected. These checks show that the learned correction does not degrade the
+monitored inventory behaviour of the conservative baseline under the nominal
+conditions. They do not, by themselves, establish accuracy outside the
+training domain.
+
+The figure below is produced by the original single-checkpoint comparison.
+It remains useful as a qualitative field-error visualization; the aggregated
+publication values reported above are the quantitative reference for the
+final model comparison.
 
 ![Simplified, PINN, and FVM--FFN hybrid error comparison](Hybrid_Model/Images/Comparison/error_metrics_comparison.png)
 
@@ -157,15 +173,25 @@ trained with its prescribed constant-flux formulation. The plot is therefore
 a comparison of the current implementations on the same reference field, not
 a universal ranking under identical physical assumptions.
 
-### Robustness to initial concentration and diffusivity
+### Robustness to baseline perturbations
 
-`ConvergenceTest.py` evaluates one frozen nominal checkpoint on simplified
-datasets generated with different values of `C0` and `Ds`. The hard inventory
-constraint remains satisfied at approximately `1e-09` for all variants, but
-the predictive accuracy can deteriorate substantially away from the nominal
-baseline. In particular, changing `Ds` while retaining `C0 = 0.50` produces a
-large negative relative-error reduction. This confirms that exact inventory
-consistency and radial-profile accuracy are separate properties.
+`ConvergenceTest.py` and the benchmark worker evaluate a frozen nominal
+checkpoint on five simplified-model variants spanning different initial
+concentrations and dimensionless final times associated with the perturbed
+baselines. The correction improves the simplified-model RMSE for two variants
+(`9.40%` and `11.60%`) but worsens it for the remaining three (`-220.12%`,
+`-58.26%`, and `-34.00%`). No physical-bound violations are detected.
+
+This is an applicability-domain result rather than a stochastic-training
+result: the same nominal correction is reused without retraining. It shows
+that inventory consistency and nominal accuracy do not guarantee predictive
+robustness under trajectory or parameter changes. A deployed corrector
+therefore needs an applicability check, a retraining policy, or a fallback to
+the physical solver.
+
+The figure below visualizes the original frozen-checkpoint experiment. The
+percentages reported above are the multi-seed publication aggregates and
+supersede the single-run values for final reporting.
 
 ![Frozen-checkpoint robustness across simplified-model variants](Hybrid_Model/Images/Convergence/convergence_test.png)
 
@@ -175,6 +201,17 @@ SINDYc and the thermal FFN are trained on multiple operating trajectories and
 tested on dedicated interpolation and extrapolation cases. Their comparison
 includes temperature and derivative errors, rollout stability, training and
 inference time, and model complexity.
+
+In the publication benchmark, SINDYc identifies a two-term thermal model with
+interpolation and extrapolation RMSE values of `3.3981e-04 K` and
+`4.9426e-04 K`. The thermal FFN obtains `3.808e-03 K` and `6.5494e-02 K`,
+respectively, and is also slower to train and roll out in this implementation.
+This result reflects the fact that the tested thermal dynamics are sparse in
+the selected candidate library; it is not a general claim that SINDYc always
+outperforms neural models.
+
+The following plot is an illustrative trajectory-level comparison; the
+publication statistics above provide the aggregated quantitative result.
 
 ![SINDYc and FFN interpolation comparison](Hybrid_Model/Images/Thermal_models_comparison_interpolation.png)
 
@@ -278,9 +315,67 @@ cd Benchmark
 python run_benchmarks.py --preset smoke
 ```
 
-The `standard` and `publication` presets use the full training settings and
-can require substantial computation. See [`Benchmark/README.md`](Benchmark/README.md)
-before starting them.
+The `standard` and `publication` presets use production-scale training
+settings and can require substantial computation. The publication preset is
+the more exhaustive protocol: five seeds, two process-level repeats per seed,
+and expanded timing repetitions. See
+[`Benchmark/README.md`](Benchmark/README.md) before starting either run.
+
+### Final publication benchmark
+
+The finalized run `20260903_085820` completed all 70 requested executions:
+seven pipelines, five independent initialization seeds, and two fresh-process
+repeats per seed. The following values are run-level means on the tested Apple
+Silicon system.
+
+| Concentration pipeline | Relative L2 error | Online latency | Speedup vs reference | Offline training | Physical interpretation |
+|---|---:|---:|---:|---:|---|
+| Reference FVM | N/A | `108.679 ms` | `1.00x` | none | Numerical target and fallback |
+| Simplified FVM | `1.1016e-02` | `80.767 ms` | `1.35x` | none | Passes mass and bound checks |
+| FVM--FNN hybrid | `3.9776e-04` | `83.793 ms` | `1.30x` | `11.797 s` | Passes mass and bound checks on the nominal case |
+| Standalone PINN | `5.1941e-02` | `4.648 ms` | `23.38x` | `590.203 s` | Fails the selected mass tolerance; some bound violations |
+| Hybrid-PINN | `1.6655e-03` | `7.031 ms` | `15.46x` | `121.328 s` | No bound violations, but fails the selected mass tolerance |
+
+All field errors in this table are measured against the reference-FVM
+dataset. An error for the reference itself is therefore not an independent
+accuracy measurement: the computed value of order `1e-14` only reflects
+floating-point round-off and data-storage precision. It is intentionally
+reported as not applicable here and must not be interpreted as physical or
+experimental validation.
+
+The FVM--FNN training cost is recovered after approximately 474 calls when
+compared only with the measured online saving relative to the reference FVM.
+The corresponding Hybrid-PINN correction-stage estimate is approximately
+1,194 calls and excludes the earlier cost of producing its frozen PINN
+checkpoint. These are compute-only break-even values: reference-data
+generation, engineering effort, validation, and maintenance are excluded.
+
+The timing comparison describes the complete implemented pipelines on the
+benchmark machine. FVM-based workloads ran on CPU, whereas the PINN-based
+workloads ran on Apple MPS. The values are therefore deployment measurements
+for that configuration, not hardware-neutral rankings of the algorithms.
+
+### Operational conclusions
+
+- Use the **reference FVM** for qualification, low-volume high-assurance
+  simulations, out-of-domain cases, and fallback.
+- Use the **simplified FVM** when a training-free and physically consistent
+  approximation is preferred and an error of order `1e-2` is acceptable.
+- Use the **FVM--FNN hybrid** for high nominal accuracy when roughly `84 ms`
+  is fast enough and an applicability-domain check is available.
+- Use the **Hybrid-PINN** when sub-`10 ms` latency is required and conservation
+  monitoring plus a physical fallback can be provided.
+- Treat the present **standalone PINN** as a fast research baseline rather
+  than the default reliability-critical solver.
+- Use **thermal SINDyC** while the dynamics remain sparse in the selected
+  candidate library; re-identify the model when the physics or excitation
+  regime changes.
+
+The recorded engineering effort is 152 person-hours (19 eight-hour days).
+Problem definition, validation, and documentation account for 101 hours, or
+66.4% of the total, while recorded training supervision accounts for 3 hours.
+The dominant industrial cost is therefore formulation and qualification, not
+optimizer runtime alone.
 
 ## Report
 
