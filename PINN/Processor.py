@@ -4,6 +4,7 @@ import warnings
 from torch.utils.data import TensorDataset
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 
 from NeuralNetwork import MLP,FFN
 
@@ -48,7 +49,10 @@ class Processing(object):
         lr = 1e-3,
         early_stopping_patience=800,
         sheduler_patience=200,
-        lbfgs_max_iter=500
+        lbfgs_max_iter=500,
+        validation_interval=1,
+        diagnostics_interval=1,
+        early_stopping_min_delta=0.0,
         ):
         """Fit the PINN with weighted data, PDE, and boundary losses.
 
@@ -56,17 +60,35 @@ class Processing(object):
         the best trained concentration model.
         """
 
+        if validation_interval < 1:
+            raise ValueError("validation_interval must be at least 1.")
+        if diagnostics_interval < 0:
+            raise ValueError("diagnostics_interval cannot be negative.")
+        if early_stopping_patience < 1:
+            raise ValueError("early_stopping_patience must be at least 1.")
+        if early_stopping_min_delta < 0.0:
+            raise ValueError("early_stopping_min_delta cannot be negative.")
+
         model = MLP().to(self.device)
         opt1 = torch.optim.Adam(params=model.parameters(),lr=lr)
+
+        scheduler_patience_checks = max(
+            1,
+            (sheduler_patience + validation_interval - 1) // validation_interval,
+        )
+        scheduler_cooldown_checks = max(
+            0,
+            (50 + validation_interval - 1) // validation_interval,
+        )
 
         sheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer=opt1,
             mode="min",
             factor=0.5,
-            patience=sheduler_patience,
+            patience=scheduler_patience_checks,
             threshold=1e-4,
             threshold_mode="rel",
-            cooldown=50,
+            cooldown=scheduler_cooldown_checks,
             min_lr=1e-6
         )
 
@@ -74,15 +96,19 @@ class Processing(object):
         best_data_val_loss = float("inf")
         best_total_val_loss = float("inf")
         best_model_state = None
-        patience = 0
+        best_epoch = 0
+        validation_evaluations = 0
+        training_start = perf_counter()
 
 
+        completed_epochs = 0
         for epoch in range(epochs):
+            completed_epochs = epoch + 1
             model.train()
 
-            data_loss_sum = 0.0
-            pde_loss_sum = 0.0
-            boundary_loss_sum = 0.0
+            data_loss_sum = torch.zeros((), device=self.device)
+            pde_loss_sum = torch.zeros((), device=self.device)
+            boundary_loss_sum = torch.zeros((), device=self.device)
 
             number_data_points = 0
             number_collocation_points = 0
@@ -146,16 +172,27 @@ class Processing(object):
                 #LOSS
                 batch_train_loss = lambda_d * batch_DATA_loss + lambda_f * batch_PDE_loss + lambda_b * batch_BOUNDARY_loss
 
-                output_statistics = self.check_output_scale(concentrations_d)
-                pde_statistics = self.check_pde_residual(residual_PDE)
-
                 batch_train_loss.backward()
 
-                gradient_statistics = self.check_gradients(model,batch_train_loss.item())
+                diagnostics_due = (
+                    diagnostics_interval > 0
+                    and batch_index == 0
+                    and (
+                        epoch == 0
+                        or (epoch + 1) % diagnostics_interval == 0
+                    )
+                )
+                if diagnostics_due:
+                    output_statistics = self.check_output_scale(concentrations_d)
+                    pde_statistics = self.check_pde_residual(residual_PDE)
+                    gradient_statistics = self.check_gradients(
+                        model,
+                        float(batch_train_loss.detach().cpu()),
+                    )
 
                 opt1.step()
 
-                if batch_index == 0:
+                if diagnostics_due:
                     print(
                         "Diagnostics | "
                         f"Output mean: {output_statistics['mean']:.3e} | "
@@ -167,18 +204,36 @@ class Processing(object):
                         f"{gradient_statistics['total_norm']:.3e}"
                     )
 
-                data_loss_sum += batch_DATA_loss.item() * dx_train.shape[0]
-                pde_loss_sum += batch_PDE_loss.item() * fx_train.shape[0]
-                boundary_loss_sum += batch_BOUNDARY_loss.item() * bx_train.shape[0]
+                data_loss_sum += batch_DATA_loss.detach() * dx_train.shape[0]
+                pde_loss_sum += batch_PDE_loss.detach() * fx_train.shape[0]
+                boundary_loss_sum += batch_BOUNDARY_loss.detach() * bx_train.shape[0]
 
                 number_data_points += dx_train.shape[0]
                 number_collocation_points += fx_train.shape[0]
                 number_boundary_points += bx_train.shape[0]
 
-            epoch_data_loss = (data_loss_sum / number_data_points)
-            epoch_pde_loss = (pde_loss_sum / number_collocation_points)
-            epoch_boundary_loss = (boundary_loss_sum / number_boundary_points)
-            epoch_total_loss = (lambda_d * epoch_data_loss + lambda_f * epoch_pde_loss + lambda_b * epoch_boundary_loss)
+            validation_due = (
+                epoch == 0
+                or (epoch + 1) % validation_interval == 0
+                or (epoch + 1) == epochs
+            )
+            if not validation_due:
+                continue
+
+            validation_evaluations += 1
+            epoch_loss_values = torch.stack(
+                (
+                    data_loss_sum / number_data_points,
+                    pde_loss_sum / number_collocation_points,
+                    boundary_loss_sum / number_boundary_points,
+                )
+            ).detach().cpu().tolist()
+            epoch_data_loss, epoch_pde_loss, epoch_boundary_loss = epoch_loss_values
+            epoch_total_loss = (
+                lambda_d * epoch_data_loss
+                + lambda_f * epoch_pde_loss
+                + lambda_b * epoch_boundary_loss
+            )
 
             epoch_data_val_loss, epoch_pde_val_loss, epoch_boundary_val_loss, epoch_total_val_loss = self.validate(
                 model,
@@ -189,6 +244,9 @@ class Processing(object):
                 lambda_b
                 )
             
+            elapsed_seconds = perf_counter() - training_start
+            mean_epoch_seconds = elapsed_seconds / (epoch + 1)
+            maximum_eta_minutes = mean_epoch_seconds * (epochs - epoch - 1) / 60.0
             print(
                 f"Epoch {epoch + 1:5d}/{epochs} | "
                 f"Total_train_loss: {epoch_total_loss:.4e} | "
@@ -199,37 +257,48 @@ class Processing(object):
                 f"PDE_val_loss: {epoch_pde_val_loss:.4e} | "
                 f"BC_train_loss: {epoch_boundary_loss:.4e} | "
                 f"BC_val_loss: {epoch_boundary_val_loss:.4e} | "
-                f"LR: {opt1.param_groups[0]['lr']:.2e} |"
-                f"OPT: ADAM"
+                f"LR: {opt1.param_groups[0]['lr']:.2e} | "
+                f"OPT: ADAM | "
+                f"Elapsed: {elapsed_seconds / 60.0:.1f} min | "
+                f"ETA(max): {maximum_eta_minutes:.1f} min"
                 )
             print("-" * 100)
 
             sheduler.step(epoch_total_val_loss)
 
-            if epoch_data_val_loss < best_data_val_loss:
+            if (
+                best_model_state is None
+                or epoch_data_val_loss
+                < best_data_val_loss - early_stopping_min_delta
+            ):
                 best_data_val_loss = epoch_data_val_loss
                 best_total_val_loss = epoch_total_val_loss
-                patience = 0
+                best_epoch = epoch + 1
 
                 best_model_state = {
                     name: value.detach().clone()
                     for name, value in model.state_dict().items()
                     }
-            else:
-                if patience < early_stopping_patience:
-                    patience += 1
 
-            if patience >= early_stopping_patience:
+            epochs_without_improvement = epoch + 1 - best_epoch
+            if epochs_without_improvement >= early_stopping_patience:
                 plateau_reached = True
-                print("Plateau reached: switching from Adam to LBFGS.")
+                print(
+                    "Plateau reached after "
+                    f"{epochs_without_improvement} epochs without a material "
+                    "validation improvement."
+                )
                 break
 
+        if best_model_state is None:
+            raise RuntimeError("PINN training completed without a validation result.")
         model.load_state_dict(best_model_state)
         final_data_validation_loss = best_data_val_loss
         final_total_validation_loss = best_total_val_loss
         final_optimizer = "ADAM"
 
-        if plateau_reached:
+        if plateau_reached and lbfgs_max_iter > 0:
+            print("Switching from Adam to LBFGS refinement.")
             model = self.refine(
                 model,
                 init_concentration,
@@ -262,6 +331,18 @@ class Processing(object):
                 final_total_validation_loss = best_total_val_loss
                 final_optimizer = "ADAM"
 
+        self.training_summary = {
+            "epochs_completed": completed_epochs,
+            "best_epoch": best_epoch,
+            "validation_evaluations": validation_evaluations,
+            "validation_interval": validation_interval,
+            "diagnostics_interval": diagnostics_interval,
+            "early_stopping_min_delta": early_stopping_min_delta,
+            "early_stopped": plateau_reached,
+            "final_optimizer": final_optimizer,
+            "training_loop_seconds": perf_counter() - training_start,
+        }
+
         self.save_checkpoint(
             model=model,
             data_validation_loss=final_data_validation_loss,
@@ -289,9 +370,9 @@ class Processing(object):
 
         model.eval()
 
-        data_val_loss_sum = 0.0
-        pde_val_loss_sum = 0.0
-        boundary_val_loss_sum = 0.0
+        data_val_loss_sum = torch.zeros((), device=self.device)
+        pde_val_loss_sum = torch.zeros((), device=self.device)
+        boundary_val_loss_sum = torch.zeros((), device=self.device)
 
         number_data_points = 0
         number_collocation_points = 0
@@ -349,17 +430,21 @@ class Processing(object):
             #DATA
             batch_data_val_loss = torch.mean((val_concentration_data - dy_val).square())
 
-            data_val_loss_sum += (batch_data_val_loss.item() * dx_val.shape[0])
-            pde_val_loss_sum += (batch_pde_val_loss.item() * fx_val.shape[0])
-            boundary_val_loss_sum += (batch_boundary_val_loss.item() * bx_val.shape[0])
+            data_val_loss_sum += batch_data_val_loss.detach() * dx_val.shape[0]
+            pde_val_loss_sum += batch_pde_val_loss.detach() * fx_val.shape[0]
+            boundary_val_loss_sum += batch_boundary_val_loss.detach() * bx_val.shape[0]
 
             number_data_points += dx_val.shape[0]
             number_collocation_points += fx_val.shape[0]
             number_boundary_points += bx_val.shape[0]
 
-        data_val_loss = (data_val_loss_sum / number_data_points)
-        pde_val_loss = (pde_val_loss_sum / number_collocation_points)
-        boundary_val_loss = (boundary_val_loss_sum / number_boundary_points)
+        data_val_loss, pde_val_loss, boundary_val_loss = torch.stack(
+            (
+                data_val_loss_sum / number_data_points,
+                pde_val_loss_sum / number_collocation_points,
+                boundary_val_loss_sum / number_boundary_points,
+            )
+        ).detach().cpu().tolist()
 
         val_loss = (lambda_d * data_val_loss + lambda_f * pde_val_loss + lambda_b * boundary_val_loss)
 

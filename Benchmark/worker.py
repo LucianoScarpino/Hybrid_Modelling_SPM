@@ -203,7 +203,9 @@ def run_fvm_hybrid(
     model_config = config["fvm_hybrid"]
     timing_config = config["timing"]
     dataset_folder = module_folder / "Dataset"
-    device = select_device(config["device"])
+    # This very small network is normally faster on CPU because dispatching
+    # its tiny batches to MPS costs more than the matrix operations themselves.
+    device = select_device(model_config.get("device", config["device"]))
 
     loader = Loader(random_state=int(config["split_seed"]))
     simplified_dataset = loader.get_simplified_dataset(dataset_folder)
@@ -565,7 +567,7 @@ def run_pinn(
 
     model_config = config["pinn"]
     timing_config = config["timing"]
-    device = select_device(config["device"])
+    device = select_device(model_config.get("device", config["device"]))
     batch_size = int(model_config["batch_size"])
     _, data_loaders, collocation_loaders, boundary_loaders = pinn_loaders(
         root,
@@ -599,6 +601,11 @@ def run_pinn(
             early_stopping_patience=int(model_config["early_stopping_patience"]),
             sheduler_patience=int(model_config["scheduler_patience"]),
             lbfgs_max_iter=int(model_config["lbfgs_max_iterations"]),
+            validation_interval=int(model_config.get("validation_interval", 1)),
+            diagnostics_interval=int(model_config.get("diagnostics_interval", 1)),
+            early_stopping_min_delta=float(
+                model_config.get("early_stopping_min_delta", 0.0)
+            ),
         )
     finally:
         os.chdir(old_working_directory)
@@ -666,6 +673,7 @@ def run_pinn(
         "training": {
             "epochs_requested": int(model_config["epochs"]),
             "split_seed": int(config["split_seed"]),
+            **getattr(processor, "training_summary", {}),
         },
         "model": {
             "trainable_parameters": count_parameters(model),
@@ -738,7 +746,7 @@ def run_hybrid_pinn(
     model_config = config["hybrid_pinn"]
     pinn_config = config["pinn"]
     timing_config = config["timing"]
-    device = select_device(config["device"])
+    device = select_device(model_config.get("device", config["device"]))
     checkpoint_path = find_pinn_checkpoint(root, model_config.get("checkpoint"))
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     initial_concentration = float(
@@ -783,6 +791,10 @@ def run_hybrid_pinn(
             lr=float(model_config["learning_rate"]),
             early_stopping_patience=int(model_config["early_stopping_patience"]),
             device=device,
+            validation_interval=int(model_config.get("validation_interval", 1)),
+            early_stopping_min_delta=float(
+                model_config.get("early_stopping_min_delta", 0.0)
+            ),
         )
     finally:
         os.chdir(old_working_directory)
@@ -864,6 +876,7 @@ def run_hybrid_pinn(
         "training": {
             "epochs_requested": int(model_config["epochs"]),
             "split_seed": int(config["split_seed"]),
+            **getattr(learner, "training_summary", {}),
         },
         "model": {
             "frozen_pinn_parameters": count_parameters(pinn_model),
@@ -934,7 +947,7 @@ def run_thermal(
             "model": {"active_terms": int(model.complexity), "trainable_parameters": 0},
         }
 
-    device = select_device(config["device"])
+    device = select_device(thermal_config.get("device", config["device"]))
     discoverer = FFNDiscovering(data_folder, names, T_amb=ambient)
     train_loader, validation_loader, interpolation_loader, extrapolation_loader = (
         discoverer.generate_thermal_loaders()

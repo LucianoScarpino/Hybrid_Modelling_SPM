@@ -91,6 +91,9 @@ def dataset_manifest(root: Path) -> list[dict[str, Any]]:
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
+        # A resumed run may have fixed every previous failure/skip.  Remove the
+        # obsolete table instead of leaving misleading data from the old state.
+        path.unlink(missing_ok=True)
         return
     fieldnames = sorted({key for row in rows for key in row})
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -505,6 +508,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", type=Path, help="JSON overrides applied after the preset.")
     parser.add_argument("--output", type=Path)
     parser.add_argument(
+        "--resume",
+        type=Path,
+        help=(
+            "Resume an existing result directory using its saved configuration; "
+            "successful runs are reused."
+        ),
+    )
+    parser.add_argument(
         "--effort-log",
         type=Path,
         help="Optional CSV based on effort_log_template.csv.",
@@ -522,30 +533,63 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    config, models, seeds, repeats = effective_configuration(args)
     root = PROJECT_ROOT
-    run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_directory = (
-        args.output.resolve()
-        if args.output
-        else (Path(__file__).resolve().parent / "results" / run_stamp)
-    )
-    output_directory.mkdir(parents=True, exist_ok=False)
-    effective_config_path = output_directory / "effective_config.json"
-    write_json(effective_config_path, config)
+    if args.resume and args.output:
+        raise ValueError("--resume and --output cannot be used together.")
+    if args.resume and any(
+        value is not None
+        for value in (args.config, args.models, args.seeds, args.repeats)
+    ):
+        raise ValueError(
+            "--resume uses the saved configuration, models, seeds, and repeats; "
+            "do not combine it with selection or configuration overrides."
+        )
 
-    manifest = {
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "project_root": str(root),
-        "preset": args.preset,
-        "models": models,
-        "seeds": seeds,
-        "repeats": repeats,
-        "configuration": config,
-        "environment": environment_metadata(),
-        "git": git_metadata(root),
-        "datasets": dataset_manifest(root),
-    }
+    if args.resume:
+        output_directory = args.resume.resolve()
+        if not output_directory.is_dir():
+            raise FileNotFoundError(output_directory)
+        effective_config_path = output_directory / "effective_config.json"
+        manifest_path = output_directory / "manifest.json"
+        if not effective_config_path.exists() or not manifest_path.exists():
+            raise FileNotFoundError(
+                "A resumable directory must contain effective_config.json and manifest.json."
+            )
+        config = load_json(effective_config_path)
+        manifest = load_json(manifest_path)
+        models = list(manifest["models"])
+        seeds = [int(seed) for seed in manifest["seeds"]]
+        repeats = int(manifest["repeats"])
+        manifest.setdefault("resume_events", []).append(
+            {
+                "resumed_at": datetime.now(timezone.utc).isoformat(),
+                "environment": environment_metadata(),
+                "git": git_metadata(root),
+            }
+        )
+    else:
+        config, models, seeds, repeats = effective_configuration(args)
+        run_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_directory = (
+            args.output.resolve()
+            if args.output
+            else (Path(__file__).resolve().parent / "results" / run_stamp)
+        )
+        output_directory.mkdir(parents=True, exist_ok=False)
+        effective_config_path = output_directory / "effective_config.json"
+        write_json(effective_config_path, config)
+        manifest = {
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "project_root": str(root),
+            "preset": args.preset,
+            "models": models,
+            "seeds": seeds,
+            "repeats": repeats,
+            "configuration": config,
+            "environment": environment_metadata(),
+            "git": git_metadata(root),
+            "datasets": dataset_manifest(root),
+        }
     effort_rows: list[dict[str, Any]] = []
     if args.effort_log:
         effort_path = args.effort_log.resolve()
@@ -558,12 +602,18 @@ def main() -> int:
                 effort_rows[-1]["person_hours"] if effort_rows else 0.0
             ),
         }
+    manifest["status"] = "running"
+    manifest["last_started_at"] = datetime.now(timezone.utc).isoformat()
+    manifest.pop("completed_at", None)
+    manifest.pop("interrupted_at", None)
     write_json(output_directory / "manifest.json", manifest)
 
     worker_path = Path(__file__).with_name("worker.py")
     results: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
+    interrupted = False
+    interrupted_run: str | None = None
     total = len(models) * len(seeds) * repeats
     current = 0
     for model_name in models:
@@ -572,9 +622,19 @@ def main() -> int:
                 current += 1
                 run_name = f"{model_name}__seed_{seed}__repeat_{repeat_index + 1}"
                 run_directory = output_directory / "runs" / run_name
-                run_directory.mkdir(parents=True, exist_ok=False)
+                run_directory.mkdir(parents=True, exist_ok=bool(args.resume))
                 result_path = run_directory / "result.json"
                 log_path = run_directory / "worker.log"
+                if args.resume and result_path.exists():
+                    existing_result = load_json(result_path)
+                    if existing_result.get("status") == "success":
+                        results.append(existing_result)
+                        print(
+                            f"[{current}/{total}] {model_name} | seed={seed} | "
+                            f"repeat={repeat_index + 1} | REUSED",
+                            flush=True,
+                        )
+                        continue
                 if (
                     model_name == "thermal_sindyc"
                     and importlib.util.find_spec("pysindy") is None
@@ -595,7 +655,8 @@ def main() -> int:
                     skipped.append(result)
                     print(
                         f"[{current}/{total}] {model_name} | seed={seed} | "
-                        f"repeat={repeat_index + 1} | SKIPPED"
+                        f"repeat={repeat_index + 1} | SKIPPED",
+                        flush=True,
                     )
                     continue
                 command = [
@@ -617,7 +678,11 @@ def main() -> int:
                 environment = dict(os.environ)
                 environment["MPLBACKEND"] = "Agg"
                 environment["PYTHONHASHSEED"] = str(seed)
-                print(f"[{current}/{total}] {model_name} | seed={seed} | repeat={repeat_index + 1}")
+                print(
+                    f"[{current}/{total}] {model_name} | seed={seed} | "
+                    f"repeat={repeat_index + 1}",
+                    flush=True,
+                )
                 try:
                     with log_path.open("w", encoding="utf-8") as log_stream:
                         completed = subprocess.run(
@@ -647,16 +712,29 @@ def main() -> int:
                         "error": f"Run exceeded {args.timeout_seconds} seconds.",
                     }
                     write_json(result_path, result)
+                except KeyboardInterrupt:
+                    interrupted = True
+                    interrupted_run = run_name
+                    print(
+                        "\nBenchmark interrupted. Aggregating all completed runs; "
+                        "use --resume to continue this directory later.",
+                        flush=True,
+                    )
+                    break
                 if result.get("status") == "success":
                     results.append(result)
                 else:
                     failures.append(result)
-                    print(f"  FAILED: {result.get('error_type')} - {result.get('error')}")
+                    print(
+                        f"  FAILED: {result.get('error_type')} - "
+                        f"{result.get('error')}",
+                        flush=True,
+                    )
                     if args.fail_fast:
                         break
-            if args.fail_fast and failures:
+            if interrupted or (args.fail_fast and failures):
                 break
-        if args.fail_fast and failures:
+        if interrupted or (args.fail_fast and failures):
             break
 
     raw_rows = [flatten_dict(result) for result in results]
@@ -675,6 +753,15 @@ def main() -> int:
     manifest["completed_runs"] = len(results)
     manifest["failed_runs"] = len(failures)
     manifest["skipped_runs"] = len(skipped)
+    manifest["interrupted"] = interrupted
+    manifest["interrupted_run"] = interrupted_run
+    finished_at = datetime.now(timezone.utc).isoformat()
+    if interrupted:
+        manifest["status"] = "interrupted"
+        manifest["interrupted_at"] = finished_at
+    else:
+        manifest["status"] = "completed_with_failures" if failures else "completed"
+        manifest["completed_at"] = finished_at
     write_json(output_directory / "manifest.json", manifest)
     generate_markdown_report(
         output_directory / "REPORT.md",
@@ -694,6 +781,8 @@ def main() -> int:
         f"skipped runs: {len(skipped)}"
     )
     print(f"Results: {output_directory}")
+    if interrupted:
+        return 130
     return 1 if failures else 0
 
 

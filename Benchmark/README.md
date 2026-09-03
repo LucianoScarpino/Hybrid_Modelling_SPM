@@ -48,6 +48,19 @@ python run_benchmarks.py --preset standard
 python run_benchmarks.py --preset publication
 ```
 
+The standard preset uses a lower-overhead PINN protocol: validation is run
+every 10 epochs, detailed diagnostics every 100 epochs, materially small
+validation changes do not reset early stopping, and larger minibatches improve
+accelerator utilization. Its PINN L-BFGS refinement is capped at 100
+iterations; the publication preset retains the 500-iteration cap. These values
+are stored in `effective_config.json` and the actual epochs completed are
+included in each run result.
+
+The FVM--FNN correction model defaults to CPU even when the global device is
+`auto`. Its dataset and network are small, so on Apple Silicon the MPS dispatch
+overhead can dominate the computation. Set `fvm_hybrid.device` in a custom
+configuration if another backend is demonstrably faster on the target machine.
+
 Both presets can be restricted to selected models:
 
 ```bash
@@ -68,6 +81,19 @@ python run_benchmarks.py --preset standard --models pinn hybrid_pinn
 Use `--timeout-seconds` to impose a per-run limit and `--fail-fast` when a
 failed run should stop the suite. Runs are intentionally sequential: concurrent
 GPU/MPS workloads would invalidate latency and training-time comparisons.
+
+If a suite is interrupted, resume it with its timestamped result directory:
+
+```bash
+python run_benchmarks.py --resume results/YOUR_RUN_DIRECTORY
+```
+
+The saved effective configuration and model/seed selection are reused.
+Successful `result.json` files are retained and only incomplete or failed runs
+are executed again. Do not combine `--resume` with `--config`, `--models`,
+`--seeds`, `--repeats`, or `--output`. A run created before the optimized PINN
+configuration was introduced resumes with its original settings; start a new
+standard run to use the optimized protocol.
 
 PySINDy is optional. If it is unavailable, `thermal_sindyc` is recorded in
 `skipped.csv` while the remaining models continue. Pass `--strict-dependencies`
@@ -165,6 +191,10 @@ sampling. `split_seed` is separate and fixed by default, so model variability
 can be measured on the same train/validation/test partition. `repeats` reruns
 the same seed in a fresh process and is useful for checking determinism and
 machine-time variability.
+
+PINN progress is written to the run-specific `worker.log`. Each validation line
+reports elapsed time and an upper-bound ETA based on the configured maximum
+number of epochs; early stopping can make the actual duration shorter.
 
 For scientific reporting, use at least five independent model seeds. Confidence
 intervals produced from fewer than five seeds are descriptive only.

@@ -38,6 +38,7 @@
     "ODE_solver": "solve_ivp"
   },
   "fvm_hybrid": {
+    "device": "cpu",
     "learning_rate": 0.001,
     "epochs": 10000,
     "early_stopping_patience": 800,
@@ -50,8 +51,11 @@
     "epochs": 10000,
     "scheduler_patience": 200,
     "early_stopping_patience": 800,
+    "early_stopping_min_delta": 1e-06,
     "lbfgs_max_iterations": 500,
-    "batch_size": 512,
+    "batch_size": 1024,
+    "validation_interval": 10,
+    "diagnostics_interval": 100,
     "lambda_data": 1.0,
     "lambda_pde": 1.0,
     "lambda_boundary": 1.0,
@@ -64,7 +68,9 @@
     "learning_rate": 0.001,
     "epochs": 3000,
     "early_stopping_patience": 300,
-    "batch_size": 512,
+    "early_stopping_min_delta": 1e-07,
+    "batch_size": 2048,
+    "validation_interval": 10,
     "physics_diagnostics": false
   },
   "thermal": {
@@ -125,7 +131,16 @@
       ],
       "seeds": [11, 26, 42],
       "repeats": 1,
-      "overrides": {}
+      "overrides": {
+        "pinn": {
+          "scheduler_patience": 100,
+          "early_stopping_patience": 400,
+          "lbfgs_max_iterations": 100
+        },
+        "hybrid_pinn": {
+          "early_stopping_patience": 200
+        }
+      }
     },
     "publication": {
       "models": [

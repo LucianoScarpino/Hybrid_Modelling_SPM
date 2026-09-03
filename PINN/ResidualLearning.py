@@ -3,7 +3,7 @@ import torch
 
 from pathlib import Path
 from datetime import datetime
-from copy import deepcopy
+from time import perf_counter
 
 from NeuralNetwork import FFN
 
@@ -25,13 +25,22 @@ class ResidualLearner(object):
             epochs,
             lr,
             early_stopping_patience,
-            device
+            device,
+            validation_interval=1,
+            early_stopping_min_delta=0.0,
             ):
         """Fit the residual FFN with an MSE and concentration-bounds penalty.
 
         Inputs are training settings and residual loaders. Returns the best
         validation model selected by early stopping.
         """
+
+        if validation_interval < 1:
+            raise ValueError("validation_interval must be at least 1.")
+        if early_stopping_patience < 1:
+            raise ValueError("early_stopping_patience must be at least 1.")
+        if early_stopping_min_delta < 0.0:
+            raise ValueError("early_stopping_min_delta cannot be negative.")
 
         print("Training Residual Learner...")
 
@@ -40,11 +49,15 @@ class ResidualLearner(object):
 
         best_val_loss = float("inf")
         best_params = None
-        patience = 0
+        best_epoch = 0
+        validation_evaluations = 0
+        training_start = perf_counter()
+        completed_epochs = 0
     
         for epoch in range(epochs):
+            completed_epochs = epoch + 1
             model.train()
-            train_batch_loss = 0.0
+            train_batch_loss = torch.zeros((), device=device)
             batch_num_points = 0
 
             for X,y in train_res_dataset:
@@ -60,13 +73,19 @@ class ResidualLearner(object):
                 train_error.backward()
                 optimizer.step()
 
-                train_batch_loss += train_error.item() * X.shape[0]
+                train_batch_loss += train_error.detach() * X.shape[0]
                 batch_num_points += X.shape[0]
 
+            validation_due = (
+                epoch == 0
+                or (epoch + 1) % validation_interval == 0
+                or (epoch + 1) == epochs
+            )
+            if not validation_due:
+                continue
 
-            train_loss = train_batch_loss/batch_num_points
-
-            val_loss = 0.0
+            validation_evaluations += 1
+            val_loss_sum = torch.zeros((), device=device)
             num_val_points = 0
 
             model.eval()
@@ -81,29 +100,56 @@ class ResidualLearner(object):
                     val_batch_bound_term = self.check_boundary_limits(pred + X[:,2:3],verbose=False)
                     res = torch.mean((pred - y).square()) + val_batch_bound_term
 
-                    val_loss += res.item() * X.shape[0]
+                    val_loss_sum += res.detach() * X.shape[0]
                     num_val_points += X.shape[0]
 
-            val_loss = val_loss/num_val_points
+            train_loss, val_loss = torch.stack(
+                (
+                    train_batch_loss / batch_num_points,
+                    val_loss_sum / num_val_points,
+                )
+            ).detach().cpu().tolist()
+            elapsed_seconds = perf_counter() - training_start
+            mean_epoch_seconds = elapsed_seconds / (epoch + 1)
+            maximum_eta_minutes = mean_epoch_seconds * (epochs - epoch - 1) / 60.0
 
-            print(f"epoch [{epoch}/{epochs}] |"
+            print(f"epoch [{epoch + 1}/{epochs}] |"
                   f"training loss: {train_loss:.6e} |"
-                  f"validation loss: {val_loss:.6e} |"
+                  f"validation loss: {val_loss:.6e} | "
+                  f"elapsed: {elapsed_seconds / 60.0:.1f} min | "
+                  f"ETA(max): {maximum_eta_minutes:.1f} min"
                   )
 
             print("-"*100)
 
-            if val_loss <= best_val_loss:
+            if (
+                best_params is None
+                or val_loss < best_val_loss - early_stopping_min_delta
+            ):
                 best_val_loss = val_loss
-                best_params = deepcopy(model.state_dict())
-                patience = 0
-            else:
-                patience += 1
-                if patience >= early_stopping_patience:
-                    print(f"Early stopped a epoch: {epoch}")
-                    break
+                best_epoch = epoch + 1
+                best_params = {
+                    name: value.detach().clone()
+                    for name, value in model.state_dict().items()
+                }
 
+            epochs_without_improvement = epoch + 1 - best_epoch
+            if epochs_without_improvement >= early_stopping_patience:
+                print(f"Early stopped at epoch: {epoch + 1}")
+                break
+
+        if best_params is None:
+            raise RuntimeError("Residual training completed without a validation result.")
         model.load_state_dict(best_params)
+        self.training_summary = {
+            "epochs_completed": completed_epochs,
+            "best_epoch": best_epoch,
+            "validation_evaluations": validation_evaluations,
+            "validation_interval": validation_interval,
+            "early_stopping_min_delta": early_stopping_min_delta,
+            "early_stopped": completed_epochs < epochs,
+            "training_loop_seconds": perf_counter() - training_start,
+        }
         self.save_resiudal_checkpoint(
             model,
             best_val_loss,
